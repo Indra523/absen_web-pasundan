@@ -539,6 +539,12 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
                 <span class="icon">🔌</span>
                 <span>Sinkronisasi Mesin</span>
             </a>
+
+            <div class="menu-label" style="margin-top: 10px;">Pengaturan</div>
+            <a href="kelola_user.php" class="nav-item <?php echo $active_menu === 'users' ? 'active' : ''; ?>">
+                <span class="icon">🔑</span>
+                <span>Manajemen User</span>
+            </a>
             <?php endif; ?>
         </nav>
 
