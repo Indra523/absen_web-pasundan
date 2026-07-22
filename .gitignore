@@ -1,0 +1,33 @@
+# === DEPENDENCIES ===
+vendor/
+
+# === FILE KONFIGURASI SENSITIF (Berisi password DB) ===
+# Ganti dengan config.php asli berisi kredensial Anda
+# Salin dari config.example.php lalu isi sesuai kebutuhan
+config.php
+
+# === FILE TEMPORARY & TOOLS ===
+plink.exe
+pscp.exe
+*.log
+*.tmp
+test_*.php
+
+# === DATABASE BACKUP (Berisi data asli) ===
+database/*.sql
+
+# === UPLOAD & CACHE ===
+uploads/
+cache/
+*.cache
+
+# === OS & EDITOR ===
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === CLAUDE AI ===
+.claude/
