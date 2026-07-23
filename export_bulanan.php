@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN LAPORAN EVALUASI ABSENSI BULANAN (Dengan Sorting)
+// HALAMAN LAPORAN EVALUASI ABSENSI BULANAN (Dengan Sorting & Responsif)
 // Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung
 // ============================================================
 
@@ -191,7 +191,7 @@ usort($rekap_data, function($a, $b) use ($sort) {
     }
 });
 
-// PROSES EXPORT EXCEL
+// PROSES EXPORT EXCEL (Tanpa Kolom NO)
 if ($export) {
     $filename = "Laporan_Evaluasi_Kehadiran_{$nama_bulan[$bulan]}_{$tahun}.xls";
     header("Content-Type: application/vnd.ms-excel; charset=utf-8");
@@ -228,7 +228,6 @@ if ($export) {
         <table>
             <thead>
                 <tr>
-                    <th>No</th>
                     <th>PIN</th>
                     <th>Nama Lengkap</th>
                     <th>Departemen / Jabatan</th>
@@ -242,7 +241,6 @@ if ($export) {
             </thead>
             <tbody>
                 <?php
-                $no = 1;
                 foreach ($rekap_data as $r) {
                     $eval_text = "🟢 Baik (≥90%)";
                     $eval_class = "badge-green";
@@ -258,7 +256,6 @@ if ($export) {
                     }
 
                     echo "<tr>
-                            <td>{$no}</td>
                             <td>'" . h($r['pin']) . "</td>
                             <td class='text-left'>" . h($r['nama']) . "</td>
                             <td class='text-left'>" . h($r['dept']) . "</td>
@@ -269,7 +266,6 @@ if ($export) {
                             <td><b>{$r['persen']}%</b></td>
                             <td class='{$eval_class}'>{$eval_text}</td>
                           </tr>";
-                    $no++;
                 }
                 ?>
             </tbody>
@@ -281,7 +277,6 @@ if ($export) {
         <table>
             <thead>
                 <tr style="background:#ffedd5; color:#9a3412;">
-                    <th>No</th>
                     <th>PIN</th>
                     <th>Nama Guru</th>
                     <th>Departemen</th>
@@ -291,17 +286,14 @@ if ($export) {
             </thead>
             <tbody>
                 <?php
-                $no2 = 1;
                 foreach ($log_diluar_jadwal_list as $ld) {
                     echo "<tr>
-                            <td>{$no2}</td>
                             <td>'" . h($ld['pin']) . "</td>
                             <td class='text-left'>" . h($ld['nama']) . "</td>
                             <td class='text-left'>" . h($ld['dept']) . "</td>
                             <td>" . h($ld['waktu']) . "</td>
                             <td>" . h($ld['hari_nama']) . " (Di luar jadwal)</td>
                           </tr>";
-                    $no2++;
                 }
                 ?>
             </tbody>
@@ -316,55 +308,59 @@ if ($export) {
 render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
 ?>
 
-<!-- FILTER CONTROL CARD -->
-<div class="card" style="margin-bottom:20px;">
-    <form method="GET" action="export_bulanan.php" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; align-items:end;">
-        <div>
-            <label for="bulan">📅 Pilih Bulan:</label>
-            <select name="bulan" id="bulan" style="margin-bottom:0;">
-                <?php foreach ($nama_bulan as $num => $nama_b): ?>
-                <option value="<?php echo $num; ?>" <?php echo $bulan === $num ? 'selected' : ''; ?>><?php echo $nama_b; ?></option>
-                <?php endforeach; ?>
-            </select>
+<!-- FILTER CONTROL CARD (Layout Rapi & Responsif) -->
+<div class="card" style="margin-bottom:20px; padding:20px;">
+    <form method="GET" action="export_bulanan.php" style="margin:0;">
+        <!-- BARIS 1: INPUT FILTER (GRID RAPI FIX) -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:16px;">
+            <div>
+                <label for="bulan">📅 Pilih Bulan:</label>
+                <select name="bulan" id="bulan" style="margin-bottom:0; width:100%;">
+                    <?php foreach ($nama_bulan as $num => $nama_b): ?>
+                    <option value="<?php echo $num; ?>" <?php echo $bulan === $num ? 'selected' : ''; ?>><?php echo $nama_b; ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div>
+                <label for="tahun">📆 Pilih Tahun:</label>
+                <select name="tahun" id="tahun" style="margin-bottom:0; width:100%;">
+                    <?php for ($y = date('Y'); $y >= 2024; $y--): ?>
+                    <option value="<?php echo $y; ?>" <?php echo $tahun === $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+
+            <div>
+                <label for="kategori">👥 Kategori:</label>
+                <select name="kategori" id="kategori" style="margin-bottom:0; width:100%;">
+                    <option value="semua" <?php echo $kategori === 'semua' ? 'selected' : ''; ?>>Semua (Guru & Karyawan)</option>
+                    <option value="guru" <?php echo $kategori === 'guru' ? 'selected' : ''; ?>>👨‍🏫 Guru Pengajar Only</option>
+                    <option value="karyawan" <?php echo $kategori === 'karyawan' ? 'selected' : ''; ?>>👔 Karyawan / Staff Only</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="sort">🔀 Urutkan Berdasarkan:</label>
+                <select name="sort" id="sort" style="margin-bottom:0; width:100%;">
+                    <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 PIN (1 ➔ 99)</option>
+                    <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 PIN (99 ➔ 1)</option>
+                    <option value="persen_desc" <?php echo $sort === 'persen_desc' ? 'selected' : ''; ?>>📊 % Kehadiran (Tertinggi)</option>
+                    <option value="persen_asc" <?php echo $sort === 'persen_asc' ? 'selected' : ''; ?>>📊 % Kehadiran (Terendah)</option>
+                    <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
+                    <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>🔤 Nama (Z ➔ A)</option>
+                    <option value="hadir_desc" <?php echo $sort === 'hadir_desc' ? 'selected' : ''; ?>>🟢 Total Hadir (Banyak)</option>
+                    <option value="target_desc" <?php echo $sort === 'target_desc' ? 'selected' : ''; ?>>🎯 Target Hari (Banyak)</option>
+                    <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>👨‍🏫 Tipe (Guru Dulu)</option>
+                    <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
+                </select>
+            </div>
         </div>
 
-        <div>
-            <label for="tahun">📆 Pilih Tahun:</label>
-            <select name="tahun" id="tahun" style="margin-bottom:0;">
-                <?php for ($y = date('Y'); $y >= 2024; $y--): ?>
-                <option value="<?php echo $y; ?>" <?php echo $tahun === $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
-                <?php endfor; ?>
-            </select>
-        </div>
-
-        <div>
-            <label for="kategori">👥 Kategori:</label>
-            <select name="kategori" id="kategori" style="margin-bottom:0;">
-                <option value="semua" <?php echo $kategori === 'semua' ? 'selected' : ''; ?>>Semua (Guru & Karyawan)</option>
-                <option value="guru" <?php echo $kategori === 'guru' ? 'selected' : ''; ?>>👨‍🏫 Guru Pengajar Only</option>
-                <option value="karyawan" <?php echo $kategori === 'karyawan' ? 'selected' : ''; ?>>👔 Karyawan / Staff Only</option>
-            </select>
-        </div>
-
-        <div>
-            <label for="sort">🔀 Urutkan Berdasarkan:</label>
-            <select name="sort" id="sort" style="margin-bottom:0;">
-                <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 PIN (1 ➔ 99)</option>
-                <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 PIN (99 ➔ 1)</option>
-                <option value="persen_desc" <?php echo $sort === 'persen_desc' ? 'selected' : ''; ?>>📊 % Kehadiran (Tertinggi)</option>
-                <option value="persen_asc" <?php echo $sort === 'persen_asc' ? 'selected' : ''; ?>>📊 % Kehadiran (Terendah)</option>
-                <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
-                <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>🔤 Nama (Z ➔ A)</option>
-                <option value="hadir_desc" <?php echo $sort === 'hadir_desc' ? 'selected' : ''; ?>>🟢 Total Hadir (Banyak)</option>
-                <option value="target_desc" <?php echo $sort === 'target_desc' ? 'selected' : ''; ?>>🎯 Target Hari (Banyak)</option>
-                <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>👨‍🏫 Tipe (Guru Dulu)</option>
-                <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
-            </select>
-        </div>
-
-        <div style="display:flex; gap:8px;">
-            <button type="submit" class="btn btn-primary" style="flex:1;">🔍 Tampilkan</button>
-            <a href="<?php echo 'export_bulanan.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort, 'export' => 1]); ?>" class="btn btn-success">📊 Export Excel</a>
+        <!-- BARIS 2: ACTION BUTTONS (SELAJU DI DALAM CARD) -->
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:10px; flex-wrap:wrap; padding-top:14px; border-top:1px solid #f1f5f9;">
+            <button type="submit" class="btn btn-primary">🔍 Tampilkan Laporan</button>
+            <a href="<?php echo 'export_bulanan.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort, 'export' => 1]); ?>" class="btn btn-success">📊 Export ke Excel</a>
         </div>
     </form>
 </div>
@@ -402,7 +398,7 @@ function b_sort_icon($col_name, $current_sort) {
 }
 ?>
 
-<!-- TABEL REKAP EVALUASI -->
+<!-- TABEL REKAP EVALUASI (Tanpa Kolom NO) -->
 <div class="card">
     <div class="card-header">
         <div class="card-title">
@@ -414,7 +410,6 @@ function b_sort_icon($col_name, $current_sort) {
         <table>
             <thead>
                 <tr>
-                    <th>No</th>
                     <th>
                         <a href="<?php echo b_sort_url('pin', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan PIN">
                             PIN<?php echo b_sort_icon('pin', $sort); ?>
@@ -452,7 +447,6 @@ function b_sort_icon($col_name, $current_sort) {
             <tbody>
                 <?php
                 if (!empty($rekap_data)) {
-                    $no = 1;
                     foreach ($rekap_data as $r) {
                         $is_guru = ($r['tipe'] === 'guru');
                         $badge_tipe = $is_guru 
@@ -475,7 +469,6 @@ function b_sort_icon($col_name, $current_sort) {
                             : "<span style='color:#94a3b8;'>-</span>";
 
                         echo "<tr>
-                                <td><b>{$no}</b></td>
                                 <td><code style='background:#f1f5f9; padding:4px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($r['pin']) . "</code></td>
                                 <td style='text-align:left;'>
                                     <div style='font-weight:700; color:#0f172a;'>" . h($r['nama']) . "</div>
@@ -488,10 +481,9 @@ function b_sort_icon($col_name, $current_sort) {
                                 <td><b style='font-size:15px; color:#0f172a;'>{$r['persen']}%</b></td>
                                 <td>{$status_eval}</td>
                               </tr>";
-                        $no++;
                     }
                 } else {
-                    echo "<tr><td colspan='9' style='padding:30px; color:#94a3b8;'>Data tidak ditemukan untuk periode ini.</td></tr>";
+                    echo "<tr><td colspan='8' style='padding:30px; color:#94a3b8;'>Data tidak ditemukan untuk periode ini.</td></tr>";
                 }
                 ?>
             </tbody>
@@ -500,7 +492,7 @@ function b_sort_icon($col_name, $current_sort) {
 </div>
 
 <?php if (!empty($log_diluar_jadwal_list)): ?>
-<!-- TABEL LOG GURU ABSEN DI LUAR JADWAL NGAJAR -->
+<!-- TABEL LOG GURU ABSEN DI LUAR JADWAL NGAJAR (Tanpa Kolom NO) -->
 <div class="card" style="border: 1px solid #ffedd5; background: #fffcf8;">
     <div class="card-header">
         <div class="card-title" style="color: #c2410c;">
@@ -514,7 +506,6 @@ function b_sort_icon($col_name, $current_sort) {
         <table>
             <thead>
                 <tr style="background:#ffedd5;">
-                    <th style="color:#9a3412;">No</th>
                     <th style="color:#9a3412;">PIN</th>
                     <th style="color:#9a3412; text-align:left;">Nama Guru</th>
                     <th style="color:#9a3412;">Tanggal Absen</th>
@@ -523,10 +514,8 @@ function b_sort_icon($col_name, $current_sort) {
             </thead>
             <tbody>
                 <?php
-                $no2 = 1;
                 foreach ($log_diluar_jadwal_list as $ld) {
                     echo "<tr>
-                            <td><b>{$no2}</b></td>
                             <td><code style='background:#fff; padding:3px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($ld['pin']) . "</code></td>
                             <td style='text-align:left;'>
                                 <div style='font-weight:700; color:#0f172a;'>" . h($ld['nama']) . "</div>
@@ -535,7 +524,6 @@ function b_sort_icon($col_name, $current_sort) {
                             <td><b>" . h($ld['waktu']) . "</b></td>
                             <td><span class='badge' style='background:#ffedd5; color:#9a3412; border:1px solid #fed7aa;'>{$ld['hari_nama']} (Di Luar Jadwal)</span></td>
                           </tr>";
-                    $no2++;
                 }
                 ?>
             </tbody>
