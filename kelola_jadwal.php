@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN KELOLA JADWAL NGAJAR GURU (Superadmin Only)
+// HALAMAN KELOLA JADWAL NGAJAR GURU (Dengan Real-Time Search)
 // Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung
 // ============================================================
 
@@ -73,6 +73,7 @@ $sql_guru = "SELECT mk.*,
              GROUP BY mk.pin 
              ORDER BY mk.tipe DESC, CAST(mk.pin AS UNSIGNED) ASC, mk.pin ASC";
 $result_guru = $conn->query($sql_guru);
+$total_guru  = $result_guru->num_rows;
 
 render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
 ?>
@@ -90,11 +91,19 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
 <?php endif; ?>
 
 <div class="card">
-    <div class="card-header">
-        <div class="card-title">
+    <div class="card-header" style="flex-wrap:wrap; gap:12px; align-items:center;">
+        <div class="card-title" style="margin-bottom:0;">
             <span>⚙️ Pengaturan Jadwal Ngajar Guru</span>
         </div>
-        <span class="badge badge-verif" style="font-size:12px; font-weight:700;">Total Master: <?php echo $result_guru->num_rows; ?> Orang</span>
+
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <!-- Input Pencarian Real-Time (Tanpa Tekan Enter) -->
+            <input type="text" id="q_jadwal" placeholder="🔍 Cari Real-Time (Nama, PIN, Dept)..." style="margin-bottom:0; height:38px; width:260px; font-size:13px;" autocomplete="off">
+            
+            <span class="badge badge-verif" style="font-size:12px; font-weight:700;">
+                Menampilkan <b id="count-visible"><?php echo $total_guru; ?></b> dari <?php echo $total_guru; ?> Orang
+            </span>
+        </div>
     </div>
 
     <div style="margin-bottom: 16px; font-size:13px; color:#64748b; background:#f8fafc; padding:12px 16px; border-radius:10px; border:1px solid #e2e8f0; line-height:1.5;">
@@ -113,7 +122,7 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                     <th>Aksi</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tbody-jadwal">
                 <?php
                 if ($result_guru->num_rows > 0) {
                     $no = 1;
@@ -144,13 +153,14 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                         $hari_json = json_encode(array_map('intval', $hari_arr));
                         $nama_attr = h($g['nama']);
                         $pin_attr  = h($g['pin']);
+                        $dept_attr = h($g['departemen']);
 
-                        echo "<tr>
+                        echo "<tr class='jadwal-row' data-pin='{$pin_attr}' data-nama='" . strtolower($nama_attr) . "' data-dept='" . strtolower($dept_attr) . "'>
                                 <td><b>{$no}</b></td>
                                 <td><code style='background:#f1f5f9; padding:4px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>{$pin_attr}</code></td>
                                 <td style='text-align:left;'>
                                     <div style='font-weight:700; color:#0f172a;'>{$nama_attr}</div>
-                                    <div style='font-size:11px; color:#64748b;'>" . h($g['departemen']) . "</div>
+                                    <div style='font-size:11px; color:#64748b;'>{$dept_attr}</div>
                                 </td>
                                 <td>{$badge_kategori}</td>
                                 <td style='text-align:left;'>{$tampil_jadwal}</td>
@@ -164,9 +174,12 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                         $no++;
                     }
                 } else {
-                    echo "<tr><td colspan='6' style='padding:30px; color:#94a3b8;'>Belum ada data guru/karyawan.</td></tr>";
+                    echo "<tr id='row-empty'><td colspan='6' style='padding:30px; color:#94a3b8;'>Belum ada data guru/karyawan.</td></tr>";
                 }
                 ?>
+                <tr id="row-no-match" style="display:none;">
+                    <td colspan="6" style="padding: 30px; color:#94a3b8; text-align:center;">🔍 Data tidak ditemukan untuk kata kunci pencarian tersebut.</td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -217,16 +230,15 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
 </style>
 
 <script>
+// --- MODAL JADWAL ---
 function bukaModalJadwal(pin, nama, hariArr) {
     document.getElementById('modal_pin').value = pin;
     document.getElementById('modal_nama').textContent = nama;
 
-    // Reset semua checkbox
     for (let i = 1; i <= 6; i++) {
         document.getElementById('chk_hari_' + i).checked = false;
     }
 
-    // Centang hari yang ada di hariArr
     if (Array.isArray(hariArr)) {
         hariArr.forEach(h => {
             const chk = document.getElementById('chk_hari_' + h);
@@ -245,6 +257,37 @@ function tutupModalJadwal() {
 document.getElementById('modal-jadwal').addEventListener('click', function(e) {
     if (e.target === this) tutupModalJadwal();
 });
+
+// --- REAL-TIME INSTANT SEARCH (SEARCH AS YOU TYPE) ---
+const inputQJadwal = document.getElementById('q_jadwal');
+const countVisibleSpan = document.getElementById('count-visible');
+const rowNoMatch = document.getElementById('row-no-match');
+
+function filterJadwalTable() {
+    const val = inputQJadwal.value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.jadwal-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const pin  = row.getAttribute('data-pin') || '';
+        const nama = row.getAttribute('data-nama') || '';
+        const dept = row.getAttribute('data-dept') || '';
+
+        if (!val || pin.includes(val) || nama.includes(val) || dept.includes(val)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    if (countVisibleSpan) countVisibleSpan.textContent = visibleCount;
+    if (rowNoMatch) {
+        rowNoMatch.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+    }
+}
+
+inputQJadwal.addEventListener('input', filterJadwalTable);
 </script>
 
 <?php render_footer(); ?>
