@@ -167,7 +167,13 @@ render_header("Manajemen User", "users");
 </div>
 <?php endif; ?>
 
-<div style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
+<style>
+@media (max-width: 900px) {
+    .user-mgmt-grid { grid-template-columns: 1fr !important; }
+    .user-info-grid  { grid-template-columns: 1fr !important; }
+}
+</style>
+<div class="user-mgmt-grid" style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
 
     <!-- PANEL KIRI: FORM TAMBAH USER -->
     <div>
@@ -281,7 +287,7 @@ render_header("Manajemen User", "users");
         <!-- INFO ROLE -->
         <div class="card" style="margin-bottom:0; background: linear-gradient(135deg, #f8fafc, #f1f5f9);">
             <div class="card-title" style="font-size:14px; margin-bottom:14px;">ℹ️ Keterangan Role</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="user-info-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
                 <div style="background:#fff; border-radius:10px; padding:14px 16px; border:1px solid #e2e8f0;">
                     <div style="font-weight:700; color:#0f172a; font-size:13px; margin-bottom:6px;">👑 Superadmin</div>
                     <ul style="font-size:13px; color:#64748b; padding-left:16px; line-height:1.8;">
