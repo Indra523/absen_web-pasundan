@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN LAPORAN EVALUASI ABSENSI BULANAN (Dengan Sorting & Responsif)
+// HALAMAN LAPORAN EVALUASI ABSENSI BULANAN (Dengan Layout Presisi)
 // Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung
 // ============================================================
 
@@ -308,57 +308,43 @@ if ($export) {
 render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
 ?>
 
-<!-- FILTER CONTROL CARD (Layout Rapi & Responsif) -->
+<!-- FILTER CONTROL CARD (3 Kolom Filter + Tombol di Kanan) -->
 <div class="card" style="margin-bottom:20px; padding:20px;">
-    <form method="GET" action="export_bulanan.php" style="margin:0;">
-        <!-- BARIS 1: INPUT FILTER (GRID RAPI FIX) -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:16px;">
-            <div>
+    <form method="GET" action="export_bulanan.php" style="display:flex; justify-content:space-between; align-items:end; flex-wrap:wrap; gap:16px; margin:0;">
+        <input type="hidden" name="sort" value="<?php echo h($sort); ?>">
+
+        <!-- INPUT FILTERS -->
+        <div style="display:flex; gap:14px; flex-wrap:wrap; flex:1; min-width:280px;">
+            <div style="flex:1; min-width:140px;">
                 <label for="bulan">📅 Pilih Bulan:</label>
-                <select name="bulan" id="bulan" style="margin-bottom:0; width:100%;">
+                <select name="bulan" id="bulan" style="margin-bottom:0;">
                     <?php foreach ($nama_bulan as $num => $nama_b): ?>
                     <option value="<?php echo $num; ?>" <?php echo $bulan === $num ? 'selected' : ''; ?>><?php echo $nama_b; ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
-            <div>
+            <div style="flex:1; min-width:120px;">
                 <label for="tahun">📆 Pilih Tahun:</label>
-                <select name="tahun" id="tahun" style="margin-bottom:0; width:100%;">
+                <select name="tahun" id="tahun" style="margin-bottom:0;">
                     <?php for ($y = date('Y'); $y >= 2024; $y--): ?>
                     <option value="<?php echo $y; ?>" <?php echo $tahun === $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
                     <?php endfor; ?>
                 </select>
             </div>
 
-            <div>
+            <div style="flex:1.5; min-width:180px;">
                 <label for="kategori">👥 Kategori:</label>
-                <select name="kategori" id="kategori" style="margin-bottom:0; width:100%;">
+                <select name="kategori" id="kategori" style="margin-bottom:0;">
                     <option value="semua" <?php echo $kategori === 'semua' ? 'selected' : ''; ?>>Semua (Guru & Karyawan)</option>
                     <option value="guru" <?php echo $kategori === 'guru' ? 'selected' : ''; ?>>👨‍🏫 Guru Pengajar Only</option>
                     <option value="karyawan" <?php echo $kategori === 'karyawan' ? 'selected' : ''; ?>>👔 Karyawan / Staff Only</option>
                 </select>
             </div>
-
-            <div>
-                <label for="sort">🔀 Urutkan Berdasarkan:</label>
-                <select name="sort" id="sort" style="margin-bottom:0; width:100%;">
-                    <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 PIN (1 ➔ 99)</option>
-                    <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 PIN (99 ➔ 1)</option>
-                    <option value="persen_desc" <?php echo $sort === 'persen_desc' ? 'selected' : ''; ?>>📊 % Kehadiran (Tertinggi)</option>
-                    <option value="persen_asc" <?php echo $sort === 'persen_asc' ? 'selected' : ''; ?>>📊 % Kehadiran (Terendah)</option>
-                    <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
-                    <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>🔤 Nama (Z ➔ A)</option>
-                    <option value="hadir_desc" <?php echo $sort === 'hadir_desc' ? 'selected' : ''; ?>>🟢 Total Hadir (Banyak)</option>
-                    <option value="target_desc" <?php echo $sort === 'target_desc' ? 'selected' : ''; ?>>🎯 Target Hari (Banyak)</option>
-                    <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>👨‍🏫 Tipe (Guru Dulu)</option>
-                    <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
-                </select>
-            </div>
         </div>
 
-        <!-- BARIS 2: ACTION BUTTONS (SELAJU DI DALAM CARD) -->
-        <div style="display:flex; justify-content:flex-end; align-items:center; gap:10px; flex-wrap:wrap; padding-top:14px; border-top:1px solid #f1f5f9;">
+        <!-- ACTION BUTTONS -->
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <button type="submit" class="btn btn-primary">🔍 Tampilkan Laporan</button>
             <a href="<?php echo 'export_bulanan.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort, 'export' => 1]); ?>" class="btn btn-success">📊 Export ke Excel</a>
         </div>
@@ -398,12 +384,33 @@ function b_sort_icon($col_name, $current_sort) {
 }
 ?>
 
-<!-- TABEL REKAP EVALUASI (Tanpa Kolom NO) -->
+<!-- TABEL REKAP EVALUASI (Dengan Dropdown Urutkan di Header Card) -->
 <div class="card">
-    <div class="card-header">
-        <div class="card-title">
+    <div class="card-header" style="flex-wrap:wrap; gap:12px; align-items:center;">
+        <div class="card-title" style="margin-bottom:0;">
             <span>📋 Rekapitulasi Kehadiran & Evaluasi Kinerja</span>
         </div>
+
+        <!-- DROPDOWN URUTKAN DI SAMPLING SAMBIL CARD TITLE -->
+        <form method="GET" action="export_bulanan.php" style="margin:0; display:flex; align-items:center; gap:8px;">
+            <input type="hidden" name="bulan" value="<?php echo $bulan; ?>">
+            <input type="hidden" name="tahun" value="<?php echo $tahun; ?>">
+            <input type="hidden" name="kategori" value="<?php echo h($kategori); ?>">
+            
+            <label for="sort" style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:0; white-space:nowrap;">🔀 Urutkan:</label>
+            <select name="sort" id="sort" onchange="this.form.submit()" style="margin-bottom:0; height:38px; font-size:13px; padding:6px 12px; width:auto; cursor:pointer;">
+                <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 PIN (1 ➔ 99)</option>
+                <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 PIN (99 ➔ 1)</option>
+                <option value="persen_desc" <?php echo $sort === 'persen_desc' ? 'selected' : ''; ?>>📊 % Kehadiran (Tertinggi)</option>
+                <option value="persen_asc" <?php echo $sort === 'persen_asc' ? 'selected' : ''; ?>>📊 % Kehadiran (Terendah)</option>
+                <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
+                <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>🔤 Nama (Z ➔ A)</option>
+                <option value="hadir_desc" <?php echo $sort === 'hadir_desc' ? 'selected' : ''; ?>>🟢 Total Hadir (Banyak)</option>
+                <option value="target_desc" <?php echo $sort === 'target_desc' ? 'selected' : ''; ?>>🎯 Target Hari (Banyak)</option>
+                <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>👨‍🏫 Tipe (Guru Dulu)</option>
+                <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
+            </select>
+        </form>
     </div>
 
     <div class="table-responsive">
