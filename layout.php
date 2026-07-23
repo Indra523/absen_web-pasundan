@@ -22,8 +22,6 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <style>
         :root {
             --sidebar-width: 280px;
@@ -373,7 +371,7 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         <!-- WATERMARK / CREDIT -->
         <div style="padding: 10px 16px 14px 16px; text-align: center;">
             <span style="font-size: 11px; color: #475569; letter-spacing: 0.2px;">
-                Build with <i class="fa-solid fa-heart" style="color: #ef4444; font-size: 10px;"></i> by <span style="font-weight: 700; color: #94a3b8;">Indra Setia</span>
+                Build with <span style="color: #ef4444; font-size: 12px;">❤️</span> by <span style="font-weight: 700; color: #94a3b8;">Indra Setia</span>
             </span>
         </div>
     </aside>
@@ -403,7 +401,7 @@ function render_footer() {
 
 <!-- FOOTER WATERMARK (bawah konten utama) -->
 <footer style="margin-left: var(--sidebar-width); padding: 16px 36px; text-align: center; border-top: 1px solid #e2e8f0; background: #f8fafc; font-size: 12px; color: #94a3b8; transition: margin-left 0.3s;" id="main-footer">
-    Build with <i class="fa-solid fa-heart" style="color: #ef4444;"></i> by <strong style="color: #64748b;">Indra Setia</strong>
+    Build with <span style="color: #ef4444;">❤️</span> by <strong style="color: #64748b;">Indra Setia</strong>
     &nbsp;·&nbsp; Monitoring Absensi SMK Pasundan 2 Bandung &nbsp;·&nbsp; <?php echo date('Y'); ?>
 </footer>
 
