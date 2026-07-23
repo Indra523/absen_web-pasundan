@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // HALAMAN MANAJEMEN USER — Superadmin Only
-// Fitur: Tambah User, Edit Username/Password, Hapus User, Status Online & Last Active
+// Fitur: Tambah User, Edit Username/Password, Hapus User, Real-Time Online Auto-Refresh
 // ============================================================
 
 require_once __DIR__ . '/layout.php';
@@ -104,7 +104,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt = $conn->prepare("UPDATE users SET username=?, password=?, role=? WHERE id=?");
                         $stmt->bind_param("sssi", $username_update, $hash, $role_update, $id_target);
                         if ($stmt->execute()) {
-                            // Update session jika user update dirinya sendiri
                             if ($id_target == ($_SESSION['user_id'] ?? 0)) {
                                 $_SESSION['username'] = $username_update;
                             }
@@ -134,13 +133,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($action === 'hapus') {
         $id_hapus = (int)($_POST['id_hapus'] ?? 0);
 
-        // Tidak boleh hapus diri sendiri
         if ($id_hapus <= 0) {
             $pesan_error = 'ID user tidak valid.';
         } elseif ($id_hapus == ($_SESSION['user_id'] ?? 0)) {
             $pesan_error = '⛔ Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif.';
         } else {
-            // Cek minimal 1 superadmin harus tersisa
             $cek_sa = $conn->prepare("SELECT id FROM users WHERE role='superadmin' AND id != ?");
             $cek_sa->bind_param("i", $id_hapus);
             $cek_sa->execute();
@@ -171,13 +168,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // -------------------------------------------------------
 $semua_user = $conn->query("SELECT id, username, role, created_at, last_active FROM users ORDER BY id ASC");
 
-// Hitung total online (last_active dalam 5 menit terakhir)
 $online_count = 0;
 $user_list = [];
 if ($semua_user && $semua_user->num_rows > 0) {
     while ($row = $semua_user->fetch_assoc()) {
         $last_act_ts = !empty($row['last_active']) ? strtotime($row['last_active']) : 0;
-        $is_online = (time() - $last_act_ts) <= 300; // 5 menit = 300 detik
+        $is_online = (time() - $last_act_ts) <= 300;
         if ($is_online) $online_count++;
         $row['is_online'] = $is_online;
         $user_list[] = $row;
@@ -264,12 +260,13 @@ render_header("Manajemen User", "users");
             <div class="card-header" style="flex-wrap:wrap; gap:10px;">
                 <div class="card-title">👥 Daftar User System</div>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <span class="badge badge-verif" style="font-size:12px; font-weight:700; background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">
+                    <span class="badge badge-verif" id="badge-online-count" style="font-size:12px; font-weight:700; background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">
                         <span class="pulse-green" style="margin-right:4px;"></span> <?php echo $online_count; ?> Online
                     </span>
                     <span class="badge badge-verif" style="font-size:12px; font-weight:700;">
                         Total: <?php echo count($user_list); ?> User
                     </span>
+                    <span style="font-size:11px; color:#94a3b8; margin-left:4px;" title="Status diperbarui otomatis secara real-time">⚡ Live</span>
                 </div>
             </div>
 
@@ -285,7 +282,7 @@ render_header("Manajemen User", "users");
                             <th>Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tbody-users">
                         <?php
                         if (!empty($user_list)):
                             $no = 1;
@@ -299,7 +296,7 @@ render_header("Manajemen User", "users");
                                     ? "<span class='badge' style='background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;'><span class='pulse-green' style='margin-right:4px;'></span> Online</span>"
                                     : "<span class='badge' style='background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0;'>⚪ Offline</span>";
                         ?>
-                        <tr>
+                        <tr data-user-id="<?php echo $u['id']; ?>">
                             <td><b><?php echo $no++; ?></b></td>
                             <td style="text-align:left;">
                                 <div style="display:flex; align-items:center; gap:8px;">
@@ -317,8 +314,8 @@ render_header("Manajemen User", "users");
                                     <?php echo $u['role'] === 'superadmin' ? '👑 Superadmin' : '👤 Admin'; ?>
                                 </span>
                             </td>
-                            <td><?php echo $status_badge; ?></td>
-                            <td style="color:#475569; font-size:12px; font-weight:600;">
+                            <td class="cell-status"><?php echo $status_badge; ?></td>
+                            <td class="cell-last-active" style="color:#475569; font-size:12px; font-weight:600;">
                                 <?php echo format_last_active($u['last_active']); ?>
                             </td>
                             <td>
@@ -450,6 +447,44 @@ function togglePass(inputId, btnId) {
         btn.textContent = '👁️';
     }
 }
+
+// --- REAL-TIME AUTO REFRESH STATUS USER (AJAX) ---
+function refreshUserStatuses() {
+    fetch('api_users.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.success && Array.isArray(data.users)) {
+                // Update badge total online
+                const onlineBadge = document.getElementById('badge-online-count');
+                if (onlineBadge) {
+                    onlineBadge.innerHTML = `<span class="pulse-green" style="margin-right:4px;"></span> ${data.online_count} Online`;
+                }
+
+                // Update setiap baris user
+                data.users.forEach(u => {
+                    const row = document.querySelector(`tr[data-user-id="${u.id}"]`);
+                    if (row) {
+                        const statusCell = row.querySelector('.cell-status');
+                        const lastActiveCell = row.querySelector('.cell-last-active');
+
+                        if (statusCell) {
+                            statusCell.innerHTML = u.is_online
+                                ? `<span class='badge' style='background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;'><span class='pulse-green' style='margin-right:4px;'></span> Online</span>`
+                                : `<span class='badge' style='background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0;'>⚪ Offline</span>`;
+                        }
+
+                        if (lastActiveCell) {
+                            lastActiveCell.innerHTML = u.last_active_html;
+                        }
+                    }
+                });
+            }
+        })
+        .catch(err => console.error('Error fetching live user status:', err));
+}
+
+// Auto-refresh setiap 5 detik tanpa perlu reload tab browser
+setInterval(refreshUserStatuses, 5000);
 </script>
 
 <?php render_footer(); ?>
