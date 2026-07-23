@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN LAPORAN EVALUASI ABSENSI BULANAN
+// HALAMAN LAPORAN EVALUASI ABSENSI BULANAN (Dengan Sorting)
 // Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung
 // ============================================================
 
@@ -12,6 +12,7 @@ $conn = getDB();
 $bulan    = (int)($_GET['bulan'] ?? date('n'));
 $tahun    = (int)($_GET['tahun'] ?? date('Y'));
 $kategori = $_GET['kategori'] ?? 'semua'; // 'semua', 'karyawan', 'guru'
+$sort     = $_GET['sort'] ?? 'pin_asc';
 $export   = isset($_GET['export']) && $_GET['export'] === '1';
 
 if ($bulan < 1 || $bulan > 12) $bulan = (int)date('n');
@@ -30,7 +31,6 @@ function get_hari_kerja_karyawan($thn, $bln) {
 
 // Helper: Hitung target hari ngajar guru di bulan tsb sesuai jadwal
 function get_target_hari_guru($conn, $pin, $thn, $bln) {
-    // Ambil daftar hari ngajar guru dari DB (1=Senin...6=Sabtu)
     $stmt = $conn->prepare("SELECT hari FROM jadwal_guru WHERE pin = ?");
     $stmt->bind_param("s", $pin);
     $stmt->execute();
@@ -74,7 +74,7 @@ $sql_master = "SELECT mk.*,
                LEFT JOIN jadwal_guru jg ON mk.pin = jg.pin 
                {$where_kat}
                GROUP BY mk.pin 
-               ORDER BY mk.tipe DESC, mk.nama ASC";
+               ORDER BY CAST(mk.pin AS UNSIGNED) ASC, mk.pin ASC";
 $res_master = $conn->query($sql_master);
 
 // Ambil semua data log absensi di bulan & tahun tsb
@@ -91,18 +91,13 @@ $stmt_log->bind_param("ss", $start_date, $end_date);
 $stmt_log->execute();
 $res_log = $stmt_log->get_result();
 
-// Organisasikan log absensi per PIN dan per Tanggal
-// $absen_data[pin][tgl_absen] = ['hari_num' => x, 'status' => y]
 $absen_data = [];
-$absen_diluar_jadwal = []; // Log guru di luar jadwal
-
 while ($l = $res_log->fetch_assoc()) {
     $pin = $l['pin'];
     $tgl = $l['tgl_absen'];
     if (!isset($absen_data[$pin])) {
         $absen_data[$pin] = [];
     }
-    // Simpan unique per hari per pin
     if (!isset($absen_data[$pin][$tgl])) {
         $absen_data[$pin][$tgl] = (int)$l['hari_num'];
     }
@@ -133,13 +128,10 @@ if ($res_master->num_rows > 0) {
         foreach ($tgl_logs as $tgl_str => $hari_num) {
             if ($is_guru) {
                 if (empty($hari_arr)) {
-                    // Belum ada jadwal
                     $total_hadir_diluar++;
                 } elseif (in_array($hari_num, $hari_arr)) {
-                    // Sesuai jadwal
                     $total_hadir_sesuai++;
                 } else {
-                    // Di luar jadwal
                     $total_hadir_diluar++;
                     $log_diluar_jadwal_list[] = [
                         'pin' => $pin,
@@ -150,14 +142,12 @@ if ($res_master->num_rows > 0) {
                     ];
                 }
             } else {
-                // Karyawan: hitung semua hari kecuali Minggu (7)
                 if ($hari_num !== 7) {
                     $total_hadir_sesuai++;
                 }
             }
         }
 
-        // Persentase
         $persen = ($target_hari > 0) ? round(($total_hadir_sesuai / $target_hari) * 100, 1) : 0;
 
         $rekap_data[] = [
@@ -173,6 +163,33 @@ if ($res_master->num_rows > 0) {
         ];
     }
 }
+
+// SORTING ARRAY REKAP DATA
+usort($rekap_data, function($a, $b) use ($sort) {
+    switch ($sort) {
+        case 'pin_desc':
+            return ((int)$b['pin'] <=> (int)$a['pin']) ?: strcmp($b['pin'], $a['pin']);
+        case 'nama_asc':
+            return strcasecmp($a['nama'], $b['nama']);
+        case 'nama_desc':
+            return strcasecmp($b['nama'], $a['nama']);
+        case 'persen_desc':
+            return ($b['persen'] <=> $a['persen']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'persen_asc':
+            return ($a['persen'] <=> $b['persen']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'target_desc':
+            return ($b['target_hari'] <=> $a['target_hari']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'hadir_desc':
+            return ($b['hadir_sesuai'] <=> $a['hadir_sesuai']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'tipe_desc':
+            return strcmp($b['tipe'], $a['tipe']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'tipe_asc':
+            return strcmp($a['tipe'], $b['tipe']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'pin_asc':
+        default:
+            return ((int)$a['pin'] <=> (int)$b['pin']) ?: strcmp($a['pin'], $b['pin']);
+    }
+});
 
 // PROSES EXPORT EXCEL
 if ($export) {
@@ -329,9 +346,25 @@ render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
             </select>
         </div>
 
+        <div>
+            <label for="sort">🔀 Urutkan Berdasarkan:</label>
+            <select name="sort" id="sort" style="margin-bottom:0;">
+                <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 PIN (1 ➔ 99)</option>
+                <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 PIN (99 ➔ 1)</option>
+                <option value="persen_desc" <?php echo $sort === 'persen_desc' ? 'selected' : ''; ?>>📊 % Kehadiran (Tertinggi)</option>
+                <option value="persen_asc" <?php echo $sort === 'persen_asc' ? 'selected' : ''; ?>>📊 % Kehadiran (Terendah)</option>
+                <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
+                <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>🔤 Nama (Z ➔ A)</option>
+                <option value="hadir_desc" <?php echo $sort === 'hadir_desc' ? 'selected' : ''; ?>>🟢 Total Hadir (Banyak)</option>
+                <option value="target_desc" <?php echo $sort === 'target_desc' ? 'selected' : ''; ?>>🎯 Target Hari (Banyak)</option>
+                <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>👨‍🏫 Tipe (Guru Dulu)</option>
+                <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
+            </select>
+        </div>
+
         <div style="display:flex; gap:8px;">
             <button type="submit" class="btn btn-primary" style="flex:1;">🔍 Tampilkan</button>
-            <a href="<?php echo 'export_bulanan.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'export' => 1]); ?>" class="btn btn-success">📊 Export Excel</a>
+            <a href="<?php echo 'export_bulanan.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort, 'export' => 1]); ?>" class="btn btn-success">📊 Export Excel</a>
         </div>
     </form>
 </div>
@@ -352,6 +385,23 @@ render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
     </div>
 </div>
 
+<?php
+// Helper URL untuk Header Sorting Clickable di Laporan Bulanan
+function b_sort_url($col_name, $current_sort, $bulan, $tahun, $kategori) {
+    $next_sort = ($current_sort === "{$col_name}_asc") ? "{$col_name}_desc" : "{$col_name}_asc";
+    if ($col_name === 'persen') {
+        $next_sort = ($current_sort === 'persen_desc') ? 'persen_asc' : 'persen_desc';
+    }
+    return "export_bulanan.php?" . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $next_sort]);
+}
+
+function b_sort_icon($col_name, $current_sort) {
+    if ($current_sort === "{$col_name}_asc") return " 🔼";
+    if ($current_sort === "{$col_name}_desc") return " 🔽";
+    return " <span style='color:#cbd5e1;'>↕</span>";
+}
+?>
+
 <!-- TABEL REKAP EVALUASI -->
 <div class="card">
     <div class="card-header">
@@ -365,13 +415,37 @@ render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>PIN</th>
-                    <th style="text-align:left;">Nama Guru & Karyawan</th>
-                    <th>Tipe</th>
-                    <th>Target Hari</th>
-                    <th>Hadir Sesuai</th>
+                    <th>
+                        <a href="<?php echo b_sort_url('pin', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan PIN">
+                            PIN<?php echo b_sort_icon('pin', $sort); ?>
+                        </a>
+                    </th>
+                    <th style="text-align:left;">
+                        <a href="<?php echo b_sort_url('nama', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan Nama">
+                            Nama Guru & Karyawan<?php echo b_sort_icon('nama', $sort); ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo b_sort_url('tipe', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan Tipe">
+                            Tipe<?php echo b_sort_icon('tipe', $sort); ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo b_sort_url('target', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan Target Hari">
+                            Target Hari<?php echo b_sort_icon('target', $sort); ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo b_sort_url('hadir', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan Hadir">
+                            Hadir Sesuai<?php echo b_sort_icon('hadir', $sort); ?>
+                        </a>
+                    </th>
                     <th>Hadir Di Luar Jadwal</th>
-                    <th>% Kehadiran</th>
+                    <th>
+                        <a href="<?php echo b_sort_url('persen', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan % Kehadiran">
+                            % Kehadiran<?php echo b_sort_icon('persen', $sort); ?>
+                        </a>
+                    </th>
                     <th>Status Evaluasi</th>
                 </tr>
             </thead>
