@@ -399,12 +399,6 @@ function render_footer() {
     </main>
 </div>
 
-<!-- FOOTER WATERMARK (bawah konten utama) -->
-<footer style="margin-left: var(--sidebar-width); padding: 16px 36px; text-align: center; border-top: 1px solid #e2e8f0; background: #f8fafc; font-size: 12px; color: #94a3b8; transition: margin-left 0.3s;" id="main-footer">
-    Build with <span style="color: #ef4444;">❤️</span> by <strong style="color: #64748b;">Indra Setia</strong>
-    &nbsp;·&nbsp; Monitoring Absensi SMK Pasundan 2 Bandung &nbsp;·&nbsp; <?php echo date('Y'); ?>
-</footer>
-
 <script>
 function toggleSidebar() {
     const sidebar  = document.getElementById('sidebar');
@@ -422,12 +416,6 @@ function closeSidebar() {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebar-overlay').classList.remove('open');
     document.body.style.overflow = '';
-}
-
-// Footer margin responsif di mobile
-const footer = document.getElementById('main-footer');
-if (footer && window.innerWidth <= 768) {
-    footer.style.marginLeft = '0';
 }
 
 document.addEventListener('keydown', function(e) {
