@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN MANAJEMEN GURU & KARYAWAN (Dengan Sorting & Search)
+// HALAMAN MANAJEMEN GURU & KARYAWAN (Dengan Real-Time Instant Search)
 // Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung
 // ============================================================
 
@@ -223,7 +223,7 @@ if (isset($_GET['hapus'])) {
     }
 }
 
-// --- 7. SORTING & SERCHING MASTER KARYAWAN ---
+// --- 7. SORTING MASTER KARYAWAN ---
 $sort = $_GET['sort'] ?? 'pin_asc';
 $q_master = trim($_GET['q_master'] ?? '');
 
@@ -253,27 +253,9 @@ switch ($sort) {
         break;
 }
 
-$where_master = "";
-$params_master = [];
-$types_master = "";
-
-if (!empty($q_master)) {
-    $where_master = "WHERE (pin LIKE ? OR nama LIKE ? OR departemen LIKE ?)";
-    $param_q = "%" . $q_master . "%";
-    $params_master = [$param_q, $param_q, $param_q];
-    $types_master = "sss";
-}
-
-$sql_master = "SELECT * FROM master_karyawan {$where_master} ORDER BY {$order_by}";
-
-if (!empty($params_master)) {
-    $stmt_m = $conn->prepare($sql_master);
-    $stmt_m->bind_param($types_master, ...$params_master);
-    $stmt_m->execute();
-    $result = $stmt_m->get_result();
-} else {
-    $result = $conn->query($sql_master);
-}
+$sql_master = "SELECT * FROM master_karyawan ORDER BY {$order_by}";
+$result = $conn->query($sql_master);
+$total_master = $result->num_rows;
 
 render_header("Kelola Guru & Karyawan", "karyawan");
 ?>
@@ -335,7 +317,7 @@ render_header("Kelola Guru & Karyawan", "karyawan");
     </div>
 </div>
 
-<!-- CARD 3: TABEL DAFTAR KARYAWAN + SORTING + BULK DELETE -->
+<!-- CARD 3: TABEL DAFTAR KARYAWAN + REAL-TIME SEARCH + SORTING + BULK DELETE -->
 <div class="card">
     <!-- PANEL FILTER & SORTING -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
@@ -343,12 +325,12 @@ render_header("Kelola Guru & Karyawan", "karyawan");
             <span>📋 Master Data Guru & Karyawan Terdaftar</span>
         </div>
 
-        <form method="GET" action="input_karyawan.php" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0;">
-            <!-- Input Pencarian -->
-            <input type="text" name="q_master" value="<?php echo h($q_master); ?>" placeholder="🔍 Cari PIN, Nama, Dept..." style="margin-bottom:0; height:38px; width:210px; font-size:13px;" autocomplete="off">
+        <form method="GET" action="input_karyawan.php" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0;" onsubmit="return false;">
+            <!-- Input Pencarian Real-Time (Tanpa Tekan Enter) -->
+            <input type="text" id="q_master" name="q_master" value="<?php echo h($q_master); ?>" placeholder="🔍 Cari Real-Time (Nama, PIN, Dept)..." style="margin-bottom:0; height:38px; width:250px; font-size:13px;" autocomplete="off">
             
             <!-- Dropdown Sorting -->
-            <select name="sort" onchange="this.form.submit()" style="margin-bottom:0; height:38px; font-size:13px; padding:6px 12px; width:auto; cursor:pointer;">
+            <select name="sort" onchange="location.href='input_karyawan.php?sort=' + this.value + (document.getElementById('q_master').value ? '&q_master=' + encodeURIComponent(document.getElementById('q_master').value) : '')" style="margin-bottom:0; height:38px; font-size:13px; padding:6px 12px; width:auto; cursor:pointer;">
                 <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 Urut PIN (1 ➔ 99)</option>
                 <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 Urut PIN (99 ➔ 1)</option>
                 <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
@@ -357,17 +339,13 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                 <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
                 <option value="dept_asc" <?php echo $sort === 'dept_asc' ? 'selected' : ''; ?>>🏢 Departemen</option>
             </select>
-
-            <?php if (!empty($q_master) || $sort !== 'pin_asc'): ?>
-            <a href="input_karyawan.php" style="font-size:12px; color:#ef4444; font-weight:600; text-decoration:none; padding:6px;">✕ Reset Filter</a>
-            <?php endif; ?>
         </form>
     </div>
 
     <!-- ACTION HEADER: TOTAL BADGE & BULK DELETE BUTTON -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
         <div style="font-size:13px; color:#64748b;">
-            Menampilkan <b><?php echo $result->num_rows; ?></b> data guru & karyawan
+            Menampilkan <b id="count-visible"><?php echo $total_master; ?></b> dari <b><?php echo $total_master; ?></b> data guru & karyawan
         </div>
 
         <form method="POST" action="input_karyawan.php" id="form-bulk" style="margin:0;">
@@ -383,8 +361,7 @@ render_header("Kelola Guru & Karyawan", "karyawan");
     // Helper URL untuk Header Sorting Clickable
     function sort_url($col_name, $current_sort) {
         $next_sort = ($current_sort === "{$col_name}_asc") ? "{$col_name}_desc" : "{$col_name}_asc";
-        $q = isset($_GET['q_master']) ? '&q_master=' . urlencode($_GET['q_master']) : '';
-        return "input_karyawan.php?sort={$next_sort}{$q}";
+        return "input_karyawan.php?sort={$next_sort}";
     }
 
     function sort_icon($col_name, $current_sort) {
@@ -395,7 +372,7 @@ render_header("Kelola Guru & Karyawan", "karyawan");
     ?>
 
     <div class="table-responsive">
-        <table>
+        <table id="tbl-master">
             <thead>
                 <tr>
                     <th style="width:40px; text-align:center;">
@@ -424,7 +401,7 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                     <th>Aksi</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tbody-master">
                 <?php
                 if ($result->num_rows > 0) {
                     while ($row = $result->fetch_assoc()) {
@@ -438,7 +415,7 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                         $dept_attr = h($row['departemen']);
                         $tipe_attr = h($row['tipe']);
 
-                        echo "<tr>
+                        echo "<tr class='master-row' data-pin='{$pin_attr}' data-nama='" . strtolower($nama_attr) . "' data-dept='" . strtolower($dept_attr) . "'>
                                 <td style='text-align:center;'>
                                     <input type='checkbox' name='pin_selected[]' value='{$pin_attr}' form='form-bulk' class='chk-item' onchange='updateBulkState()' style='width:18px; height:18px; cursor:pointer;'>
                                 </td>
@@ -462,9 +439,12 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                               </tr>";
                     }
                 } else {
-                    echo "<tr><td colspan='6' style='padding: 30px; color:#94a3b8;'>Data tidak ditemukan" . (!empty($q_master) ? " untuk kata kunci '" . h($q_master) . "'" : "") . ".</td></tr>";
+                    echo "<tr id='row-empty'><td colspan='6' style='padding: 30px; color:#94a3b8;'>Belum ada data guru & karyawan. Silakan tambah manual atau import dari Excel.</td></tr>";
                 }
                 ?>
+                <tr id="row-no-match" style="display:none;">
+                    <td colspan="6" style="padding: 30px; color:#94a3b8; text-align:center;">🔍 Data tidak ditemukan untuk kata kunci pencarian tersebut.</td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -541,7 +521,12 @@ document.getElementById('modal-edit-karyawan').addEventListener('click', functio
 // --- BULK SELECTION (CHECKBOX) ---
 function toggleSelectAll(master) {
     const checkboxes = document.querySelectorAll('.chk-item');
-    checkboxes.forEach(cb => cb.checked = master.checked);
+    checkboxes.forEach(cb => {
+        // Cuma centang baris yang sedang terlihat (tidak ter-hide search)
+        if (cb.closest('tr').style.display !== 'none') {
+            cb.checked = master.checked;
+        }
+    });
     updateBulkState();
 }
 
@@ -551,7 +536,7 @@ function updateBulkState() {
     const btnBulk = document.getElementById('btn-bulk-delete');
     const countSpan = document.getElementById('count-selected');
     const master = document.getElementById('check-all');
-    const totalItems = document.querySelectorAll('.chk-item').length;
+    const visibleCheckboxes = document.querySelectorAll('.master-row:not([style*="display: none"]) .chk-item');
 
     countSpan.textContent = count;
 
@@ -561,9 +546,53 @@ function updateBulkState() {
         btnBulk.style.display = 'none';
     }
 
-    if (master) {
-        master.checked = (count === totalItems && totalItems > 0);
+    if (master && visibleCheckboxes.length > 0) {
+        let allVisibleChecked = true;
+        visibleCheckboxes.forEach(cb => {
+            if (!cb.checked) allVisibleChecked = false;
+        });
+        master.checked = allVisibleChecked;
     }
+}
+
+// --- REAL-TIME INSTANT SEARCH (TANPA HARUS TEKAN ENTER) ---
+const inputQMaster = document.getElementById('q_master');
+const countVisibleSpan = document.getElementById('count-visible');
+const rowNoMatch = document.getElementById('row-no-match');
+
+function filterMasterTable() {
+    const val = inputQMaster.value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.master-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const pin  = row.getAttribute('data-pin') || '';
+        const nama = row.getAttribute('data-nama') || '';
+        const dept = row.getAttribute('data-dept') || '';
+
+        if (!val || pin.includes(val) || nama.includes(val) || dept.includes(val)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+            // Uncheck hidden items
+            const chk = row.querySelector('.chk-item');
+            if (chk) chk.checked = false;
+        }
+    });
+
+    if (countVisibleSpan) countVisibleSpan.textContent = visibleCount;
+    if (rowNoMatch) {
+        rowNoMatch.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+    }
+    updateBulkState();
+}
+
+inputQMaster.addEventListener('input', filterMasterTable);
+
+// Filter awal jika ada query di URL
+if (inputQMaster.value) {
+    filterMasterTable();
 }
 </script>
 
