@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN MANAJEMEN GURU & KARYAWAN (Dengan Edit & Bulk Delete)
+// HALAMAN MANAJEMEN GURU & KARYAWAN (Dengan Sorting & Search)
 // Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung
 // ============================================================
 
@@ -223,8 +223,57 @@ if (isset($_GET['hapus'])) {
     }
 }
 
-// Ambil daftar karyawan yang sudah terdaftar
-$result = $conn->query("SELECT * FROM master_karyawan ORDER BY pin ASC");
+// --- 7. SORTING & SERCHING MASTER KARYAWAN ---
+$sort = $_GET['sort'] ?? 'pin_asc';
+$q_master = trim($_GET['q_master'] ?? '');
+
+$order_by = "CAST(pin AS UNSIGNED) ASC, pin ASC"; // Default: Sorting Numeric PIN 1, 2, 3...
+switch ($sort) {
+    case 'pin_desc':
+        $order_by = "CAST(pin AS UNSIGNED) DESC, pin DESC";
+        break;
+    case 'nama_asc':
+        $order_by = "nama ASC";
+        break;
+    case 'nama_desc':
+        $order_by = "nama DESC";
+        break;
+    case 'dept_asc':
+        $order_by = "departemen ASC, CAST(pin AS UNSIGNED) ASC";
+        break;
+    case 'tipe_asc':
+        $order_by = "tipe ASC, CAST(pin AS UNSIGNED) ASC";
+        break;
+    case 'tipe_desc':
+        $order_by = "tipe DESC, CAST(pin AS UNSIGNED) ASC";
+        break;
+    default:
+        $sort = 'pin_asc';
+        $order_by = "CAST(pin AS UNSIGNED) ASC, pin ASC";
+        break;
+}
+
+$where_master = "";
+$params_master = [];
+$types_master = "";
+
+if (!empty($q_master)) {
+    $where_master = "WHERE (pin LIKE ? OR nama LIKE ? OR departemen LIKE ?)";
+    $param_q = "%" . $q_master . "%";
+    $params_master = [$param_q, $param_q, $param_q];
+    $types_master = "sss";
+}
+
+$sql_master = "SELECT * FROM master_karyawan {$where_master} ORDER BY {$order_by}";
+
+if (!empty($params_master)) {
+    $stmt_m = $conn->prepare($sql_master);
+    $stmt_m->bind_param($types_master, ...$params_master);
+    $stmt_m->execute();
+    $result = $stmt_m->get_result();
+} else {
+    $result = $conn->query($sql_master);
+}
 
 render_header("Kelola Guru & Karyawan", "karyawan");
 ?>
@@ -286,85 +335,139 @@ render_header("Kelola Guru & Karyawan", "karyawan");
     </div>
 </div>
 
-<!-- CARD 3: TABEL DAFTAR KARYAWAN + BULK DELETE -->
+<!-- CARD 3: TABEL DAFTAR KARYAWAN + SORTING + BULK DELETE -->
 <div class="card">
-    <form method="POST" action="input_karyawan.php" id="form-bulk">
-        <?php echo csrf_field(); ?>
-        
-        <div class="card-header" style="flex-wrap:wrap; gap:12px;">
-            <div class="card-title">
-                <span>📋 Master Data Guru & Karyawan Terdaftar</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <span class="badge badge-verif" style="font-size:13px; font-weight:700;">Total: <?php echo $result->num_rows; ?> Orang</span>
-                
-                <!-- Tombol Hapus Massal -->
-                <button type="submit" name="bulk_delete" id="btn-bulk-delete" class="btn" 
-                        style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-size:13px; padding:7px 14px; display:none;"
-                        onclick="return confirm('Yakin ingin menghapus semua data yang dicentang?')">
-                    🗑️ Hapus Terpilih (<span id="count-selected">0</span>)
-                </button>
-            </div>
+    <!-- PANEL FILTER & SORTING -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
+        <div class="card-title" style="margin-bottom:0;">
+            <span>📋 Master Data Guru & Karyawan Terdaftar</span>
         </div>
 
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width:40px; text-align:center;">
-                            <input type="checkbox" id="check-all" onclick="toggleSelectAll(this)" style="width:18px; height:18px; cursor:pointer;" title="Pilih Semua">
-                        </th>
-                        <th>PIN / ID</th>
-                        <th style="text-align:left;">Nama Lengkap</th>
-                        <th style="text-align:left;">Departemen / Jabatan</th>
-                        <th>Tipe Kategori</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    if ($result->num_rows > 0) {
-                        while ($row = $result->fetch_assoc()) {
-                            $is_guru = ($row['tipe'] === 'guru');
-                            $badge_tipe = $is_guru 
-                                ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>👨‍🏫 Guru</span>"
-                                : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>👔 Karyawan</span>";
+        <form method="GET" action="input_karyawan.php" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0;">
+            <!-- Input Pencarian -->
+            <input type="text" name="q_master" value="<?php echo h($q_master); ?>" placeholder="🔍 Cari PIN, Nama, Dept..." style="margin-bottom:0; height:38px; width:210px; font-size:13px;" autocomplete="off">
+            
+            <!-- Dropdown Sorting -->
+            <select name="sort" onchange="this.form.submit()" style="margin-bottom:0; height:38px; font-size:13px; padding:6px 12px; width:auto; cursor:pointer;">
+                <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 Urut PIN (1 ➔ 99)</option>
+                <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 Urut PIN (99 ➔ 1)</option>
+                <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
+                <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>🔤 Nama (Z ➔ A)</option>
+                <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>👨‍🏫 Tipe (Guru Dulu)</option>
+                <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
+                <option value="dept_asc" <?php echo $sort === 'dept_asc' ? 'selected' : ''; ?>>🏢 Departemen</option>
+            </select>
 
-                            $pin_attr  = h($row['pin']);
-                            $nama_attr = h($row['nama']);
-                            $dept_attr = h($row['departemen']);
-                            $tipe_attr = h($row['tipe']);
+            <?php if (!empty($q_master) || $sort !== 'pin_asc'): ?>
+            <a href="input_karyawan.php" style="font-size:12px; color:#ef4444; font-weight:600; text-decoration:none; padding:6px;">✕ Reset Filter</a>
+            <?php endif; ?>
+        </form>
+    </div>
 
-                            echo "<tr>
-                                    <td style='text-align:center;'>
-                                        <input type='checkbox' name='pin_selected[]' value='{$pin_attr}' class='chk-item' onchange='updateBulkState()' style='width:18px; height:18px; cursor:pointer;'>
-                                    </td>
-                                    <td><code style='background:#f1f5f9; padding:4px 10px; border-radius:6px; font-weight:700; color:#0f172a;'>{$pin_attr}</code></td>
-                                    <td style='text-align:left;'><b>{$nama_attr}</b></td>
-                                    <td style='text-align:left; color:#64748b;'>{$dept_attr}</td>
-                                    <td>{$badge_tipe}</td>
-                                    <td>
-                                        <div style='display:flex; gap:6px; justify-content:center;'>
-                                            <button type='button' class='btn' style='background:#f1f5f9; color:#334155; font-size:12px; padding:6px 12px; border:1px solid #cbd5e1;'
-                                                    onclick='bukaModalEditKaryawan(\"{$pin_attr}\", \"{$nama_attr}\", \"{$dept_attr}\", \"{$tipe_attr}\")'>
-                                                ✏️ Edit
-                                            </button>
-                                            <a class='btn' style='background:#fee2e2; color:#dc2626; font-size:12px; padding:6px 12px; border:1px solid #fca5a5; text-decoration:none;' 
-                                               href='input_karyawan.php?hapus=" . urlencode($row['pin']) . "' 
-                                               onclick=\"return confirm('Yakin ingin menghapus data {$nama_attr}?')\">
-                                                🗑️ Hapus
-                                            </a>
-                                        </div>
-                                    </td>
-                                  </tr>";
-                        }
-                    } else {
-                        echo "<tr><td colspan='6' style='padding: 30px; color:#94a3b8;'>Belum ada data guru & karyawan. Silakan tambah manual atau import dari Excel.</td></tr>";
+    <!-- ACTION HEADER: TOTAL BADGE & BULK DELETE BUTTON -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+        <div style="font-size:13px; color:#64748b;">
+            Menampilkan <b><?php echo $result->num_rows; ?></b> data guru & karyawan
+        </div>
+
+        <form method="POST" action="input_karyawan.php" id="form-bulk" style="margin:0;">
+            <?php echo csrf_field(); ?>
+            <button type="submit" name="bulk_delete" id="btn-bulk-delete" class="btn" 
+                    style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-size:13px; padding:7px 14px; display:none;"
+                    onclick="return confirm('Yakin ingin menghapus semua data yang dicentang?')">
+                🗑️ Hapus Terpilih (<span id="count-selected">0</span>)
+            </button>
+    </div>
+
+    <?php
+    // Helper URL untuk Header Sorting Clickable
+    function sort_url($col_name, $current_sort) {
+        $next_sort = ($current_sort === "{$col_name}_asc") ? "{$col_name}_desc" : "{$col_name}_asc";
+        $q = isset($_GET['q_master']) ? '&q_master=' . urlencode($_GET['q_master']) : '';
+        return "input_karyawan.php?sort={$next_sort}{$q}";
+    }
+
+    function sort_icon($col_name, $current_sort) {
+        if ($current_sort === "{$col_name}_asc") return " 🔼";
+        if ($current_sort === "{$col_name}_desc") return " 🔽";
+        return " <span style='color:#cbd5e1;'>↕</span>";
+    }
+    ?>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:40px; text-align:center;">
+                        <input type="checkbox" id="check-all" onclick="toggleSelectAll(this)" style="width:18px; height:18px; cursor:pointer;" title="Pilih Semua">
+                    </th>
+                    <th>
+                        <a href="<?php echo sort_url('pin', $sort); ?>" style="color:inherit; text-decoration:none;" title="Klik untuk mengurutkan PIN">
+                            PIN / ID<?php echo sort_icon('pin', $sort); ?>
+                        </a>
+                    </th>
+                    <th style="text-align:left;">
+                        <a href="<?php echo sort_url('nama', $sort); ?>" style="color:inherit; text-decoration:none;" title="Klik untuk mengurutkan Nama">
+                            Nama Lengkap<?php echo sort_icon('nama', $sort); ?>
+                        </a>
+                    </th>
+                    <th style="text-align:left;">
+                        <a href="<?php echo sort_url('dept', $sort); ?>" style="color:inherit; text-decoration:none;" title="Klik untuk mengurutkan Departemen">
+                            Departemen / Jabatan<?php echo sort_icon('dept', $sort); ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="<?php echo sort_url('tipe', $sort); ?>" style="color:inherit; text-decoration:none;" title="Klik untuk mengurutkan Tipe Kategori">
+                            Tipe Kategori<?php echo sort_icon('tipe', $sort); ?>
+                        </a>
+                    </th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                if ($result->num_rows > 0) {
+                    while ($row = $result->fetch_assoc()) {
+                        $is_guru = ($row['tipe'] === 'guru');
+                        $badge_tipe = $is_guru 
+                            ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>👨‍🏫 Guru</span>"
+                            : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>👔 Karyawan</span>";
+
+                        $pin_attr  = h($row['pin']);
+                        $nama_attr = h($row['nama']);
+                        $dept_attr = h($row['departemen']);
+                        $tipe_attr = h($row['tipe']);
+
+                        echo "<tr>
+                                <td style='text-align:center;'>
+                                    <input type='checkbox' name='pin_selected[]' value='{$pin_attr}' form='form-bulk' class='chk-item' onchange='updateBulkState()' style='width:18px; height:18px; cursor:pointer;'>
+                                </td>
+                                <td><code style='background:#f1f5f9; padding:4px 10px; border-radius:6px; font-weight:700; color:#0f172a;'>{$pin_attr}</code></td>
+                                <td style='text-align:left;'><b>{$nama_attr}</b></td>
+                                <td style='text-align:left; color:#64748b;'>{$dept_attr}</td>
+                                <td>{$badge_tipe}</td>
+                                <td>
+                                    <div style='display:flex; gap:6px; justify-content:center;'>
+                                        <button type='button' class='btn' style='background:#f1f5f9; color:#334155; font-size:12px; padding:6px 12px; border:1px solid #cbd5e1;'
+                                                onclick='bukaModalEditKaryawan(\"{$pin_attr}\", \"{$nama_attr}\", \"{$dept_attr}\", \"{$tipe_attr}\")'>
+                                            ✏️ Edit
+                                        </button>
+                                        <a class='btn' style='background:#fee2e2; color:#dc2626; font-size:12px; padding:6px 12px; border:1px solid #fca5a5; text-decoration:none;' 
+                                           href='input_karyawan.php?hapus=" . urlencode($row['pin']) . "' 
+                                           onclick=\"return confirm('Yakin ingin menghapus data {$nama_attr}?')\">
+                                            🗑️ Hapus
+                                        </a>
+                                    </div>
+                                </td>
+                              </tr>";
                     }
-                    ?>
-                </tbody>
-            </table>
-        </div>
+                } else {
+                    echo "<tr><td colspan='6' style='padding: 30px; color:#94a3b8;'>Data tidak ditemukan" . (!empty($q_master) ? " untuk kata kunci '" . h($q_master) . "'" : "") . ".</td></tr>";
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
     </form>
 </div>
 

@@ -71,7 +71,7 @@ $sql_guru = "SELECT mk.*,
              FROM master_karyawan mk 
              LEFT JOIN jadwal_guru jg ON mk.pin = jg.pin 
              GROUP BY mk.pin 
-             ORDER BY mk.tipe DESC, mk.nama ASC";
+             ORDER BY mk.tipe DESC, CAST(mk.pin AS UNSIGNED) ASC, mk.pin ASC";
 $result_guru = $conn->query($sql_guru);
 
 render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
