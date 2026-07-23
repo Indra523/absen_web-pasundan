@@ -21,11 +21,11 @@ if (isset($_GET['download_template'])) {
     header('Content-Disposition: attachment; filename=template_guru_karyawan.csv');
     $output = fopen('php://output', 'w');
     // Header CSV
-    fputcsv($output, ['No', 'PIN', 'Nama', 'Departemen']);
+    fputcsv($output, ['No', 'PIN', 'Nama', 'Departemen', 'Tipe (karyawan/guru)']);
     // Contoh Data
-    fputcsv($output, ['1', '88', 'Drs. H. Ahmad Ridwan, M.Pd.', 'Guru Pengajar']);
-    fputcsv($output, ['2', '89', 'Budi Santoso, S.ST.', 'Staff TU / Laboratorium']);
-    fputcsv($output, ['3', '90', 'Citra Dewi, S.Pd.', 'Guru Pengajar']);
+    fputcsv($output, ['1', '88', 'Drs. H. Ahmad Ridwan, M.Pd.', 'Guru Pengajar', 'guru']);
+    fputcsv($output, ['2', '89', 'Budi Santoso, S.ST.', 'Staff TU / Laboratorium', 'karyawan']);
+    fputcsv($output, ['3', '90', 'Citra Dewi, S.Pd.', 'Guru Pengajar', 'guru']);
     fclose($output);
     exit;
 }
@@ -37,10 +37,11 @@ if (isset($_POST['submit'])) {
     $pin        = trim($_POST['pin'] ?? '');
     $nama       = trim($_POST['nama'] ?? '');
     $departemen = trim($_POST['departemen'] ?? '');
+    $tipe       = in_array($_POST['tipe'] ?? '', ['karyawan', 'guru']) ? $_POST['tipe'] : 'karyawan';
 
     if (!empty($pin) && !empty($nama)) {
-        $stmt = $conn->prepare("INSERT INTO master_karyawan (pin, nama, departemen) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE nama = ?, departemen = ?");
-        $stmt->bind_param("sssss", $pin, $nama, $departemen, $nama, $departemen);
+        $stmt = $conn->prepare("INSERT INTO master_karyawan (pin, nama, departemen, tipe) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama = ?, departemen = ?, tipe = ?");
+        $stmt->bind_param("sssssss", $pin, $nama, $departemen, $tipe, $nama, $departemen, $tipe);
         
         if ($stmt->execute()) {
             $pesan = "<p style='color: #155724; background: #d4edda; border: 1px solid #c3e6cb; padding: 12px; border-radius: 8px; margin-bottom: 15px;'><b>✅ Berhasil!</b> Data Guru/Karyawan berhasil disimpan.</p>";
@@ -95,6 +96,7 @@ if (isset($_POST['import_excel'])) {
             $colPin  = -1;
             $colNama = -1;
             $colDept = -1;
+            $colTipe = -1;
 
             $headerRow = $rows[0];
             foreach ($headerRow as $idx => $val) {
@@ -105,6 +107,8 @@ if (isset($_POST['import_excel'])) {
                     $colNama = $idx;
                 } elseif (in_array($v, ['departemen', 'dept', 'bagian', 'jabatan', 'unit'])) {
                     $colDept = $idx;
+                } elseif (in_array($v, ['tipe', 'type', 'kategori', 'tipe (karyawan/guru)'])) {
+                    $colTipe = $idx;
                 }
             }
 
@@ -117,29 +121,33 @@ if (isset($_POST['import_excel'])) {
                     $colPin  = 1;
                     $colNama = 2;
                     $colDept = 3;
+                    $colTipe = 4;
                     $startRow = 0;
                 } else {
                     $colPin  = (count($firstRow) >= 3) ? 1 : 0;
                     $colNama = (count($firstRow) >= 3) ? 2 : 1;
                     $colDept = (count($firstRow) >= 4) ? 3 : 2;
+                    $colTipe = (count($firstRow) >= 5) ? 4 : -1;
                     $startRow = 1;
                 }
             }
 
-            $stmt = $conn->prepare("INSERT INTO master_karyawan (pin, nama, departemen) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE nama = VALUES(nama), departemen = VALUES(departemen)");
+            $stmt = $conn->prepare("INSERT INTO master_karyawan (pin, nama, departemen, tipe) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE nama = VALUES(nama), departemen = VALUES(departemen), tipe = VALUES(tipe)");
 
             for ($i = $startRow; $i < count($rows); $i++) {
                 $row = $rows[$i];
                 $pin  = isset($row[$colPin]) ? trim(strval($row[$colPin])) : '';
                 $nama = isset($row[$colNama]) ? trim(strval($row[$colNama])) : '';
                 $dept = isset($row[$colDept]) ? trim(strval($row[$colDept])) : '';
+                $tipe_val = ($colTipe !== -1 && isset($row[$colTipe])) ? strtolower(trim(strval($row[$colTipe]))) : 'karyawan';
+                $tipe = in_array($tipe_val, ['guru', 'karyawan']) ? $tipe_val : 'karyawan';
 
                 if (empty($pin) || empty($nama)) {
                     $skipped++;
                     continue;
                 }
 
-                $stmt->bind_param("sss", $pin, $nama, $dept);
+                $stmt->bind_param("ssss", $pin, $nama, $dept, $tipe);
                 if ($stmt->execute()) {
                     if ($stmt->affected_rows === 1) {
                         $imported++;
@@ -199,6 +207,12 @@ render_header("Kelola Guru & Karyawan", "karyawan");
             <label>Departemen / Jabatan:</label>
             <input type="text" name="departemen" placeholder="Contoh: Guru Pengajar / Staff TU">
 
+            <label>Tipe Kategori:</label>
+            <select name="tipe" style="margin-bottom:18px;">
+                <option value="karyawan">👔 Karyawan / Staff (Hari kerja kalender)</option>
+                <option value="guru">👨‍🏫 Guru Pengajar (Sesuai jadwal ngajar)</option>
+            </select>
+
             <button type="submit" name="submit" class="btn btn-success btn-block">💾 Simpan Data Karyawan</button>
         </form>
     </div>
@@ -219,7 +233,8 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                 • Kolom 1: <code>No</code> (opsional)<br>
                 • Kolom 2: <code>PIN / User ID</code> (Wajib)<br>
                 • Kolom 3: <code>Nama Lengkap</code> (Wajib)<br>
-                • Kolom 4: <code>Departemen / Jabatan</code> (Opsional)
+                • Kolom 4: <code>Departemen / Jabatan</code> (Opsional)<br>
+                • Kolom 5: <code>Tipe</code>: <code>karyawan</code> atau <code>guru</code> (Opsional)
             </div>
 
             <button type="submit" name="import_excel" class="btn btn-primary btn-block">📥 Unggah & Import Excel</button>
@@ -245,6 +260,7 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                     <th>PIN / ID</th>
                     <th>Nama Lengkap</th>
                     <th>Departemen / Jabatan</th>
+                    <th>Tipe Kategori</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -252,15 +268,21 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                 <?php
                 if ($result->num_rows > 0) {
                     while ($row = $result->fetch_assoc()) {
+                        $is_guru = ($row['tipe'] === 'guru');
+                        $badge_tipe = $is_guru 
+                            ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>👨‍🏫 Guru</span>"
+                            : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>👔 Karyawan</span>";
+
                         echo "<tr>
                                 <td><code style='background:#f1f5f9; padding:4px 10px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($row['pin']) . "</code></td>
                                 <td style='text-align:left;'><b>" . h($row['nama']) . "</b></td>
                                 <td style='text-align:left; color:#64748b;'>" . h($row['departemen']) . "</td>
-                                <td><a class='btn-hapus' href='input_karyawan.php?hapus=" . urlencode($row['pin']) . "' onclick=\"return confirm('Yakin ingin menghapus data " . h($row['nama']) . "?')\">Hapus</a></td>
+                                <td>{$badge_tipe}</td>
+                                <td><a class='btn-hapus' style='color:#dc2626; font-size:13px; font-weight:600; text-decoration:none;' href='input_karyawan.php?hapus=" . urlencode($row['pin']) . "' onclick=\"return confirm('Yakin ingin menghapus data " . h($row['nama']) . "?')\">🗑️ Hapus</a></td>
                               </tr>";
                     }
                 } else {
-                    echo "<tr><td colspan='4' style='padding: 30px; color:#94a3b8;'>Belum ada data guru & karyawan. Silakan tambah manual atau import dari Excel.</td></tr>";
+                    echo "<tr><td colspan='5' style='padding: 30px; color:#94a3b8;'>Belum ada data guru & karyawan. Silakan tambah manual atau import dari Excel.</td></tr>";
                 }
                 ?>
             </tbody>

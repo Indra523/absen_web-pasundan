@@ -338,6 +338,11 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
                 <span>Live Monitoring</span>
             </a>
 
+            <a href="export_bulanan.php" class="nav-item <?php echo $active_menu === 'laporan_bulanan' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon">📅</span>
+                <span>Laporan Bulanan</span>
+            </a>
+
             <?php if (is_superadmin()): ?>
             <a href="input_karyawan.php" class="nav-item <?php echo $active_menu === 'karyawan' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon">👥</span>
@@ -350,6 +355,11 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             </a>
 
             <div class="menu-label" style="margin-top: 10px;">Pengaturan</div>
+            <a href="kelola_jadwal.php" class="nav-item <?php echo $active_menu === 'jadwal_guru' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon">⚙️</span>
+                <span>Kelola Jadwal Guru</span>
+            </a>
+
             <a href="kelola_user.php" class="nav-item <?php echo $active_menu === 'users' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon">🔑</span>
                 <span>Manajemen User</span>

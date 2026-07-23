@@ -20,9 +20,11 @@ $params = [];
 $types = "";
 
 if ($tgl !== 'all' && !empty($tgl)) {
-    $where[] = "DATE(log_absen.waktu) = ?";
+    // Optimization: Range scan agar menggunakan index idx_waktu
+    $where[] = "(log_absen.waktu >= ? AND log_absen.waktu < DATE_ADD(?, INTERVAL 1 DAY))";
+    $params[] = $tgl . " 00:00:00";
     $params[] = $tgl;
-    $types .= "s";
+    $types .= "ss";
 }
 
 if (!empty($q)) {
@@ -43,9 +45,19 @@ if ($status_filter !== '' && in_array($status_filter, ['0', '1'])) {
 
 $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
-$sql = "SELECT log_absen.*, master_karyawan.nama, master_karyawan.departemen 
+// Query utama + LEFT JOIN ke master_karyawan dan check jadwal guru
+// MOD(DAYOFWEEK(la.waktu) + 5, 7) + 1 menghitung hari: 1=Senin ... 6=Sabtu, 7=Minggu
+$sql = "SELECT log_absen.*, 
+               master_karyawan.nama, 
+               master_karyawan.departemen, 
+               master_karyawan.tipe,
+               jg.id AS jg_id,
+               (SELECT COUNT(*) FROM jadwal_guru WHERE pin = log_absen.pin) AS total_jadwal_guru
         FROM log_absen 
         LEFT JOIN master_karyawan ON log_absen.pin = master_karyawan.pin 
+        LEFT JOIN jadwal_guru jg 
+               ON jg.pin = log_absen.pin 
+              AND jg.hari = (MOD(DAYOFWEEK(log_absen.waktu) + 5, 7) + 1)
         {$where_sql}
         ORDER BY log_absen.waktu DESC LIMIT 300";
 
@@ -76,11 +88,26 @@ if ($result->num_rows > 0) {
         if ($row['tipe_verifikasi'] == '1') $tipe_teks = "Sidik Jari 👆";
         elseif ($row['tipe_verifikasi'] == '15') $tipe_teks = "Wajah 👤";
 
+        // Cek Badge Jadwal Guru
+        $badge_jadwal = "";
+        $is_guru = ($row['tipe'] ?? '') === 'guru';
+        if ($is_guru) {
+            if ($row['total_jadwal_guru'] == 0) {
+                $badge_jadwal = "<span class='badge' style='background:#fef3c7; color:#92400e; border:1px solid #fde68a;' title='Jadwal ngajar belum diatur superadmin'>❓ Belum Ada Jadwal</span>";
+            } elseif (empty($row['jg_id'])) {
+                $badge_jadwal = "<span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;' title='Absen di luar hari jadwal ngajar'>⚠️ Di Luar Jadwal</span>";
+            }
+        }
+
         if (!empty($row['nama'])) {
             $nama_escaped = h($row['nama']);
             $dept_escaped = h($row['departemen']);
+            $tipe_label   = $is_guru ? "👨‍🏫 Guru" : "👔 Karyawan";
             $tampil_nama = "<td class='nama-container'>
-                                <div class='nama-title'>{$nama_escaped}</div>
+                                <div style='display:flex; align-items:center; gap:6px;'>
+                                    <div class='nama-title'>{$nama_escaped}</div>
+                                    <span style='font-size:10px; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:600;'>{$tipe_label}</span>
+                                </div>
                                 <div class='dept-subtitle'>{$dept_escaped}</div>
                             </td>";
         } else {
@@ -93,7 +120,12 @@ if ($result->num_rows > 0) {
                 {$tampil_nama}
                 <td><b>" . h($row['waktu']) . "</b></td>
                 <td><span class='badge {$badge_class}'>" . h($status_teks) . "</span></td>
-                <td><span class='badge badge-verif'>" . h($tipe_teks) . "</span></td>
+                <td>
+                    <div style='display:flex; flex-direction:column; align-items:center; gap:4px;'>
+                        <span class='badge badge-verif'>" . h($tipe_teks) . "</span>
+                        {$badge_jadwal}
+                    </div>
+                </td>
               </tr>";
         $no++;
     }

@@ -18,9 +18,10 @@ $params = [];
 $types = "";
 
 if ($tgl !== 'all' && !empty($tgl)) {
-    $where[] = "DATE(log_absen.waktu) = ?";
+    $where[] = "(log_absen.waktu >= ? AND log_absen.waktu < DATE_ADD(?, INTERVAL 1 DAY))";
+    $params[] = $tgl . " 00:00:00";
     $params[] = $tgl;
-    $types .= "s";
+    $types .= "ss";
 }
 
 if (!empty($q)) {
