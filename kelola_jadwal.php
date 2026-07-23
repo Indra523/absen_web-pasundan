@@ -144,10 +144,10 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                             foreach ($hari_arr as $hn) {
                                 $nama_h = $nama_hari_map[(int)$hn] ?? '';
                                 if ($nama_h) {
-                                    $badge_hari[] = "<span style='background:#f1f5f9; color:#0f172a; font-weight:700; font-size:11px; padding:3px 8px; border-radius:6px; border:1px solid #cbd5e1;'>{$nama_h}</span>";
+                                    $badge_hari[] = "<span style='background:#f1f5f9; color:#0f172a; font-weight:700; font-size:11px; padding:4px 9px; border-radius:6px; border:1px solid #cbd5e1; white-space:nowrap;'>{$nama_h}</span>";
                                 }
                             }
-                            $tampil_jadwal = implode(' ', $badge_hari);
+                            $tampil_jadwal = "<div style='display:flex; flex-wrap:wrap; gap:6px; align-items:center;'>" . implode('', $badge_hari) . "</div>";
                         }
 
                         $hari_json = json_encode(array_map('intval', $hari_arr));
