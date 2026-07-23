@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // HALAMAN MANAJEMEN USER — Superadmin Only
-// Fitur: Tambah User, Edit Username/Password, Hapus User
+// Fitur: Tambah User, Edit Username/Password, Hapus User, Status Online & Last Active
 // ============================================================
 
 require_once __DIR__ . '/layout.php';
@@ -10,6 +10,28 @@ require_role(['superadmin']);
 $conn = getDB();
 $pesan_sukses = '';
 $pesan_error  = '';
+
+// Helper Format Waktu Terakhir Aktif
+function format_last_active($datetime_str) {
+    if (empty($datetime_str)) {
+        return "<span style='color:#94a3b8; font-style:italic;'>Belum pernah</span>";
+    }
+    $time = strtotime($datetime_str);
+    $diff = time() - $time;
+
+    if ($diff < 60) {
+        return "<span style='color:#10b981; font-weight:700;'>Baru saja</span>";
+    } elseif ($diff < 3600) {
+        $m = floor($diff / 60);
+        return "{$m} menit yang lalu";
+    } elseif (date('Y-m-d', $time) === date('Y-m-d')) {
+        return "Hari ini " . date('H:i', $time);
+    } elseif (date('Y-m-d', $time) === date('Y-m-d', strtotime('-1 day'))) {
+        return "Kemarin " . date('H:i', $time);
+    } else {
+        return date('d/m/Y H:i', $time);
+    }
+}
 
 // -------------------------------------------------------
 // PROSES POST ACTION
@@ -145,9 +167,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // -------------------------------------------------------
-// AMBIL SEMUA DATA USER
+// AMBIL SEMUA DATA USER (LENGKAP DENGAN LAST ACTIVE)
 // -------------------------------------------------------
-$semua_user = $conn->query("SELECT id, username, role, created_at FROM users ORDER BY id ASC");
+$semua_user = $conn->query("SELECT id, username, role, created_at, last_active FROM users ORDER BY id ASC");
+
+// Hitung total online (last_active dalam 5 menit terakhir)
+$online_count = 0;
+$user_list = [];
+if ($semua_user && $semua_user->num_rows > 0) {
+    while ($row = $semua_user->fetch_assoc()) {
+        $last_act_ts = !empty($row['last_active']) ? strtotime($row['last_active']) : 0;
+        $is_online = (time() - $last_act_ts) <= 300; // 5 menit = 300 detik
+        if ($is_online) $online_count++;
+        $row['is_online'] = $is_online;
+        $user_list[] = $row;
+    }
+}
 
 render_header("Manajemen User", "users");
 ?>
@@ -172,7 +207,22 @@ render_header("Manajemen User", "users");
     .user-mgmt-grid { grid-template-columns: 1fr !important; }
     .user-info-grid  { grid-template-columns: 1fr !important; }
 }
+.pulse-green {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulseGlow 1.8s infinite;
+}
+@keyframes pulseGlow {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
 </style>
+
 <div class="user-mgmt-grid" style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
 
     <!-- PANEL KIRI: FORM TAMBAH USER -->
@@ -191,7 +241,7 @@ render_header("Manajemen User", "users");
 
                 <label for="password_baru">Password</label>
                 <div style="position: relative; margin-bottom: 18px;">
-                    <input type="password" id="password_baru" name="password_baru" placeholder="Minimal 6 karakter" style="margin-bottom: 0; padding-right: 44px;" autocomplete="new-password">
+                    <input type="password" id="password_baru" name="password_baru" placeholder="Minimal 6 karakter" style="margin-bottom: 0; padding-right: 44px;" autocomplete="new-password" required>
                     <button type="button" onclick="togglePass('password_baru', 'eye-tambah')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:18px; color:#64748b;" id="eye-tambah">👁️</button>
                 </div>
 
@@ -211,8 +261,16 @@ render_header("Manajemen User", "users");
     <!-- PANEL KANAN: DAFTAR USER -->
     <div>
         <div class="card" style="margin-bottom: 24px;">
-            <div class="card-header">
-                <div class="card-title">👥 Daftar User Aktif (<?php echo $semua_user->num_rows; ?> User)</div>
+            <div class="card-header" style="flex-wrap:wrap; gap:10px;">
+                <div class="card-title">👥 Daftar User System</div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span class="badge badge-verif" style="font-size:12px; font-weight:700; background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">
+                        <span class="pulse-green" style="margin-right:4px;"></span> <?php echo $online_count; ?> Online
+                    </span>
+                    <span class="badge badge-verif" style="font-size:12px; font-weight:700;">
+                        Total: <?php echo count($user_list); ?> User
+                    </span>
+                </div>
             </div>
 
             <div class="table-responsive">
@@ -222,19 +280,24 @@ render_header("Manajemen User", "users");
                             <th>No</th>
                             <th style="text-align:left;">Username</th>
                             <th>Role</th>
-                            <th>Dibuat</th>
+                            <th>Status</th>
+                            <th>Terakhir Aktif</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        $no = 1;
-                        $semua_user->data_seek(0);
-                        while ($u = $semua_user->fetch_assoc()):
-                            $is_self = ($u['id'] == ($_SESSION['user_id'] ?? 0));
-                            $role_badge_color = $u['role'] === 'superadmin'
-                                ? 'background:#fef3c7; color:#92400e; border:1px solid #fde68a;'
-                                : 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;';
+                        if (!empty($user_list)):
+                            $no = 1;
+                            foreach ($user_list as $u):
+                                $is_self = ($u['id'] == ($_SESSION['user_id'] ?? 0));
+                                $role_badge_color = $u['role'] === 'superadmin'
+                                    ? 'background:#fef3c7; color:#92400e; border:1px solid #fde68a;'
+                                    : 'background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;';
+
+                                $status_badge = $u['is_online']
+                                    ? "<span class='badge' style='background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;'><span class='pulse-green' style='margin-right:4px;'></span> Online</span>"
+                                    : "<span class='badge' style='background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0;'>⚪ Offline</span>";
                         ?>
                         <tr>
                             <td><b><?php echo $no++; ?></b></td>
@@ -244,7 +307,7 @@ render_header("Manajemen User", "users");
                                     <div>
                                         <div style="font-weight:700; color:#0f172a;"><?php echo h($u['username']); ?></div>
                                         <?php if ($is_self): ?>
-                                        <div style="font-size:11px; color:#10b981; font-weight:600;">● Akun Anda</div>
+                                        <div style="font-size:11px; color:#10b981; font-weight:600;">● Akun Anda (Aktif)</div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -254,14 +317,15 @@ render_header("Manajemen User", "users");
                                     <?php echo $u['role'] === 'superadmin' ? '👑 Superadmin' : '👤 Admin'; ?>
                                 </span>
                             </td>
-                            <td style="color:#64748b; font-size:13px;">
-                                <?php echo $u['created_at'] ? date('d/m/Y', strtotime($u['created_at'])) : '-'; ?>
+                            <td><?php echo $status_badge; ?></td>
+                            <td style="color:#475569; font-size:12px; font-weight:600;">
+                                <?php echo format_last_active($u['last_active']); ?>
                             </td>
                             <td>
                                 <div style="display:flex; gap:8px; justify-content:center;">
                                     <button
                                         class="btn"
-                                        style="background:#f1f5f9; color:#334155; font-size:12px; padding:7px 14px; border:1px solid #e2e8f0;"
+                                        style="background:#f1f5f9; color:#334155; font-size:12px; padding:7px 12px; border:1px solid #e2e8f0;"
                                         onclick="bukaModalEdit(<?php echo $u['id']; ?>, '<?php echo h($u['username']); ?>', '<?php echo $u['role']; ?>')"
                                     >✏️ Edit</button>
 
@@ -270,7 +334,7 @@ render_header("Manajemen User", "users");
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="action" value="hapus">
                                         <input type="hidden" name="id_hapus" value="<?php echo $u['id']; ?>">
-                                        <button type="submit" class="btn" style="background:#fee2e2; color:#dc2626; font-size:12px; padding:7px 14px; border:1px solid #fca5a5;">🗑️ Hapus</button>
+                                        <button type="submit" class="btn" style="background:#fee2e2; color:#dc2626; font-size:12px; padding:7px 12px; border:1px solid #fca5a5;">🗑️ Hapus</button>
                                     </form>
                                     <?php else: ?>
                                     <span style="font-size:12px; color:#94a3b8; padding:7px 0;">—</span>
@@ -278,7 +342,9 @@ render_header("Manajemen User", "users");
                                 </div>
                             </td>
                         </tr>
-                        <?php endwhile; ?>
+                        <?php endforeach; else: ?>
+                        <tr><td colspan="6" style="padding:30px; color:#94a3b8;">Belum ada user.</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -286,7 +352,7 @@ render_header("Manajemen User", "users");
 
         <!-- INFO ROLE -->
         <div class="card" style="margin-bottom:0; background: linear-gradient(135deg, #f8fafc, #f1f5f9);">
-            <div class="card-title" style="font-size:14px; margin-bottom:14px;">ℹ️ Keterangan Role</div>
+            <div class="card-title" style="font-size:14px; margin-bottom:14px;">ℹ️ Keterangan Status & Role</div>
             <div class="user-info-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
                 <div style="background:#fff; border-radius:10px; padding:14px 16px; border:1px solid #e2e8f0;">
                     <div style="font-weight:700; color:#0f172a; font-size:13px; margin-bottom:6px;">👑 Superadmin</div>
@@ -294,16 +360,15 @@ render_header("Manajemen User", "users");
                         <li>Live Monitoring Absensi</li>
                         <li>Kelola Data Guru & Karyawan</li>
                         <li>Sinkronisasi Mesin</li>
-                        <li>Manajemen User</li>
+                        <li>Manajemen User & Monitoring Status</li>
                         <li>Export & Import Data</li>
                     </ul>
                 </div>
                 <div style="background:#fff; border-radius:10px; padding:14px 16px; border:1px solid #e2e8f0;">
-                    <div style="font-weight:700; color:#0f172a; font-size:13px; margin-bottom:6px;">👤 Admin</div>
+                    <div style="font-weight:700; color:#0f172a; font-size:13px; margin-bottom:6px;">🟢 Status Online & Offline</div>
                     <ul style="font-size:13px; color:#64748b; padding-left:16px; line-height:1.8;">
-                        <li>Live Monitoring Absensi</li>
-                        <li>Filter Tanggal & Pencarian</li>
-                        <li>Export ke Excel</li>
+                        <li><b>Online:</b> Aktif membuka web dalam 5 menit terakhir.</li>
+                        <li><b>Offline:</b> Tidak aktif/sudah menutup web > 5 menit.</li>
                     </ul>
                 </div>
             </div>
@@ -370,12 +435,10 @@ function tutupModalEdit() {
     document.getElementById('modal-edit').style.display = 'none';
 }
 
-// Tutup modal saat klik di luar kotak
 document.getElementById('modal-edit').addEventListener('click', function(e) {
     if (e.target === this) tutupModalEdit();
 });
 
-// Toggle show/hide password
 function togglePass(inputId, btnId) {
     const input = document.getElementById(inputId);
     const btn   = document.getElementById(btnId);
