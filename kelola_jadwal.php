@@ -155,6 +155,18 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                         $pin_attr  = h($g['pin']);
                         $dept_attr = h($g['departemen']);
 
+                        $btn_aksi = "";
+                        if ($is_guru) {
+                            $btn_aksi = "<button type='button' class='btn' style='background:linear-gradient(135deg,#3b82f6,#6366f1); color:#ffffff; font-size:12px; padding:6px 12px; border:none; box-shadow:0 2px 6px rgba(59,130,246,0.3);' 
+                                                onclick='bukaModalJadwal(\"{$pin_attr}\", \"{$nama_attr}\", {$hari_json})'>
+                                            ✏️ Atur Jadwal
+                                        </button>";
+                        } else {
+                            $btn_aksi = "<button type='button' class='btn' style='background:#f1f5f9; color:#94a3b8; font-size:12px; padding:6px 12px; border:1px solid #e2e8f0; cursor:not-allowed;' disabled title='Hanya untuk kategori Guru Pengajar'>
+                                            🔒 Tidak Perlu Jadwal
+                                        </button>";
+                        }
+
                         echo "<tr class='jadwal-row' data-pin='{$pin_attr}' data-nama='" . strtolower($nama_attr) . "' data-dept='" . strtolower($dept_attr) . "'>
                                 <td><b>{$no}</b></td>
                                 <td><code style='background:#f1f5f9; padding:4px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>{$pin_attr}</code></td>
@@ -164,12 +176,7 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                                 </td>
                                 <td>{$badge_kategori}</td>
                                 <td style='text-align:left;'>{$tampil_jadwal}</td>
-                                <td>
-                                    <button type='button' class='btn' style='background:#f1f5f9; color:#334155; font-size:12px; padding:6px 12px; border:1px solid #cbd5e1;' 
-                                            onclick='bukaModalJadwal(\"{$pin_attr}\", \"{$nama_attr}\", {$hari_json})'>
-                                        ✏️ Atur Jadwal
-                                    </button>
-                                </td>
+                                <td>{$btn_aksi}</td>
                               </tr>";
                         $no++;
                     }
