@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN MANAJEMEN GURU & KARYAWAN
+// HALAMAN MANAJEMEN GURU & KARYAWAN (Dengan Edit & Bulk Delete)
 // Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung
 // ============================================================
 
@@ -20,9 +20,7 @@ if (isset($_GET['download_template'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename=template_guru_karyawan.csv');
     $output = fopen('php://output', 'w');
-    // Header CSV
     fputcsv($output, ['No', 'PIN', 'Nama', 'Departemen', 'Tipe (karyawan/guru)']);
-    // Contoh Data
     fputcsv($output, ['1', '88', 'Drs. H. Ahmad Ridwan, M.Pd.', 'Guru Pengajar', 'guru']);
     fputcsv($output, ['2', '89', 'Budi Santoso, S.ST.', 'Staff TU / Laboratorium', 'karyawan']);
     fputcsv($output, ['3', '90', 'Citra Dewi, S.Pd.', 'Guru Pengajar', 'guru']);
@@ -30,7 +28,7 @@ if (isset($_GET['download_template'])) {
     exit;
 }
 
-// --- 2. PROSES TAMBAH / UPDATE SINGLE KARYAWAN ---
+// --- 2. PROSES TAMBAH SINGLE KARYAWAN ---
 if (isset($_POST['submit'])) {
     csrf_verify();
 
@@ -44,16 +42,63 @@ if (isset($_POST['submit'])) {
         $stmt->bind_param("sssssss", $pin, $nama, $departemen, $tipe, $nama, $departemen, $tipe);
         
         if ($stmt->execute()) {
-            $pesan = "<p style='color: #155724; background: #d4edda; border: 1px solid #c3e6cb; padding: 12px; border-radius: 8px; margin-bottom: 15px;'><b>✅ Berhasil!</b> Data Guru/Karyawan berhasil disimpan.</p>";
+            $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>✅ Berhasil!</b> Data Guru/Karyawan dengan PIN <b>" . h($pin) . "</b> berhasil disimpan.</div>";
         } else {
-            $pesan = "<p style='color: #721c24; background: #f8d7da; border: 1px solid #f5c6cb; padding: 12px; border-radius: 8px; margin-bottom: 15px;'><b>Gagal:</b> " . h($conn->error) . "</p>";
+            $pesan = "<div style='background:#f8d7da; color:#721c24; padding:12px 16px; border-radius:10px; border:1px solid #f5c6cb; margin-bottom:15px;'><b>Gagal:</b> " . h($conn->error) . "</div>";
         }
     } else {
-        $pesan = "<p style='color: #856404; background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 8px; margin-bottom: 15px;'>PIN dan Nama wajib diisi!</p>";
+        $pesan = "<div style='background:#fff3cd; color:#856404; padding:12px 16px; border-radius:10px; border:1px solid #ffeeba; margin-bottom:15px;'>PIN dan Nama wajib diisi!</div>";
     }
 }
 
-// --- 3. PROSES IMPORT FILE EXCEL / CSV ---
+// --- 3. PROSES EDIT SINGLE KARYAWAN ---
+if (isset($_POST['update_karyawan'])) {
+    csrf_verify();
+
+    $pin        = trim($_POST['edit_pin'] ?? '');
+    $nama       = trim($_POST['edit_nama'] ?? '');
+    $departemen = trim($_POST['edit_departemen'] ?? '');
+    $tipe       = in_array($_POST['edit_tipe'] ?? '', ['karyawan', 'guru']) ? $_POST['edit_tipe'] : 'karyawan';
+
+    if (!empty($pin) && !empty($nama)) {
+        $stmt = $conn->prepare("UPDATE master_karyawan SET nama = ?, departemen = ?, tipe = ? WHERE pin = ?");
+        $stmt->bind_param("ssss", $nama, $departemen, $tipe, $pin);
+        
+        if ($stmt->execute()) {
+            $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>✅ Berhasil memperbarui!</b> Data Guru/Karyawan (PIN: <b>" . h($pin) . "</b>) telah diperbarui.</div>";
+        } else {
+            $pesan = "<div style='background:#f8d7da; color:#721c24; padding:12px 16px; border-radius:10px; border:1px solid #f5c6cb; margin-bottom:15px;'><b>Gagal update:</b> " . h($conn->error) . "</div>";
+        }
+    } else {
+        $pesan = "<div style='background:#fff3cd; color:#856404; padding:12px 16px; border-radius:10px; border:1px solid #ffeeba; margin-bottom:15px;'>Nama tidak boleh kosong!</div>";
+    }
+}
+
+// --- 4. PROSES HAPUS MASSAL (BULK DELETE) ---
+if (isset($_POST['bulk_delete'])) {
+    csrf_verify();
+
+    $pins_selected = $_POST['pin_selected'] ?? [];
+    if (!empty($pins_selected) && is_array($pins_selected)) {
+        $total_deleted = 0;
+        $stmt = $conn->prepare("DELETE FROM master_karyawan WHERE pin = ?");
+        
+        foreach ($pins_selected as $p) {
+            $p_clean = trim($p);
+            if (!empty($p_clean)) {
+                $stmt->bind_param("s", $p_clean);
+                if ($stmt->execute()) {
+                    $total_deleted++;
+                }
+            }
+        }
+        $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>✅ Hapus Massal Berhasil!</b> <b>{$total_deleted}</b> data guru & karyawan telah dihapus.</div>";
+    } else {
+        $pesan = "<div style='background:#fff3cd; color:#856404; padding:12px 16px; border-radius:10px; border:1px solid #ffeeba; margin-bottom:15px;'>Pilih minimal satu data yang ingin dihapus!</div>";
+    }
+}
+
+// --- 5. PROSES IMPORT FILE EXCEL / CSV ---
 if (isset($_POST['import_excel'])) {
     csrf_verify();
 
@@ -64,7 +109,6 @@ if (isset($_POST['import_excel'])) {
 
         $rows = [];
 
-        // Baca File XLSX / XLS menggunakan SimpleXLSX
         if ($ext === 'xlsx' || $ext === 'xls') {
             if ($xlsx = SimpleXLSX::parse($fileTmp)) {
                 $rows = $xlsx->rows();
@@ -72,7 +116,6 @@ if (isset($_POST['import_excel'])) {
                 $pesan = "<p style='color: red;'><b>Gagal membaca Excel:</b> " . h(SimpleXLSX::parseError()) . "</p>";
             }
         }
-        // Baca File CSV
         elseif ($ext === 'csv') {
             if (($handle = fopen($fileTmp, "r")) !== FALSE) {
                 while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
@@ -87,7 +130,6 @@ if (isset($_POST['import_excel'])) {
             $pesan = "<p style='color: red;'>Format file tidak didukung! Harap unggah file <b>.xlsx</b> atau <b>.csv</b>.</p>";
         }
 
-        // Jalankan Import jika data baris berhasil dibaca
         if (!empty($rows)) {
             $imported = 0;
             $updated  = 0;
@@ -171,13 +213,13 @@ if (isset($_POST['import_excel'])) {
     }
 }
 
-// --- 4. PROSES HAPUS KARYAWAN ---
+// --- 6. PROSES HAPUS SINGLE KARYAWAN ---
 if (isset($_GET['hapus'])) {
     $pin_hapus = $_GET['hapus'];
     $stmt = $conn->prepare("DELETE FROM master_karyawan WHERE pin = ?");
     $stmt->bind_param("s", $pin_hapus);
     if ($stmt->execute()) {
-        $pesan = "<p style='color: #155724; background: #d4edda; border: 1px solid #c3e6cb; padding: 12px; border-radius: 8px; margin-bottom: 15px;'><b>Berhasil!</b> Data dengan PIN " . h($pin_hapus) . " telah dihapus.</p>";
+        $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>Berhasil!</b> Data dengan PIN <b>" . h($pin_hapus) . "</b> telah dihapus.</div>";
     }
 }
 
@@ -244,50 +286,182 @@ render_header("Kelola Guru & Karyawan", "karyawan");
     </div>
 </div>
 
-<!-- CARD 3: TABEL DAFTAR KARYAWAN -->
+<!-- CARD 3: TABEL DAFTAR KARYAWAN + BULK DELETE -->
 <div class="card">
-    <div class="card-header">
-        <div class="card-title">
-            <span>📋 Master Data Guru & Karyawan Terdaftar</span>
+    <form method="POST" action="input_karyawan.php" id="form-bulk">
+        <?php echo csrf_field(); ?>
+        
+        <div class="card-header" style="flex-wrap:wrap; gap:12px;">
+            <div class="card-title">
+                <span>📋 Master Data Guru & Karyawan Terdaftar</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span class="badge badge-verif" style="font-size:13px; font-weight:700;">Total: <?php echo $result->num_rows; ?> Orang</span>
+                
+                <!-- Tombol Hapus Massal -->
+                <button type="submit" name="bulk_delete" id="btn-bulk-delete" class="btn" 
+                        style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-size:13px; padding:7px 14px; display:none;"
+                        onclick="return confirm('Yakin ingin menghapus semua data yang dicentang?')">
+                    🗑️ Hapus Terpilih (<span id="count-selected">0</span>)
+                </button>
+            </div>
         </div>
-        <span class="badge badge-verif" style="font-size:13px; font-weight:700;">Total: <?php echo $result->num_rows; ?> Orang</span>
-    </div>
 
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr>
-                    <th>PIN / ID</th>
-                    <th>Nama Lengkap</th>
-                    <th>Departemen / Jabatan</th>
-                    <th>Tipe Kategori</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                if ($result->num_rows > 0) {
-                    while ($row = $result->fetch_assoc()) {
-                        $is_guru = ($row['tipe'] === 'guru');
-                        $badge_tipe = $is_guru 
-                            ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>👨‍🏫 Guru</span>"
-                            : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>👔 Karyawan</span>";
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px; text-align:center;">
+                            <input type="checkbox" id="check-all" onclick="toggleSelectAll(this)" style="width:18px; height:18px; cursor:pointer;" title="Pilih Semua">
+                        </th>
+                        <th>PIN / ID</th>
+                        <th style="text-align:left;">Nama Lengkap</th>
+                        <th style="text-align:left;">Departemen / Jabatan</th>
+                        <th>Tipe Kategori</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    if ($result->num_rows > 0) {
+                        while ($row = $result->fetch_assoc()) {
+                            $is_guru = ($row['tipe'] === 'guru');
+                            $badge_tipe = $is_guru 
+                                ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>👨‍🏫 Guru</span>"
+                                : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>👔 Karyawan</span>";
 
-                        echo "<tr>
-                                <td><code style='background:#f1f5f9; padding:4px 10px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($row['pin']) . "</code></td>
-                                <td style='text-align:left;'><b>" . h($row['nama']) . "</b></td>
-                                <td style='text-align:left; color:#64748b;'>" . h($row['departemen']) . "</td>
-                                <td>{$badge_tipe}</td>
-                                <td><a class='btn-hapus' style='color:#dc2626; font-size:13px; font-weight:600; text-decoration:none;' href='input_karyawan.php?hapus=" . urlencode($row['pin']) . "' onclick=\"return confirm('Yakin ingin menghapus data " . h($row['nama']) . "?')\">🗑️ Hapus</a></td>
-                              </tr>";
+                            $pin_attr  = h($row['pin']);
+                            $nama_attr = h($row['nama']);
+                            $dept_attr = h($row['departemen']);
+                            $tipe_attr = h($row['tipe']);
+
+                            echo "<tr>
+                                    <td style='text-align:center;'>
+                                        <input type='checkbox' name='pin_selected[]' value='{$pin_attr}' class='chk-item' onchange='updateBulkState()' style='width:18px; height:18px; cursor:pointer;'>
+                                    </td>
+                                    <td><code style='background:#f1f5f9; padding:4px 10px; border-radius:6px; font-weight:700; color:#0f172a;'>{$pin_attr}</code></td>
+                                    <td style='text-align:left;'><b>{$nama_attr}</b></td>
+                                    <td style='text-align:left; color:#64748b;'>{$dept_attr}</td>
+                                    <td>{$badge_tipe}</td>
+                                    <td>
+                                        <div style='display:flex; gap:6px; justify-content:center;'>
+                                            <button type='button' class='btn' style='background:#f1f5f9; color:#334155; font-size:12px; padding:6px 12px; border:1px solid #cbd5e1;'
+                                                    onclick='bukaModalEditKaryawan(\"{$pin_attr}\", \"{$nama_attr}\", \"{$dept_attr}\", \"{$tipe_attr}\")'>
+                                                ✏️ Edit
+                                            </button>
+                                            <a class='btn' style='background:#fee2e2; color:#dc2626; font-size:12px; padding:6px 12px; border:1px solid #fca5a5; text-decoration:none;' 
+                                               href='input_karyawan.php?hapus=" . urlencode($row['pin']) . "' 
+                                               onclick=\"return confirm('Yakin ingin menghapus data {$nama_attr}?')\">
+                                                🗑️ Hapus
+                                            </a>
+                                        </div>
+                                    </td>
+                                  </tr>";
+                        }
+                    } else {
+                        echo "<tr><td colspan='6' style='padding: 30px; color:#94a3b8;'>Belum ada data guru & karyawan. Silakan tambah manual atau import dari Excel.</td></tr>";
                     }
-                } else {
-                    echo "<tr><td colspan='5' style='padding: 30px; color:#94a3b8;'>Belum ada data guru & karyawan. Silakan tambah manual atau import dari Excel.</td></tr>";
-                }
-                ?>
-            </tbody>
-        </table>
+                    ?>
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>
+
+<!-- ================= MODAL EDIT KARYAWAN ================= -->
+<div id="modal-edit-karyawan" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:20px; padding:32px; width:100%; max-width:460px; box-shadow:0 25px 60px rgba(0,0,0,0.25); animation:slideUp 0.25s ease;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="font-size:18px; font-weight:800; color:#0f172a;">✏️ Edit Data Guru & Karyawan</h3>
+            <button type="button" onclick="tutupModalEditKaryawan()" style="background:#f1f5f9; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; color:#64748b;">✕</button>
+        </div>
+
+        <form method="POST" action="input_karyawan.php">
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="update_karyawan" value="1">
+            <input type="hidden" name="edit_pin" id="edit_pin">
+
+            <div style="background:#f8fafc; border-radius:12px; padding:12px 16px; margin-bottom:18px; border:1px solid #e2e8f0;">
+                <div style="font-size:12px; color:#64748b; font-weight:600;">PIN / User ID Mesin:</div>
+                <div style="font-size:16px; font-weight:800; color:#0f172a; margin-top:2px;" id="edit_pin_display">-</div>
+            </div>
+
+            <label for="edit_nama">Nama Lengkap (Gelar):</label>
+            <input type="text" id="edit_nama" name="edit_nama" placeholder="Nama lengkap..." required>
+
+            <label for="edit_departemen">Departemen / Jabatan:</label>
+            <input type="text" id="edit_departemen" name="edit_departemen" placeholder="Departemen...">
+
+            <label for="edit_tipe">Tipe Kategori:</label>
+            <select id="edit_tipe" name="edit_tipe" style="margin-bottom:24px;">
+                <option value="karyawan">👔 Karyawan / Staff (Hari kerja kalender)</option>
+                <option value="guru">👨‍🏫 Guru Pengajar (Sesuai jadwal ngajar)</option>
+            </select>
+
+            <div style="display:flex; gap:12px;">
+                <button type="button" onclick="tutupModalEditKaryawan()" class="btn" style="flex:1; background:#f1f5f9; color:#334155; border:1px solid #e2e8f0;">Batal</button>
+                <button type="submit" class="btn btn-primary" style="flex:2;">💾 Simpan Perubahan</button>
+            </div>
+        </form>
     </div>
 </div>
+
+<style>
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script>
+// --- MODAL EDIT ---
+function bukaModalEditKaryawan(pin, nama, dept, tipe) {
+    document.getElementById('edit_pin').value = pin;
+    document.getElementById('edit_pin_display').textContent = pin;
+    document.getElementById('edit_nama').value = nama;
+    document.getElementById('edit_departemen').value = dept;
+    document.getElementById('edit_tipe').value = tipe;
+
+    const modal = document.getElementById('modal-edit-karyawan');
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('edit_nama').focus(), 100);
+}
+
+function tutupModalEditKaryawan() {
+    document.getElementById('modal-edit-karyawan').style.display = 'none';
+}
+
+document.getElementById('modal-edit-karyawan').addEventListener('click', function(e) {
+    if (e.target === this) tutupModalEditKaryawan();
+});
+
+// --- BULK SELECTION (CHECKBOX) ---
+function toggleSelectAll(master) {
+    const checkboxes = document.querySelectorAll('.chk-item');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    updateBulkState();
+}
+
+function updateBulkState() {
+    const checkboxes = document.querySelectorAll('.chk-item:checked');
+    const count = checkboxes.length;
+    const btnBulk = document.getElementById('btn-bulk-delete');
+    const countSpan = document.getElementById('count-selected');
+    const master = document.getElementById('check-all');
+    const totalItems = document.querySelectorAll('.chk-item').length;
+
+    countSpan.textContent = count;
+
+    if (count > 0) {
+        btnBulk.style.display = 'inline-flex';
+    } else {
+        btnBulk.style.display = 'none';
+    }
+
+    if (master) {
+        master.checked = (count === totalItems && totalItems > 0);
+    }
+}
+</script>
 
 <?php render_footer(); ?>
