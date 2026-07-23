@@ -18,11 +18,11 @@ function format_last_active_api($datetime_str) {
     $time = strtotime($datetime_str);
     $diff = time() - $time;
 
-    if ($diff < 60) {
+    if ($diff < 35) {
         return "<span style='color:#10b981; font-weight:700;'>Baru saja</span>";
     } elseif ($diff < 3600) {
         $m = floor($diff / 60);
-        return "{$m} menit yang lalu";
+        return $m > 0 ? "{$m} menit yang lalu" : "Baru saja";
     } elseif (date('Y-m-d', $time) === date('Y-m-d')) {
         return "Hari ini " . date('H:i', $time);
     } elseif (date('Y-m-d', $time) === date('Y-m-d', strtotime('-1 day'))) {
@@ -39,7 +39,8 @@ $users = [];
 if ($semua_user && $semua_user->num_rows > 0) {
     while ($row = $semua_user->fetch_assoc()) {
         $last_act_ts = !empty($row['last_active']) ? strtotime($row['last_active']) : 0;
-        $is_online = (time() - $last_act_ts) <= 300; // 5 menit threshold
+        // Threshold 35 detik: jika >35 detik tidak ada request/heartbeat atau logout (last_active NULL), otomatis Offline
+        $is_online = (!empty($row['last_active']) && (time() - $last_act_ts) <= 35);
         if ($is_online) $online_count++;
 
         $users[] = [

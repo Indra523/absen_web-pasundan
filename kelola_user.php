@@ -173,7 +173,7 @@ $user_list = [];
 if ($semua_user && $semua_user->num_rows > 0) {
     while ($row = $semua_user->fetch_assoc()) {
         $last_act_ts = !empty($row['last_active']) ? strtotime($row['last_active']) : 0;
-        $is_online = (time() - $last_act_ts) <= 300;
+        $is_online = (!empty($row['last_active']) && (time() - $last_act_ts) <= 35);
         if ($is_online) $online_count++;
         $row['is_online'] = $is_online;
         $user_list[] = $row;

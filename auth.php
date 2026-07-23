@@ -11,9 +11,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Update timestamp last_active user di database (di-throttle 30 detik sekali per sesi agar ringan)
+// Update timestamp last_active user di database (di-throttle 10 detik sekali per sesi agar real-time dan presisi)
 if (isset($_SESSION['user_id'])) {
-    if (!isset($_SESSION['last_activity_update']) || (time() - $_SESSION['last_activity_update']) > 30) {
+    if (!isset($_SESSION['last_activity_update']) || (time() - $_SESSION['last_activity_update']) > 10) {
         $uid_track = (int)$_SESSION['user_id'];
         $db_track = getDB();
         $stmt_track = $db_track->prepare("UPDATE users SET last_active = NOW() WHERE id = ?");
