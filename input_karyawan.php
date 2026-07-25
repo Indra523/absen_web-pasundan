@@ -42,7 +42,7 @@ if (isset($_POST['submit'])) {
         $stmt->bind_param("sssssss", $pin, $nama, $departemen, $tipe, $nama, $departemen, $tipe);
         
         if ($stmt->execute()) {
-            $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>Berhasil!</b> Data Guru/Karyawan dengan PIN <b>" . h($pin) . "</b> berhasil disimpan.</div>";
+            $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>✅ Berhasil!</b> Data Guru/Karyawan dengan PIN <b>" . h($pin) . "</b> berhasil disimpan.</div>";
         } else {
             $pesan = "<div style='background:#f8d7da; color:#721c24; padding:12px 16px; border-radius:10px; border:1px solid #f5c6cb; margin-bottom:15px;'><b>Gagal:</b> " . h($conn->error) . "</div>";
         }
@@ -65,7 +65,7 @@ if (isset($_POST['update_karyawan'])) {
         $stmt->bind_param("ssss", $nama, $departemen, $tipe, $pin);
         
         if ($stmt->execute()) {
-            $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>Berhasil memperbarui!</b> Data Guru/Karyawan (PIN: <b>" . h($pin) . "</b>) telah diperbarui.</div>";
+            $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>✅ Berhasil memperbarui!</b> Data Guru/Karyawan (PIN: <b>" . h($pin) . "</b>) telah diperbarui.</div>";
         } else {
             $pesan = "<div style='background:#f8d7da; color:#721c24; padding:12px 16px; border-radius:10px; border:1px solid #f5c6cb; margin-bottom:15px;'><b>Gagal update:</b> " . h($conn->error) . "</div>";
         }
@@ -92,7 +92,7 @@ if (isset($_POST['bulk_delete'])) {
                 }
             }
         }
-        $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>Hapus Massal Berhasil!</b> <b>{$total_deleted}</b> data guru & karyawan telah dihapus.</div>";
+        $pesan = "<div style='background:#d4edda; color:#155724; padding:12px 16px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:15px;'><b>✅ Hapus Massal Berhasil!</b> <b>{$total_deleted}</b> data guru & karyawan telah dihapus.</div>";
     } else {
         $pesan = "<div style='background:#fff3cd; color:#856404; padding:12px 16px; border-radius:10px; border:1px solid #ffeeba; margin-bottom:15px;'>Pilih minimal satu data yang ingin dihapus!</div>";
     }
@@ -200,7 +200,7 @@ if (isset($_POST['import_excel'])) {
             }
 
             $pesan = "<div style='background:#d4edda; color:#155724; padding:14px 18px; border-radius:10px; border:1px solid #c3e6cb; margin-bottom:20px;'>";
-            $pesan .= "<b>Import Selesai!</b><br>";
+            $pesan .= "<b>✅ Import Selesai!</b><br>";
             $pesan .= "• <b>{$imported}</b> data baru berhasil dimasukkan.<br>";
             $pesan .= "• <b>{$updated}</b> data diperbarui.<br>";
             if ($skipped > 0) {
@@ -227,7 +227,7 @@ if (isset($_GET['hapus'])) {
 $sort = $_GET['sort'] ?? 'pin_asc';
 $q_master = trim($_GET['q_master'] ?? '');
 
-$order_by = "CAST(pin AS UNSIGNED) ASC, pin ASC";
+$order_by = "CAST(pin AS UNSIGNED) ASC, pin ASC"; // Default: Sorting Numeric PIN 1, 2, 3...
 switch ($sort) {
     case 'pin_desc':
         $order_by = "CAST(pin AS UNSIGNED) DESC, pin DESC";
@@ -266,7 +266,7 @@ render_header("Kelola Guru & Karyawan", "karyawan");
     <!-- CARD 1: FORM INPUT SINGLE -->
     <div class="card" style="margin-bottom:0;">
         <div class="card-title">
-            <span>Tambah / Edit Manual</span>
+            <span>✏️ Tambah / Edit Manual</span>
         </div>
         <form method="POST" action="" style="margin-top: 15px;">
             <?php echo csrf_field(); ?>
@@ -282,18 +282,18 @@ render_header("Kelola Guru & Karyawan", "karyawan");
 
             <label>Tipe Kategori:</label>
             <select name="tipe" style="margin-bottom:18px;">
-                <option value="karyawan">Karyawan / Staff (Hari kerja kalender)</option>
-                <option value="guru">Guru Pengajar (Sesuai jadwal ngajar)</option>
+                <option value="karyawan">👔 Karyawan / Staff (Hari kerja kalender)</option>
+                <option value="guru">👨‍🏫 Guru Pengajar (Sesuai jadwal ngajar)</option>
             </select>
 
-            <button type="submit" name="submit" class="btn btn-success btn-block">Simpan Data Karyawan</button>
+            <button type="submit" name="submit" class="btn btn-success btn-block">💾 Simpan Data Karyawan</button>
         </form>
     </div>
 
     <!-- CARD 2: FORM IMPORT EXCEL / CSV -->
     <div class="card" style="margin-bottom:0;">
         <div class="card-title">
-            <span>Import Massal dari Excel / CSV</span>
+            <span>📊 Import Massal dari Excel / CSV</span>
         </div>
         <form method="POST" action="" enctype="multipart/form-data" style="margin-top: 15px;">
             <?php echo csrf_field(); ?>
@@ -310,10 +310,10 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                 • Kolom 5: <code>Tipe</code>: <code>karyawan</code> atau <code>guru</code> (Opsional)
             </div>
 
-            <button type="submit" name="import_excel" class="btn btn-primary btn-block">Unggah & Import Excel</button>
+            <button type="submit" name="import_excel" class="btn btn-primary btn-block">📥 Unggah & Import Excel</button>
         </form>
 
-        <a href="input_karyawan.php?download_template=1" style="display:inline-block; margin-top:14px; font-size:13px; color:#3b82f6; text-decoration:none; font-weight:600;">Download Contoh Template CSV/Excel</a>
+        <a href="input_karyawan.php?download_template=1" style="display:inline-block; margin-top:14px; font-size:13px; color:#3b82f6; text-decoration:none; font-weight:600;">📄 Download Contoh Template CSV/Excel</a>
     </div>
 </div>
 
@@ -322,22 +322,22 @@ render_header("Kelola Guru & Karyawan", "karyawan");
     <!-- PANEL FILTER & SORTING -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
         <div class="card-title" style="margin-bottom:0;">
-            <span>Master Data Guru & Karyawan Terdaftar</span>
+            <span>📋 Master Data Guru & Karyawan Terdaftar</span>
         </div>
 
         <form method="GET" action="input_karyawan.php" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0;" onsubmit="return false;">
             <!-- Input Pencarian Real-Time (Tanpa Tekan Enter) -->
-            <input type="text" id="q_master" name="q_master" value="<?php echo h($q_master); ?>" placeholder="Cari (Nama, PIN, Dept)..." style="margin-bottom:0; height:38px; width:240px; font-size:13px;" autocomplete="off">
+            <input type="text" id="q_master" name="q_master" value="<?php echo h($q_master); ?>" placeholder="🔍 Cari Real-Time (Nama, PIN, Dept)..." style="margin-bottom:0; height:38px; width:250px; font-size:13px;" autocomplete="off">
             
             <!-- Dropdown Sorting -->
             <select name="sort" onchange="location.href='input_karyawan.php?sort=' + this.value + (document.getElementById('q_master').value ? '&q_master=' + encodeURIComponent(document.getElementById('q_master').value) : '')" style="margin-bottom:0; height:38px; font-size:13px; padding:6px 12px; width:auto; cursor:pointer;">
-                <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>Urut PIN (1 -> 99)</option>
-                <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>Urut PIN (99 -> 1)</option>
-                <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>Nama (A -> Z)</option>
-                <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>Nama (Z -> A)</option>
-                <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>Tipe (Guru Dulu)</option>
-                <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>Tipe (Karyawan Dulu)</option>
-                <option value="dept_asc" <?php echo $sort === 'dept_asc' ? 'selected' : ''; ?>>Departemen</option>
+                <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 Urut PIN (1 ➔ 99)</option>
+                <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 Urut PIN (99 ➔ 1)</option>
+                <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
+                <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>🔤 Nama (Z ➔ A)</option>
+                <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>👨‍🏫 Tipe (Guru Dulu)</option>
+                <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
+                <option value="dept_asc" <?php echo $sort === 'dept_asc' ? 'selected' : ''; ?>>🏢 Departemen</option>
             </select>
         </form>
     </div>
@@ -353,20 +353,20 @@ render_header("Kelola Guru & Karyawan", "karyawan");
             <button type="submit" name="bulk_delete" id="btn-bulk-delete" class="btn" 
                     style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-size:13px; padding:7px 14px; display:none;"
                     onclick="return confirm('Yakin ingin menghapus semua data yang dicentang?')">
-                Hapus Terpilih (<span id="count-selected">0</span>)
+                🗑️ Hapus Terpilih (<span id="count-selected">0</span>)
             </button>
-        </form>
     </div>
 
     <?php
+    // Helper URL untuk Header Sorting Clickable
     function sort_url($col_name, $current_sort) {
         $next_sort = ($current_sort === "{$col_name}_asc") ? "{$col_name}_desc" : "{$col_name}_asc";
         return "input_karyawan.php?sort={$next_sort}";
     }
 
     function sort_icon($col_name, $current_sort) {
-        if ($current_sort === "{$col_name}_asc") return " ↑";
-        if ($current_sort === "{$col_name}_desc") return " ↓";
+        if ($current_sort === "{$col_name}_asc") return " 🔼";
+        if ($current_sort === "{$col_name}_desc") return " 🔽";
         return " <span style='color:#cbd5e1;'>↕</span>";
     }
     ?>
@@ -407,8 +407,8 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                     while ($row = $result->fetch_assoc()) {
                         $is_guru = ($row['tipe'] === 'guru');
                         $badge_tipe = $is_guru 
-                            ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>Guru</span>"
-                            : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>Karyawan</span>";
+                            ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>👨‍🏫 Guru</span>"
+                            : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>👔 Karyawan</span>";
 
                         $pin_attr  = h($row['pin']);
                         $nama_attr = h($row['nama']);
@@ -427,12 +427,12 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                                     <div style='display:flex; gap:6px; justify-content:center;'>
                                         <button type='button' class='btn' style='background:#f1f5f9; color:#334155; font-size:12px; padding:6px 12px; border:1px solid #cbd5e1;'
                                                 onclick='bukaModalEditKaryawan(\"{$pin_attr}\", \"{$nama_attr}\", \"{$dept_attr}\", \"{$tipe_attr}\")'>
-                                            Edit
+                                            ✏️ Edit
                                         </button>
                                         <a class='btn' style='background:#fee2e2; color:#dc2626; font-size:12px; padding:6px 12px; border:1px solid #fca5a5; text-decoration:none;' 
                                            href='input_karyawan.php?hapus=" . urlencode($row['pin']) . "' 
                                            onclick=\"return confirm('Yakin ingin menghapus data {$nama_attr}?')\">
-                                            Hapus
+                                            🗑️ Hapus
                                         </a>
                                     </div>
                                 </td>
@@ -443,18 +443,19 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                 }
                 ?>
                 <tr id="row-no-match" style="display:none;">
-                    <td colspan="6" style="padding: 30px; color:#94a3b8; text-align:center;">Data tidak ditemukan untuk kata kunci pencarian tersebut.</td>
+                    <td colspan="6" style="padding: 30px; color:#94a3b8; text-align:center;">🔍 Data tidak ditemukan untuk kata kunci pencarian tersebut.</td>
                 </tr>
             </tbody>
         </table>
     </div>
+    </form>
 </div>
 
 <!-- ================= MODAL EDIT KARYAWAN ================= -->
 <div id="modal-edit-karyawan" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
     <div style="background:#fff; border-radius:20px; padding:32px; width:100%; max-width:460px; box-shadow:0 25px 60px rgba(0,0,0,0.25); animation:slideUp 0.25s ease;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="font-size:18px; font-weight:800; color:#0f172a;">Edit Data Guru & Karyawan</h3>
+            <h3 style="font-size:18px; font-weight:800; color:#0f172a;">✏️ Edit Data Guru & Karyawan</h3>
             <button type="button" onclick="tutupModalEditKaryawan()" style="background:#f1f5f9; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; color:#64748b;">✕</button>
         </div>
 
@@ -476,13 +477,13 @@ render_header("Kelola Guru & Karyawan", "karyawan");
 
             <label for="edit_tipe">Tipe Kategori:</label>
             <select id="edit_tipe" name="edit_tipe" style="margin-bottom:24px;">
-                <option value="karyawan">Karyawan / Staff (Hari kerja kalender)</option>
-                <option value="guru">Guru Pengajar (Sesuai jadwal ngajar)</option>
+                <option value="karyawan">👔 Karyawan / Staff (Hari kerja kalender)</option>
+                <option value="guru">👨‍🏫 Guru Pengajar (Sesuai jadwal ngajar)</option>
             </select>
 
             <div style="display:flex; gap:12px;">
                 <button type="button" onclick="tutupModalEditKaryawan()" class="btn" style="flex:1; background:#f1f5f9; color:#334155; border:1px solid #e2e8f0;">Batal</button>
-                <button type="submit" class="btn btn-primary" style="flex:2;">Simpan Perubahan</button>
+                <button type="submit" class="btn btn-primary" style="flex:2;">💾 Simpan Perubahan</button>
             </div>
         </form>
     </div>
@@ -521,6 +522,7 @@ document.getElementById('modal-edit-karyawan').addEventListener('click', functio
 function toggleSelectAll(master) {
     const checkboxes = document.querySelectorAll('.chk-item');
     checkboxes.forEach(cb => {
+        // Cuma centang baris yang sedang terlihat (tidak ter-hide search)
         if (cb.closest('tr').style.display !== 'none') {
             cb.checked = master.checked;
         }
@@ -553,7 +555,7 @@ function updateBulkState() {
     }
 }
 
-// --- REAL-TIME INSTANT SEARCH ---
+// --- REAL-TIME INSTANT SEARCH (TANPA HARUS TEKAN ENTER) ---
 const inputQMaster = document.getElementById('q_master');
 const countVisibleSpan = document.getElementById('count-visible');
 const rowNoMatch = document.getElementById('row-no-match');
@@ -573,6 +575,7 @@ function filterMasterTable() {
             visibleCount++;
         } else {
             row.style.display = 'none';
+            // Uncheck hidden items
             const chk = row.querySelector('.chk-item');
             if (chk) chk.checked = false;
         }
@@ -587,6 +590,7 @@ function filterMasterTable() {
 
 inputQMaster.addEventListener('input', filterMasterTable);
 
+// Filter awal jika ada query di URL
 if (inputQMaster.value) {
     filterMasterTable();
 }
