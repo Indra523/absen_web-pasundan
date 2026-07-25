@@ -14,7 +14,6 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Polling data otomatis dilakukan via AJAX di background tanpa me-refresh halaman -->
     <title><?php echo h($page_title); ?> — SMK Pasundan 2 Bandung</title>
     <!-- Favicon & Icon Tab Browser -->
     <link rel="icon" type="image/jpeg" href="assets/logo_pasundan2.png">
@@ -28,8 +27,8 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             --bg-main: #f8fafc;
             --sidebar-bg: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
             --primary: #3b82f6;
-            --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-            --text-dark: #1e293b;
+            --primary-gradient: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            --text-dark: #0f172a;
             --text-muted: #64748b;
             --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
             --border-color: #e2e8f0;
@@ -47,9 +46,7 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
 
         .app-layout { display: flex; width: 100%; min-height: 100vh; }
 
-        /* ============================
-           SIDEBAR
-        ============================ */
+        /* SIDEBAR */
         .sidebar {
             width: var(--sidebar-width);
             background: var(--sidebar-bg);
@@ -86,9 +83,9 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         }
 
         .brand-logo {
-            width: 44px; height: 44px; min-width: 44px;
+            width: 42px; height: 42px; min-width: 42px;
             background: #fff;
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
             padding: 4px;
             box-shadow: 0 4px 14px rgba(0,0,0,0.2);
@@ -109,22 +106,31 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             padding: 12px 14px;
             color: #cbd5e1;
             text-decoration: none;
-            font-size: 14px; font-weight: 500;
+            font-size: 13.5px; font-weight: 500;
             border-radius: 10px;
             transition: all 0.2s ease;
-            min-height: 48px;
+            min-height: 44px;
         }
 
-        .nav-item .icon { font-size: 18px; display: flex; align-items: center; justify-content: center; width: 24px; flex-shrink: 0; }
+        .nav-item .icon-svg {
+            width: 20px; height: 20px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            color: #94a3b8;
+            transition: color 0.2s ease;
+        }
 
         .nav-item:hover { color: #fff; background: rgba(255,255,255,0.06); transform: translateX(3px); }
+        .nav-item:hover .icon-svg { color: #fff; }
 
         .nav-item.active {
             color: #fff;
             background: var(--primary-gradient);
             font-weight: 600;
-            box-shadow: 0 4px 14px 0 rgba(59,130,246,0.38);
+            box-shadow: 0 4px 14px 0 rgba(37,99,235,0.35);
         }
+
+        .nav-item.active .icon-svg { color: #fff; }
 
         .sidebar-user {
             padding: 14px 16px; margin: 12px;
@@ -141,18 +147,28 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             width: 34px; height: 34px; min-width: 34px;
             background: #334155; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 15px; border: 2px solid rgba(255,255,255,0.1);
+            color: #94a3b8;
+            border: 1.5px solid rgba(255,255,255,0.12);
         }
 
         .user-name { font-size: 13px; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .user-role { font-size: 10px; color: #94a3b8; }
+        .user-role { font-size: 11px; color: #94a3b8; }
 
-        .btn-logout { color: #f43f5e; text-decoration: none; font-size: 20px; padding: 8px; border-radius: 8px; transition: background 0.2s; display: flex; align-items: center; flex-shrink: 0; }
-        .btn-logout:hover { background: rgba(244,63,94,0.15); }
+        .btn-logout {
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 12px; font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+            flex-shrink: 0;
+        }
+        .btn-logout:hover { background: rgba(239,68,68,0.2); color: #fca5a5; border-color: rgba(239,68,68,0.3); }
 
-        /* ============================
-           TOPBAR MOBILE (Hamburger)
-        ============================ */
+        /* TOPBAR MOBILE */
         .topbar-mobile {
             display: none;
             position: fixed;
@@ -181,19 +197,17 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
 
         .topbar-title { font-size: 13px; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* ============================
-           MAIN CONTENT
-        ============================ */
+        /* MAIN CONTENT */
         .main-content { margin-left: var(--sidebar-width); flex: 1; padding: 32px 36px; min-width: 0; }
 
         .page-header { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
 
-        .page-title h2 { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1.3; }
+        .page-title h2 { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.4px; line-height: 1.3; }
         .page-title p  { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
-        .live-badge { display: inline-flex; align-items: center; gap: 8px; background: #fff; padding: 7px 14px; border-radius: 9999px; font-size: 13px; font-weight: 600; color: #0f172a; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); white-space: nowrap; }
+        .live-badge { display: inline-flex; align-items: center; gap: 8px; background: #fff; padding: 7px 14px; border-radius: 9999px; font-size: 12.5px; font-weight: 600; color: #0f172a; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); white-space: nowrap; }
 
-        .pulse-dot { width: 9px; height: 9px; background: #10b981; border-radius: 50%; position: relative; flex-shrink: 0; }
+        .pulse-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; position: relative; flex-shrink: 0; }
         .pulse-dot::after { content: ''; position: absolute; inset: 0; background: #10b981; border-radius: 50%; animation: pulse 1.8s infinite ease-in-out; }
 
         @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
@@ -203,7 +217,7 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
 
         .card-header { margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
 
-        .card-title { font-size: 17px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+        .card-title { font-size: 16px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; letter-spacing: -0.2px; }
 
         /* FORM */
         label { display: block; font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; }
@@ -214,29 +228,29 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         input[type="date"],
         input[type="file"],
         select {
-            width: 100%; padding: 12px 14px; margin-bottom: 18px;
+            width: 100%; padding: 11px 14px; margin-bottom: 18px;
             border: 1.5px solid #cbd5e1; border-radius: 10px;
-            font-size: 15px; font-family: inherit; color: #0f172a; background: #fff;
+            font-size: 14px; font-family: inherit; color: #0f172a; background: #fff;
             transition: all 0.2s ease;
             -webkit-appearance: none; appearance: none;
         }
 
-        input:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,0.12); }
+        input:focus, select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
 
         /* BUTTONS */
         .btn {
             display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-            padding: 11px 20px; border-radius: 10px;
-            font-weight: 600; font-size: 14px; cursor: pointer; border: none;
+            padding: 10px 18px; border-radius: 9px;
+            font-weight: 600; font-size: 13.5px; cursor: pointer; border: none;
             transition: all 0.2s ease; text-decoration: none;
-            min-height: 44px; white-space: nowrap;
+            min-height: 42px; white-space: nowrap;
         }
 
-        .btn-primary { background: var(--primary-gradient); color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
-        .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(59,130,246,0.4); }
+        .btn-primary { background: var(--primary-gradient); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+        .btn-primary:hover { opacity: 0.94; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,0.35); }
 
-        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
-        .btn-success:hover { opacity: 0.92; transform: translateY(-1px); }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 4px 12px rgba(16,185,129,0.25); }
+        .btn-success:hover { opacity: 0.94; transform: translateY(-1px); }
 
         .btn-block { width: 100%; }
 
@@ -263,16 +277,10 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         .dept-subtitle { font-size: 11px; color: #64748b; margin-top: 2px; }
         .text-unregistered { color: #94a3b8; font-style: italic; text-align: left; font-size: 12px; }
 
-        /* ============================
-           RESPONSIVE: TABLET (≤1024px)
-        ============================ */
         @media (max-width: 1024px) {
             .main-content { padding: 28px 22px; }
         }
 
-        /* ============================
-           RESPONSIVE: MOBILE (≤768px)
-        ============================ */
         @media (max-width: 768px) {
             .topbar-mobile { display: flex; }
             .sidebar { transform: translateX(-100%); }
@@ -287,13 +295,10 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             .card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
         }
 
-        /* ============================
-           RESPONSIVE: SMALL (≤480px)
-        ============================ */
         @media (max-width: 480px) {
             .main-content { padding: 70px 10px 20px 10px; }
             .card { padding: 12px; }
-            .btn { padding: 10px 12px; font-size: 13px; min-height: 42px; }
+            .btn { padding: 9px 12px; font-size: 13px; min-height: 40px; }
             .page-header { flex-direction: column; align-items: flex-start; }
             th { font-size: 10px; padding: 11px 10px; }
             td { padding: 10px 10px; font-size: 12px; }
@@ -334,34 +339,46 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             <div class="menu-label">Navigasi Utama</div>
 
             <a href="index.php" class="nav-item <?php echo $active_menu === 'index' ? 'active' : ''; ?>" onclick="closeSidebar()">
-                <span class="icon">📡</span>
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </span>
                 <span>Live Monitoring</span>
             </a>
 
             <a href="export_bulanan.php" class="nav-item <?php echo $active_menu === 'laporan_bulanan' ? 'active' : ''; ?>" onclick="closeSidebar()">
-                <span class="icon">📅</span>
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </span>
                 <span>Laporan Bulanan</span>
             </a>
 
             <?php if (is_superadmin()): ?>
             <a href="input_karyawan.php" class="nav-item <?php echo $active_menu === 'karyawan' ? 'active' : ''; ?>" onclick="closeSidebar()">
-                <span class="icon">👥</span>
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 100 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </span>
                 <span>Kelola Guru & Karyawan</span>
             </a>
 
             <a href="tarik_nama.php" class="nav-item <?php echo $active_menu === 'sinkron' ? 'active' : ''; ?>" onclick="closeSidebar()">
-                <span class="icon">🔌</span>
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </span>
                 <span>Sinkronisasi Mesin</span>
             </a>
 
             <div class="menu-label" style="margin-top: 10px;">Pengaturan</div>
             <a href="kelola_jadwal.php" class="nav-item <?php echo $active_menu === 'jadwal_guru' ? 'active' : ''; ?>" onclick="closeSidebar()">
-                <span class="icon">⚙️</span>
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </span>
                 <span>Kelola Jadwal Guru</span>
             </a>
 
             <a href="kelola_user.php" class="nav-item <?php echo $active_menu === 'users' ? 'active' : ''; ?>" onclick="closeSidebar()">
-                <span class="icon">🔑</span>
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                </span>
                 <span>Manajemen User</span>
             </a>
             <?php endif; ?>
@@ -369,19 +386,21 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
 
         <div class="sidebar-user">
             <div class="user-details">
-                <div class="avatar">👤</div>
+                <div class="avatar">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
                 <div>
                     <div class="user-name"><?php echo $username; ?></div>
                     <div class="user-role"><?php echo is_superadmin() ? 'Superadmin' : 'Operator Admin'; ?></div>
                 </div>
             </div>
-            <a href="logout.php" class="btn-logout" title="Logout">🚪</a>
+            <a href="logout.php" class="btn-logout" title="Logout">Logout</a>
         </div>
 
-        <!-- WATERMARK / CREDIT -->
+        <!-- FOOTER CREDIT -->
         <div style="padding: 10px 16px 14px 16px; text-align: center;">
             <span style="font-size: 11px; color: #475569; letter-spacing: 0.2px;">
-                Build with <span style="color: #ef4444; font-size: 12px;">❤️</span> by <span style="font-weight: 700; color: #94a3b8;">Indra Setia</span>
+                Build by <span style="font-weight: 600; color: #94a3b8;">Indra Setia</span>
             </span>
         </div>
     </aside>

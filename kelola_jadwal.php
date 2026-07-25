@@ -26,20 +26,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     csrf_verify();
 
     $pin       = trim($_POST['pin'] ?? '');
-    $hari_list = $_POST['hari'] ?? []; // Array hari yang dicentang [1, 2, 3...]
+    $hari_list = $_POST['hari'] ?? [];
 
     if (empty($pin)) {
         $pesan_error = "PIN Guru tidak valid!";
     } else {
-        // Mulai Transaksi
         $conn->begin_transaction();
         try {
-            // Hapus semua jadwal lama guru ini
             $del = $conn->prepare("DELETE FROM jadwal_guru WHERE pin = ?");
             $del->bind_param("s", $pin);
             $del->execute();
 
-            // Insert hari-hari baru
             if (!empty($hari_list) && is_array($hari_list)) {
                 $ins = $conn->prepare("INSERT INTO jadwal_guru (pin, hari) VALUES (?, ?)");
                 foreach ($hari_list as $h) {
@@ -51,13 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 }
             }
 
-            // Otomatis ubah tipe karyawan menjadi 'guru' jika belum
             $upd = $conn->prepare("UPDATE master_karyawan SET tipe = 'guru' WHERE pin = ?");
             $upd->bind_param("s", $pin);
             $upd->execute();
 
             $conn->commit();
-            $pesan_sukses = "✅ Jadwal ngajar berhasil diperbarui.";
+            $pesan_sukses = "Jadwal ngajar berhasil diperbarui.";
         } catch (Exception $e) {
             $conn->rollback();
             $pesan_error = "Gagal menyimpan jadwal: " . h($e->getMessage());
@@ -65,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Ambil semua daftar guru (dan karyawan yang mungkin ingin diubah ke guru)
+// Ambil semua daftar guru & karyawan
 $sql_guru = "SELECT mk.*, 
                     GROUP_CONCAT(jg.hari ORDER BY jg.hari ASC) AS list_hari 
              FROM master_karyawan mk 
@@ -86,19 +82,19 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
 
 <?php if ($pesan_error): ?>
 <div style="background: linear-gradient(135deg, #fee2e2, #fecaca); border: 1px solid #f87171; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-size: 14px; font-weight: 500;">
-    ⛔ <?php echo $pesan_error; ?>
+    <?php echo $pesan_error; ?>
 </div>
 <?php endif; ?>
 
 <div class="card">
     <div class="card-header" style="flex-wrap:wrap; gap:12px; align-items:center;">
         <div class="card-title" style="margin-bottom:0;">
-            <span>⚙️ Pengaturan Jadwal Ngajar Guru</span>
+            <span>Pengaturan Jadwal Ngajar Guru</span>
         </div>
 
         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <!-- Input Pencarian Real-Time (Tanpa Tekan Enter) -->
-            <input type="text" id="q_jadwal" placeholder="🔍 Cari Real-Time (Nama, PIN, Dept)..." style="margin-bottom:0; height:38px; width:260px; font-size:13px;" autocomplete="off">
+            <!-- Input Pencarian Real-Time -->
+            <input type="text" id="q_jadwal" placeholder="Cari (Nama, PIN, Dept)..." style="margin-bottom:0; height:38px; width:240px; font-size:13px;" autocomplete="off">
             
             <span class="badge badge-verif" style="font-size:12px; font-weight:700;">
                 Menampilkan <b id="count-visible"><?php echo $total_guru; ?></b> dari <?php echo $total_guru; ?> Orang
@@ -107,7 +103,7 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
     </div>
 
     <div style="margin-bottom: 16px; font-size:13px; color:#64748b; background:#f8fafc; padding:12px 16px; border-radius:10px; border:1px solid #e2e8f0; line-height:1.5;">
-        💡 <b>Petunjuk:</b> Centang hari ngajar untuk masing-masing guru. Data absensi guru yang masuk di luar hari jadwal ngajar tetap tersimpan di database, tetapi akan ditandai <span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;'>⚠️ Di Luar Jadwal</span> dan dikecualikan dari rekap evaluasi bulanan.
+        <b>Petunjuk:</b> Centang hari ngajar untuk masing-masing guru. Data absensi guru yang masuk di luar hari jadwal ngajar tetap tersimpan di database, tetapi akan ditandai <span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;'>Di Luar Jadwal</span> dan dikecualikan dari rekap evaluasi bulanan.
     </div>
 
     <div class="table-responsive">
@@ -129,8 +125,8 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                     while ($g = $result_guru->fetch_assoc()) {
                         $is_guru = ($g['tipe'] === 'guru');
                         $badge_kategori = $is_guru
-                            ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>👨‍🏫 Guru</span>"
-                            : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>👔 Karyawan</span>";
+                            ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>Guru</span>"
+                            : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>Karyawan</span>";
 
                         // Parse list hari
                         $hari_arr = !empty($g['list_hari']) ? explode(',', $g['list_hari']) : [];
@@ -138,7 +134,7 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                         if (!$is_guru) {
                             $tampil_jadwal = "<span style='color:#94a3b8; font-size:12px; font-style:italic;'>Absensi mengikuti hari kerja kalender (Senin–Sabtu)</span>";
                         } elseif (empty($hari_arr)) {
-                            $tampil_jadwal = "<span class='badge' style='background:#fef3c7; color:#92400e; border:1px solid #fde68a;'>❓ Belum Ada Jadwal</span>";
+                            $tampil_jadwal = "<span class='badge' style='background:#fef3c7; color:#92400e; border:1px solid #fde68a;'>Belum Ada Jadwal</span>";
                         } else {
                             $badge_hari = [];
                             foreach ($hari_arr as $hn) {
@@ -159,11 +155,11 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                         if ($is_guru) {
                             $btn_aksi = "<button type='button' class='btn' style='background:linear-gradient(135deg,#3b82f6,#6366f1); color:#ffffff; font-size:12px; padding:6px 12px; border:none; box-shadow:0 2px 6px rgba(59,130,246,0.3);' 
                                                 onclick='bukaModalJadwal(\"{$pin_attr}\", \"{$nama_attr}\", {$hari_json})'>
-                                            ✏️ Atur Jadwal
+                                            Atur Jadwal
                                         </button>";
                         } else {
                             $btn_aksi = "<button type='button' class='btn' style='background:#f1f5f9; color:#94a3b8; font-size:12px; padding:6px 12px; border:1px solid #e2e8f0; cursor:not-allowed;' disabled title='Hanya untuk kategori Guru Pengajar'>
-                                            🔒 Tidak Perlu Jadwal
+                                            Tidak Perlu Jadwal
                                         </button>";
                         }
 
@@ -185,7 +181,7 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
                 }
                 ?>
                 <tr id="row-no-match" style="display:none;">
-                    <td colspan="6" style="padding: 30px; color:#94a3b8; text-align:center;">🔍 Data tidak ditemukan untuk kata kunci pencarian tersebut.</td>
+                    <td colspan="6" style="padding: 30px; color:#94a3b8; text-align:center;">Data tidak ditemukan untuk kata kunci pencarian tersebut.</td>
                 </tr>
             </tbody>
         </table>
@@ -196,7 +192,7 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
 <div id="modal-jadwal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
     <div style="background:#fff; border-radius:20px; padding:32px; width:100%; max-width:460px; box-shadow:0 25px 60px rgba(0,0,0,0.25); animation:slideUp 0.25s ease;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="font-size:18px; font-weight:800; color:#0f172a;">📅 Atur Jadwal Ngajar Guru</h3>
+            <h3 style="font-size:18px; font-weight:800; color:#0f172a;">Atur Jadwal Ngajar Guru</h3>
             <button type="button" onclick="tutupModalJadwal()" style="background:#f1f5f9; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; color:#64748b;">✕</button>
         </div>
 
@@ -223,7 +219,7 @@ render_header("Kelola Jadwal Ngajar Guru", "jadwal_guru");
 
             <div style="display:flex; gap:12px;">
                 <button type="button" onclick="tutupModalJadwal()" class="btn" style="flex:1; background:#f1f5f9; color:#334155; border:1px solid #e2e8f0;">Batal</button>
-                <button type="submit" class="btn btn-primary" style="flex:2;">💾 Simpan Jadwal</button>
+                <button type="submit" class="btn btn-primary" style="flex:2;">Simpan Jadwal</button>
             </div>
         </form>
     </div>
@@ -265,7 +261,7 @@ document.getElementById('modal-jadwal').addEventListener('click', function(e) {
     if (e.target === this) tutupModalJadwal();
 });
 
-// --- REAL-TIME INSTANT SEARCH (SEARCH AS YOU TYPE) ---
+// --- REAL-TIME INSTANT SEARCH ---
 const inputQJadwal = document.getElementById('q_jadwal');
 const countVisibleSpan = document.getElementById('count-visible');
 const rowNoMatch = document.getElementById('row-no-match');

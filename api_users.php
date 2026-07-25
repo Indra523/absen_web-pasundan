@@ -39,7 +39,6 @@ $users = [];
 if ($semua_user && $semua_user->num_rows > 0) {
     while ($row = $semua_user->fetch_assoc()) {
         $last_act_ts = !empty($row['last_active']) ? strtotime($row['last_active']) : 0;
-        // Threshold 35 detik: jika >35 detik tidak ada request/heartbeat atau logout (last_active NULL), otomatis Offline
         $is_online = (!empty($row['last_active']) && (time() - $last_act_ts) <= 35);
         if ($is_online) $online_count++;
 

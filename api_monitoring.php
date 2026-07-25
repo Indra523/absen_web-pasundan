@@ -46,7 +46,6 @@ if ($status_filter !== '' && in_array($status_filter, ['0', '1'])) {
 $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
 // Query utama + LEFT JOIN ke master_karyawan dan check jadwal guru
-// MOD(DAYOFWEEK(la.waktu) + 5, 7) + 1 menghitung hari: 1=Senin ... 6=Sabtu, 7=Minggu
 $sql = "SELECT log_absen.*, 
                master_karyawan.nama, 
                master_karyawan.departemen, 
@@ -70,8 +69,8 @@ if (!empty($params)) {
     $result = $conn->query($sql);
 }
 
-ob_start();
-if ($result->num_rows > 0) {
+$rows_out = [];
+if ($result && $result->num_rows > 0) {
     $no = 1;
     while ($row = $result->fetch_assoc()) {
         $status_teks = "Unknown";
@@ -84,25 +83,26 @@ if ($result->num_rows > 0) {
             $badge_class = "badge-pulang";
         }
 
-        $tipe_teks = "Unknown";
-        if ($row['tipe_verifikasi'] == '1') $tipe_teks = "Sidik Jari 👆";
-        elseif ($row['tipe_verifikasi'] == '15') $tipe_teks = "Wajah 👤";
+        $tipe_teks = "Lainnya";
+        if ($row['tipe_verifikasi'] == '1') $tipe_teks = "Sidik Jari";
+        elseif ($row['tipe_verifikasi'] == '15') $tipe_teks = "Wajah";
+        elseif ($row['tipe_verifikasi'] == '0') $tipe_teks = "Password / PIN";
 
         // Cek Badge Jadwal Guru
         $badge_jadwal = "";
         $is_guru = ($row['tipe'] ?? '') === 'guru';
         if ($is_guru) {
             if ($row['total_jadwal_guru'] == 0) {
-                $badge_jadwal = "<span class='badge' style='background:#fef3c7; color:#92400e; border:1px solid #fde68a;' title='Jadwal ngajar belum diatur superadmin'>❓ Belum Ada Jadwal</span>";
+                $badge_jadwal = "<span class='badge' style='background:#fef3c7; color:#92400e; border:1px solid #fde68a;' title='Jadwal ngajar belum diatur superadmin'>Belum Ada Jadwal</span>";
             } elseif (empty($row['jg_id'])) {
-                $badge_jadwal = "<span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;' title='Absen di luar hari jadwal ngajar'>⚠️ Di Luar Jadwal</span>";
+                $badge_jadwal = "<span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;' title='Absen di luar hari jadwal ngajar'>Di Luar Jadwal</span>";
             }
         }
 
         if (!empty($row['nama'])) {
             $nama_escaped = h($row['nama']);
             $dept_escaped = h($row['departemen']);
-            $tipe_label   = $is_guru ? "👨‍🏫 Guru" : "👔 Karyawan";
+            $tipe_label   = $is_guru ? "Guru" : "Karyawan";
             $tampil_nama = "<td class='nama-container'>
                                 <div style='display:flex; align-items:center; gap:6px;'>
                                     <div class='nama-title'>{$nama_escaped}</div>
@@ -111,33 +111,27 @@ if ($result->num_rows > 0) {
                                 <div class='dept-subtitle'>{$dept_escaped}</div>
                             </td>";
         } else {
-            $tampil_nama = "<td class='text-unregistered'>⚠️ Belum Terdaftar di Master</td>";
+            $tampil_nama = "<td class='text-unregistered'>Belum Terdaftar di Master</td>";
         }
 
-        echo "<tr>
-                <td><b>{$no}</b></td>
-                <td><code style='background:#f1f5f9; padding:3px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($row['pin']) . "</code></td>
-                {$tampil_nama}
-                <td><b>" . h($row['waktu']) . "</b></td>
-                <td><span class='badge {$badge_class}'>" . h($status_teks) . "</span></td>
-                <td>
-                    <div style='display:flex; flex-direction:column; align-items:center; gap:4px;'>
-                        <span class='badge badge-verif'>" . h($tipe_teks) . "</span>
-                        {$badge_jadwal}
-                    </div>
-                </td>
-              </tr>";
-        $no++;
+        $status_badge = "<span class='badge {$badge_class}'>" . h($status_teks) . "</span>";
+
+        $rows_out[] = [
+            'no' => $no++,
+            'pin' => h($row['pin']),
+            'nama_html' => $tampil_nama,
+            'waktu' => h($row['waktu']),
+            'status_badge' => $status_badge,
+            'verifikasi' => $tipe_teks,
+            'badge_jadwal' => $badge_jadwal
+        ];
     }
-} else {
-    echo "<tr><td colspan='6' style='padding: 30px; color:#94a3b8;'>Data absensi tidak ditemukan untuk filter ini.</td></tr>";
 }
-$html = ob_get_clean();
 
 echo json_encode([
     'success' => true,
-    'count' => $result->num_rows,
-    'html' => $html,
+    'total' => count($rows_out),
+    'rows' => $rows_out,
     'last_update' => date('H:i:s')
 ]);
 exit;
