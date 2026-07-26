@@ -352,6 +352,13 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
                 <span>Laporan Bulanan</span>
             </a>
 
+            <a href="riwayat_karyawan.php" class="nav-item <?php echo $active_menu === 'riwayat' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+                <span>Riwayat Individual</span>
+            </a>
+
             <?php if (is_superadmin()): ?>
             <a href="input_karyawan.php" class="nav-item <?php echo $active_menu === 'karyawan' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon-svg">

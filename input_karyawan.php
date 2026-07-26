@@ -425,6 +425,10 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                                 <td>{$badge_tipe}</td>
                                 <td>
                                     <div style='display:flex; gap:6px; justify-content:center;'>
+                                        <a class='btn' style='background:#eff6ff; color:#1d4ed8; font-size:12px; padding:6px 12px; border:1px solid #bfdbfe; text-decoration:none;' 
+                                           href='riwayat_karyawan.php?pin=" . urlencode($row['pin']) . "'>
+                                            📜 Riwayat
+                                        </a>
                                         <button type='button' class='btn' style='background:#f1f5f9; color:#334155; font-size:12px; padding:6px 12px; border:1px solid #cbd5e1;'
                                                 onclick='bukaModalEditKaryawan(\"{$pin_attr}\", \"{$nama_attr}\", \"{$dept_attr}\", \"{$tipe_attr}\")'>
                                             ✏️ Edit

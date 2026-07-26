@@ -478,7 +478,9 @@ function b_sort_icon($col_name, $current_sort) {
                         echo "<tr>
                                 <td><code style='background:#f1f5f9; padding:4px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($r['pin']) . "</code></td>
                                 <td style='text-align:left;'>
-                                    <div style='font-weight:700; color:#0f172a;'>" . h($r['nama']) . "</div>
+                                    <a href='riwayat_karyawan.php?pin=" . urlencode($r['pin']) . "' style='color:#0f172a; text-decoration:none; font-weight:700;' title='Klik untuk melihat riwayat absensi lengkap'>
+                                        " . h($r['nama']) . " 📜
+                                    </a>
                                     <div style='font-size:11px; color:#64748b;'>" . h($r['dept']) . "</div>
                                 </td>
                                 <td>{$badge_tipe}</td>
