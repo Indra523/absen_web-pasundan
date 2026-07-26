@@ -229,11 +229,11 @@ render_header("Riwayat Absensi Individual", "riwayat");
                     <?php if (empty($karyawan_list)): ?>
                         <option value="">-- Tidak ada data karyawan --</option>
                     <?php else: ?>
-                        <?php foreach ($karyawan_list as $k): ?>
-                            $is_g = ($k['tipe'] === 'guru');
-                            $label_t = $is_g ? "👨‍🏫 Guru" : "👔 Karyawan";
+                        <?php foreach ($karyawan_list as $k): 
+                            $dept_label = !empty($k['departemen']) ? " — " . h($k['departemen']) : "";
+                        ?>
                             <option value="<?php echo h($k['pin']); ?>" <?php echo $pin_selected === $k['pin'] ? 'selected' : ''; ?>>
-                                [PIN: <?php echo h($k['pin']); ?>] <?php echo h($k['nama']); ?> (<?php echo h($k['departemen'] ?: 'Staff'); ?> - <?php echo $label_t; ?>)
+                                <?php echo h($k['nama']) . $dept_label; ?>
                             </option>
                         <?php endforeach; ?>
                     <?php endif; ?>
