@@ -226,6 +226,7 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         input[type="number"],
         input[type="password"],
         input[type="date"],
+        input[type="time"],
         input[type="file"],
         select {
             width: 100%; padding: 11px 14px; margin-bottom: 18px;

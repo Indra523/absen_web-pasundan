@@ -212,20 +212,14 @@ render_header("Live Monitoring Absensi", "index");
                 <?php endif; ?>
             </select>
 
-            <!-- CARD CONTAINER WAKTU ABSEN -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:18px;">
-                <div style="font-size:12px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">
-                    ⏰ Pengaturan Waktu Absen
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;">
+                <div>
+                    <label for="tgl_manual" style="font-weight:700;">📅 Tanggal Absen:</label>
+                    <input type="date" id="tgl_manual" name="tgl_manual" value="<?php echo date('Y-m-d'); ?>" required style="margin-bottom:0;">
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                    <div>
-                        <label for="tgl_manual" style="font-weight:700; font-size:13px; color:#334155; margin-bottom:6px; display:block;">📅 Tanggal:</label>
-                        <input type="date" id="tgl_manual" name="tgl_manual" value="<?php echo date('Y-m-d'); ?>" required style="margin-bottom:0; background:#ffffff;">
-                    </div>
-                    <div>
-                        <label for="jam_manual" style="font-weight:700; font-size:13px; color:#334155; margin-bottom:6px; display:block;">🕒 Jam Absen:</label>
-                        <input type="time" id="jam_manual" name="jam_manual" value="<?php echo date('H:i:s'); ?>" step="1" required style="margin-bottom:0; background:#ffffff;">
-                    </div>
+                <div>
+                    <label for="jam_manual" style="font-weight:700;">⏰ Jam Absen:</label>
+                    <input type="time" id="jam_manual" name="jam_manual" value="<?php echo date('H:i:s'); ?>" step="1" required style="margin-bottom:0;">
                 </div>
             </div>
 
