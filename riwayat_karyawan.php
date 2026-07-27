@@ -29,6 +29,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// PROSES TUKAR STATUS LOG ABSEN (Superadmin Only)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'tukar_status_log') {
+    csrf_verify();
+    if (!is_superadmin()) {
+        $pesan_error = "Akses Ditolak: Hanya Superadmin yang berhak mengubah status log absen.";
+    } else {
+        $id_toggle = (int)($_POST['id_log_toggle'] ?? 0);
+        if ($id_toggle > 0) {
+            $stmt_cur = $conn->prepare("SELECT status FROM log_absen WHERE id = ?");
+            $stmt_cur->bind_param("i", $id_toggle);
+            $stmt_cur->execute();
+            $res_cur = $stmt_cur->get_result()->fetch_assoc();
+
+            if ($res_cur) {
+                $status_baru = ($res_cur['status'] === '0') ? '1' : '0';
+                $status_label = ($status_baru === '0') ? 'Masuk' : 'Pulang';
+
+                $stmt_upd = $conn->prepare("UPDATE log_absen SET status = ? WHERE id = ?");
+                $stmt_upd->bind_param("si", $status_baru, $id_toggle);
+                if ($stmt_upd->execute()) {
+                    $pesan_sukses = "Status log absen berhasil ditukar menjadi {$status_label}.";
+                }
+            }
+        }
+    }
+}
+
 // Parameter PIN, Range Tanggal, & Sorting
 $pin_selected = trim($_GET['pin'] ?? $_POST['pin_selected'] ?? '');
 $tgl_mulai    = trim($_GET['tgl_mulai'] ?? '');
@@ -445,15 +472,25 @@ render_header("Riwayat Absensi Individual", "riwayat");
 
                         $td_aksi = "";
                         if (is_superadmin()) {
-                            $csrf_tok = csrf_token();
+                            $target_status_label = ($l['status'] === '0') ? "Pulang" : "Masuk";
+                            $action_url = "riwayat_karyawan.php?pin=" . urlencode($pin_selected) . "&tgl_mulai=" . urlencode($tgl_mulai) . "&tgl_selesai=" . urlencode($tgl_selesai) . "&sort=" . urlencode($sort_order);
                             $td_aksi = "<td>
-                                            <form method='POST' action='riwayat_karyawan.php?pin=" . urlencode($pin_selected) . "&tgl_mulai=" . urlencode($tgl_mulai) . "&tgl_selesai=" . urlencode($tgl_selesai) . "&sort=" . urlencode($sort_order) . "' style='margin:0;' onsubmit=\"return confirm('Yakin ingin menghapus data log absen ini?')\">
-                                                " . csrf_field() . "
-                                                <input type='hidden' name='action' value='hapus_log_absen'>
-                                                <input type='hidden' name='id_log_hapus' value='{$l['id']}'>
-                                                <input type='hidden' name='pin_selected' value='{$pin_selected}'>
-                                                <button type='submit' class='btn' style='background:#fee2e2; color:#dc2626; font-size:11px; padding:4px 8px; border:1px solid #fca5a5;'>🗑️ Hapus</button>
-                                            </form>
+                                            <div style='display:flex; gap:4px; justify-content:center;'>
+                                                <form method='POST' action='{$action_url}' style='margin:0;'>
+                                                    " . csrf_field() . "
+                                                    <input type='hidden' name='action' value='tukar_status_log'>
+                                                    <input type='hidden' name='id_log_toggle' value='{$l['id']}'>
+                                                    <input type='hidden' name='pin_selected' value='{$pin_selected}'>
+                                                    <button type='submit' class='btn' style='background:#f1f5f9; color:#0f172a; font-size:11px; padding:4px 8px; border:1px solid #cbd5e1;' title='Tukar status ke {$target_status_label}'>🔄 Tukar Status</button>
+                                                </form>
+                                                <form method='POST' action='{$action_url}' style='margin:0;' onsubmit=\"return confirm('Yakin ingin menghapus data log absen ini?')\">
+                                                    " . csrf_field() . "
+                                                    <input type='hidden' name='action' value='hapus_log_absen'>
+                                                    <input type='hidden' name='id_log_hapus' value='{$l['id']}'>
+                                                    <input type='hidden' name='pin_selected' value='{$pin_selected}'>
+                                                    <button type='submit' class='btn' style='background:#fee2e2; color:#dc2626; font-size:11px; padding:4px 8px; border:1px solid #fca5a5;'>🗑️ Hapus</button>
+                                                </form>
+                                            </div>
                                         </td>";
                         }
 

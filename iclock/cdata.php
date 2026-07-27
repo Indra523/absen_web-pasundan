@@ -57,12 +57,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tipe_verifikasi = isset($kolom[3]) ? trim($kolom[3]) : '';
             
             if ($pin !== '' && $waktu !== '') {
-                $tgl_log      = date('Y-m-d', strtotime($waktu));
-                $status_clean = ($status === '1') ? '1' : '0';
+                $tgl_log   = date('Y-m-d', strtotime($waktu));
+                $jam_num   = (int)date('H', strtotime($waktu));
+                $status_in = ($status === '1') ? '1' : '0';
+
+                // SMART AUTO-CORRECTION:
+                // Cek log absensi karyawan tersebut yang sudah ada di tanggal yang sama
+                $stmt_hist = $conn->prepare("SELECT status FROM log_absen WHERE pin = ? AND DATE(waktu) = ? ORDER BY waktu ASC");
+                $stmt_hist->bind_param("ss", $pin, $tgl_log);
+                $stmt_hist->execute();
+                $res_hist = $stmt_hist->get_result();
+
+                $has_masuk = false;
+                $has_pulang = false;
+                while ($h = $res_hist->fetch_assoc()) {
+                    if ($h['status'] === '0') $has_masuk = true;
+                    if ($h['status'] === '1') $has_pulang = true;
+                }
+
+                $status_clean = $status_in;
+
+                // Aturan Auto-Correction:
+                // 1. Scan Pertama Pagi Hari (< 12:00 WIB) & belum ada log Masuk hari ini -> Paksa Masuk (0)
+                if (!$has_masuk && $jam_num < 12) {
+                    $status_clean = '0';
+                }
+                // 2. Scan Siang/Sore Hari (>= 11:00 WIB) & sudah ada Masuk & belum ada Pulang -> Paksa Pulang (1)
+                elseif ($has_masuk && !$has_pulang && $jam_num >= 11) {
+                    $status_clean = '1';
+                }
 
                 // CEK DE-DUPLIKASI (DOUBLE TAP PREVENTION):
                 // Jika user sudah memiliki log dengan status SAMA pada tanggal yang sama, abaikan tap susulan tersebut.
-                // Log absen kedua untuk status yang berbeda (misal: Pulang) tetap diperbolehkan.
                 $stmt_cek = $conn->prepare("SELECT id FROM log_absen WHERE pin = ? AND DATE(waktu) = ? AND status = ? LIMIT 1");
                 $stmt_cek->bind_param("sss", $pin, $tgl_log, $status_clean);
                 $stmt_cek->execute();

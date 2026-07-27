@@ -121,13 +121,22 @@ if ($result->num_rows > 0) {
         $td_aksi = "";
         if (is_superadmin()) {
             $csrf_tok = csrf_token();
+            $target_status_label = ($row['status'] === '0') ? "Pulang" : "Masuk";
             $td_aksi = "<td>
-                            <form method='POST' action='index.php' style='margin:0;' onsubmit=\"return confirm('Yakin ingin menghapus data log absen ini?')\">
-                                <input type='hidden' name='csrf_token' value='{$csrf_tok}'>
-                                <input type='hidden' name='action' value='hapus_log_absen'>
-                                <input type='hidden' name='id_log_hapus' value='{$row['id']}'>
-                                <button type='submit' class='btn' style='background:#fee2e2; color:#dc2626; font-size:11px; padding:4px 8px; border:1px solid #fca5a5;'>🗑️ Hapus</button>
-                            </form>
+                            <div style='display:flex; gap:4px; justify-content:center;'>
+                                <form method='POST' action='index.php' style='margin:0;'>
+                                    <input type='hidden' name='csrf_token' value='{$csrf_tok}'>
+                                    <input type='hidden' name='action' value='tukar_status_log'>
+                                    <input type='hidden' name='id_log_toggle' value='{$row['id']}'>
+                                    <button type='submit' class='btn' style='background:#f1f5f9; color:#0f172a; font-size:11px; padding:4px 8px; border:1px solid #cbd5e1;' title='Tukar status ke {$target_status_label}'>🔄 Tukar Status</button>
+                                </form>
+                                <form method='POST' action='index.php' style='margin:0;' onsubmit=\"return confirm('Yakin ingin menghapus data log absen ini?')\">
+                                    <input type='hidden' name='csrf_token' value='{$csrf_tok}'>
+                                    <input type='hidden' name='action' value='hapus_log_absen'>
+                                    <input type='hidden' name='id_log_hapus' value='{$row['id']}'>
+                                    <button type='submit' class='btn' style='background:#fee2e2; color:#dc2626; font-size:11px; padding:4px 8px; border:1px solid #fca5a5;'>🗑️ Hapus</button>
+                                </form>
+                            </div>
                         </td>";
         }
 

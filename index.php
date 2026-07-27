@@ -71,6 +71,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'tukar_status_log') {
+    csrf_verify();
+    
+    if (!is_superadmin()) {
+        $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Akses Ditolak:</b> Hanya Superadmin yang berhak mengubah status log absen.</div>";
+    } else {
+        $id_toggle = (int)($_POST['id_log_toggle'] ?? 0);
+        if ($id_toggle > 0) {
+            $stmt_cur = $conn->prepare("SELECT status FROM log_absen WHERE id = ?");
+            $stmt_cur->bind_param("i", $id_toggle);
+            $stmt_cur->execute();
+            $res_cur = $stmt_cur->get_result()->fetch_assoc();
+
+            if ($res_cur) {
+                $status_baru = ($res_cur['status'] === '0') ? '1' : '0';
+                $status_label = ($status_baru === '0') ? '🟢 Masuk' : '🔴 Pulang';
+
+                $stmt_upd = $conn->prepare("UPDATE log_absen SET status = ? WHERE id = ?");
+                $stmt_upd->bind_param("si", $status_baru, $id_toggle);
+                if ($stmt_upd->execute()) {
+                    $pesan_manual = "<div style='background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>🔄 <b>Status Diperbarui!</b> Status log absen berhasil diubah menjadi <b>{$status_label}</b>.</div>";
+                }
+            }
+        }
+    }
+}
 
 // Initial Filter Parameters (Default: Tanggal Hari Ini)
 $tgl           = trim($_GET['tgl'] ?? date('Y-m-d'));
