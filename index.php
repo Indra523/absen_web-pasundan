@@ -17,12 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Akses Ditolak:</b> Hanya Superadmin yang berhak menambahkan log absen manual.</div>";
     } else {
         $pin_m        = trim($_POST['pin_manual'] ?? '');
-        $waktu_m      = trim($_POST['waktu_manual'] ?? '');
+        $tgl_m        = trim($_POST['tgl_manual'] ?? '');
+        $jam_m        = trim($_POST['jam_manual'] ?? '');
         $status_m     = trim($_POST['status_manual'] ?? '0');
         $tipe_verif_m = trim($_POST['tipe_verifikasi_manual'] ?? '0');
 
-        if (!empty($pin_m) && !empty($waktu_m)) {
-            $waktu_formatted = date('Y-m-d H:i:s', strtotime($waktu_m));
+        if (!empty($pin_m) && (!empty($tgl_m) && !empty($jam_m))) {
+            if (strlen($jam_m) === 5) $jam_m .= ':00';
+            $waktu_formatted = date('Y-m-d H:i:s', strtotime($tgl_m . ' ' . $jam_m));
             $status_clean    = in_array($status_m, ['0', '1']) ? $status_m : '0';
             $tipe_verif      = in_array($tipe_verif_m, ['0', '1', '15']) ? $tipe_verif_m : '0';
 
@@ -210,8 +212,16 @@ render_header("Live Monitoring Absensi", "index");
                 <?php endif; ?>
             </select>
 
-            <label for="waktu_manual" style="font-weight:700;">Waktu Absen (Tanggal & Jam):</label>
-            <input type="datetime-local" id="waktu_manual" name="waktu_manual" value="<?php echo date('Y-m-d\TH:i'); ?>" required style="margin-bottom:18px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
+                <div>
+                    <label for="tgl_manual" style="font-weight:700; margin-bottom:6px; display:block;">📅 Tanggal Absen:</label>
+                    <input type="date" id="tgl_manual" name="tgl_manual" value="<?php echo date('Y-m-d'); ?>" required style="margin-bottom:0;">
+                </div>
+                <div>
+                    <label for="jam_manual" style="font-weight:700; margin-bottom:6px; display:block;">⏰ Jam Absen:</label>
+                    <input type="time" id="jam_manual" name="jam_manual" value="<?php echo date('H:i:s'); ?>" step="1" required style="margin-bottom:0;">
+                </div>
+            </div>
 
             <label for="status_manual" style="font-weight:700;">Status Absensi:</label>
             <select id="status_manual" name="status_manual" style="margin-bottom:18px;">
