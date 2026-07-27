@@ -25,16 +25,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $status_clean    = in_array($status_m, ['0', '1']) ? $status_m : '0';
             $tipe_verif      = '0'; // 0 = Input Manual Admin
 
-            $stmt_m = $conn->prepare("INSERT INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, ?, ?)");
+            $stmt_m = $conn->prepare("INSERT INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status = VALUES(status), tipe_verifikasi = VALUES(tipe_verifikasi)");
             $stmt_m->bind_param("ssss", $pin_m, $waktu_formatted, $status_clean, $tipe_verif);
 
             if ($stmt_m->execute()) {
-                $pesan_manual = "<div style='background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>✅ <b>Berhasil!</b> Log absen manual untuk PIN <b>" . h($pin_m) . "</b> (Waktu: " . h($waktu_formatted) . ") berhasil ditambahkan.</div>";
+                $pesan_manual = "<div style='background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>✅ <b>Berhasil!</b> Log absen manual untuk PIN <b>" . h($pin_m) . "</b> (Waktu: " . h($waktu_formatted) . ") berhasil ditambahkan/diperbarui.</div>";
             } else {
                 $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Gagal:</b> " . h($conn->error) . "</div>";
             }
         } else {
             $pesan_manual = "<div style='background:#fff3cd; color:#856404; border:1px solid #ffeeba; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>Harap pilih karyawan dan tentukan waktu absen!</div>";
+        }
+    }
+}
+
+// PROSES HAPUS LOG ABSEN (Hanya Superadmin)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'hapus_log_absen') {
+    csrf_verify();
+    
+    if (!is_superadmin()) {
+        $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Akses Ditolak:</b> Hanya Superadmin yang berhak menghapus log absen.</div>";
+    } else {
+        $id_hapus = (int)($_POST['id_log_hapus'] ?? 0);
+        if ($id_hapus > 0) {
+            $stmt_del = $conn->prepare("DELETE FROM log_absen WHERE id = ?");
+            $stmt_del->bind_param("i", $id_hapus);
+            if ($stmt_del->execute()) {
+                $pesan_manual = "<div style='background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>✅ <b>Berhasil!</b> Data log absen telah berhasil dihapus.</div>";
+            } else {
+                $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Gagal menghapus:</b> " . h($conn->error) . "</div>";
+            }
         }
     }
 }
@@ -143,11 +163,14 @@ render_header("Live Monitoring Absensi", "index");
                     <th>Waktu Absen</th>
                     <th>Status Absensi</th>
                     <th>Tipe Verifikasi</th>
+                    <?php if (is_superadmin()): ?>
+                    <th>Aksi</th>
+                    <?php endif; ?>
                 </tr>
             </thead>
             <tbody id="tbody-monitoring">
                 <tr>
-                    <td colspan="6" style="padding: 35px; color:#94a3b8; text-align:center;">Memuat data absensi...</td>
+                    <td colspan="<?php echo is_superadmin() ? '7' : '6'; ?>" style="padding: 35px; color:#94a3b8; text-align:center;">Memuat data absensi...</td>
                 </tr>
             </tbody>
         </table>

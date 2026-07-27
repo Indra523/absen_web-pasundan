@@ -7,9 +7,30 @@
 require_once __DIR__ . '/layout.php';
 
 $conn = getDB();
+$pesan_sukses = "";
+$pesan_error  = "";
+
+// PROSES HAPUS LOG ABSEN (Superadmin Only)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'hapus_log_absen') {
+    csrf_verify();
+    if (!is_superadmin()) {
+        $pesan_error = "Akses Ditolak: Hanya Superadmin yang berhak menghapus log absen.";
+    } else {
+        $id_hapus = (int)($_POST['id_log_hapus'] ?? 0);
+        if ($id_hapus > 0) {
+            $stmt_del = $conn->prepare("DELETE FROM log_absen WHERE id = ?");
+            $stmt_del->bind_param("i", $id_hapus);
+            if ($stmt_del->execute()) {
+                $pesan_sukses = "Log absen berhasil dihapus.";
+            } else {
+                $pesan_error = "Gagal menghapus log absen: " . h($conn->error);
+            }
+        }
+    }
+}
 
 // Parameter PIN, Range Tanggal, & Sorting
-$pin_selected = trim($_GET['pin'] ?? '');
+$pin_selected = trim($_GET['pin'] ?? $_POST['pin_selected'] ?? '');
 $tgl_mulai    = trim($_GET['tgl_mulai'] ?? '');
 $tgl_selesai  = trim($_GET['tgl_selesai'] ?? '');
 $sort_order   = $_GET['sort'] ?? 'desc'; // 'desc' (terbaru ke tertua) atau 'asc' (pertama ke terbaru)
@@ -218,6 +239,18 @@ if ($export && $detail_user) {
 render_header("Riwayat Absensi Individual", "riwayat");
 ?>
 
+<?php if ($pesan_sukses): ?>
+<div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border: 1px solid #6ee7b7; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; color: #065f46; font-size: 14px; font-weight: 500;">
+    <?php echo $pesan_sukses; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($pesan_error): ?>
+<div style="background: linear-gradient(135deg, #fee2e2, #fecaca); border: 1px solid #f87171; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; color: #991b1b; font-size: 14px; font-weight: 500;">
+    <?php echo $pesan_error; ?>
+</div>
+<?php endif; ?>
+
 <!-- PANEL SEARCH & FILTER KARYAWAN -->
 <div class="card" style="margin-bottom:20px; padding:20px;">
     <form method="GET" action="riwayat_karyawan.php" style="margin:0;">
@@ -263,7 +296,7 @@ render_header("Riwayat Absensi Individual", "riwayat");
 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-top:14px; border-top:1px solid #f1f5f9;">
             <div style="font-size:12px; color:#64748b;">
-                💡 <b>Petunjuk:</b> Masukkan nama/PIN untuk melihat riwayat absensi lengkap dari awal hingga akhir.
+                💡 <b>Petunjuk:</b> Pilih nama guru/karyawan untuk melihat riwayat absensi lengkap dari awal hingga akhir.
             </div>
 
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -302,7 +335,9 @@ render_header("Riwayat Absensi Individual", "riwayat");
             </div>
         </div>
 
+        <?php if (is_superadmin()): ?>
         <a href="input_karyawan.php" class="btn" style="background:#f1f5f9; color:#334155; font-size:12px; padding:6px 12px; border:1px solid #cbd5e1;">✏️ Edit Profil Karyawan</a>
+        <?php endif; ?>
     </div>
 
     <!-- 4 SUMMARY CARDS -->
@@ -363,6 +398,9 @@ render_header("Riwayat Absensi Individual", "riwayat");
                     <th>Status Absensi</th>
                     <th>Keterangan Jadwal</th>
                     <th>Tipe Verifikasi</th>
+                    <?php if (is_superadmin()): ?>
+                    <th>Aksi</th>
+                    <?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -401,8 +439,23 @@ render_header("Riwayat Absensi Individual", "riwayat");
                         $verif_badge = "<span class='badge badge-verif'>";
                         if ($l['tipe_verifikasi'] == '1') $verif_badge .= "Sidik Jari 👆";
                         elseif ($l['tipe_verifikasi'] == '15') $verif_badge .= "Wajah 👤";
+                        elseif ($l['tipe_verifikasi'] == '0' || $l['tipe_verifikasi'] == '99') $verif_badge .= "Manual Admin ✏️";
                         else $verif_badge .= "Password / PIN";
                         $verif_badge .= "</span>";
+
+                        $td_aksi = "";
+                        if (is_superadmin()) {
+                            $csrf_tok = csrf_token();
+                            $td_aksi = "<td>
+                                            <form method='POST' action='riwayat_karyawan.php?pin=" . urlencode($pin_selected) . "&tgl_mulai=" . urlencode($tgl_mulai) . "&tgl_selesai=" . urlencode($tgl_selesai) . "&sort=" . urlencode($sort_order) . "' style='margin:0;' onsubmit=\"return confirm('Yakin ingin menghapus data log absen ini?')\">
+                                                " . csrf_field() . "
+                                                <input type='hidden' name='action' value='hapus_log_absen'>
+                                                <input type='hidden' name='id_log_hapus' value='{$l['id']}'>
+                                                <input type='hidden' name='pin_selected' value='{$pin_selected}'>
+                                                <button type='submit' class='btn' style='background:#fee2e2; color:#dc2626; font-size:11px; padding:4px 8px; border:1px solid #fca5a5;'>🗑️ Hapus</button>
+                                            </form>
+                                        </td>";
+                        }
 
                         echo "<tr>
                                 <td><b>{$no}</b></td>
@@ -411,11 +464,13 @@ render_header("Riwayat Absensi Individual", "riwayat");
                                 <td>{$st_badge}</td>
                                 <td>{$ket_badge}</td>
                                 <td>{$verif_badge}</td>
+                                {$td_aksi}
                               </tr>";
                         $no++;
                     }
                 } else {
-                    echo "<tr><td colspan='6' style='padding:35px; color:#94a3b8;'>Belum ada data riwayat absensi untuk karyawan ini.</td></tr>";
+                    $colspan = is_superadmin() ? 7 : 6;
+                    echo "<tr><td colspan='{$colspan}' style='padding:35px; color:#94a3b8;'>Belum ada data riwayat absensi untuk karyawan ini.</td></tr>";
                 }
                 ?>
             </tbody>

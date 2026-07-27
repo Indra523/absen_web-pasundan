@@ -118,6 +118,19 @@ if ($result->num_rows > 0) {
             $tampil_nama = "<td class='text-unregistered'>⚠️ Belum Terdaftar di Master</td>";
         }
 
+        $td_aksi = "";
+        if (is_superadmin()) {
+            $csrf_tok = csrf_token();
+            $td_aksi = "<td>
+                            <form method='POST' action='index.php' style='margin:0;' onsubmit=\"return confirm('Yakin ingin menghapus data log absen ini?')\">
+                                <input type='hidden' name='csrf_token' value='{$csrf_tok}'>
+                                <input type='hidden' name='action' value='hapus_log_absen'>
+                                <input type='hidden' name='id_log_hapus' value='{$row['id']}'>
+                                <button type='submit' class='btn' style='background:#fee2e2; color:#dc2626; font-size:11px; padding:4px 8px; border:1px solid #fca5a5;'>🗑️ Hapus</button>
+                            </form>
+                        </td>";
+        }
+
         echo "<tr>
                 <td><b>{$no}</b></td>
                 <td><code style='background:#f1f5f9; padding:3px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($row['pin']) . "</code></td>
@@ -130,11 +143,13 @@ if ($result->num_rows > 0) {
                         {$badge_jadwal}
                     </div>
                 </td>
+                {$td_aksi}
               </tr>";
         $no++;
     }
 } else {
-    echo "<tr><td colspan='6' style='padding: 30px; color:#94a3b8;'>Data absensi tidak ditemukan untuk filter ini.</td></tr>";
+    $colspan = is_superadmin() ? 7 : 6;
+    echo "<tr><td colspan='{$colspan}' style='padding: 30px; color:#94a3b8;'>Data absensi tidak ditemukan untuk filter ini.</td></tr>";
 }
 $html = ob_get_clean();
 
