@@ -53,14 +53,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pin             = isset($kolom[0]) ? trim($kolom[0]) : '';
             $waktu           = isset($kolom[1]) ? trim($kolom[1]) : '';
-            $status          = isset($kolom[2]) ? trim($kolom[2]) : '';
+            $status          = isset($kolom[2]) ? trim($kolom[2]) : '0';
             $tipe_verifikasi = isset($kolom[3]) ? trim($kolom[3]) : '';
             
-            if ($pin != '' && $waktu != '') {
-                // INSERT IGNORE: mencegah duplikasi berkat UNIQUE KEY (pin, waktu)
-                $stmt = $conn->prepare("INSERT IGNORE INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, ?, ?)");
-                $stmt->bind_param("ssss", $pin, $waktu, $status, $tipe_verifikasi);
-                $stmt->execute();
+            if ($pin !== '' && $waktu !== '') {
+                $tgl_log      = date('Y-m-d', strtotime($waktu));
+                $status_clean = ($status === '1') ? '1' : '0';
+
+                // CEK DE-DUPLIKASI (DOUBLE TAP PREVENTION):
+                // Jika user sudah memiliki log dengan status SAMA pada tanggal yang sama, abaikan tap susulan tersebut.
+                // Log absen kedua untuk status yang berbeda (misal: Pulang) tetap diperbolehkan.
+                $stmt_cek = $conn->prepare("SELECT id FROM log_absen WHERE pin = ? AND DATE(waktu) = ? AND status = ? LIMIT 1");
+                $stmt_cek->bind_param("sss", $pin, $tgl_log, $status_clean);
+                $stmt_cek->execute();
+                $res_cek = $stmt_cek->get_result();
+
+                if ($res_cek->num_rows === 0) {
+                    // Belum ada log untuk status ini pada tanggal tersebut -> Simpan data pertama
+                    $stmt = $conn->prepare("INSERT IGNORE INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, ?, ?)");
+                    $stmt->bind_param("ssss", $pin, $waktu, $status_clean, $tipe_verifikasi);
+                    $stmt->execute();
+                }
             }
         }
     }
