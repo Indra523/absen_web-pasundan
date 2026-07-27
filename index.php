@@ -177,11 +177,10 @@ render_header("Live Monitoring Absensi", "index");
                     <option value="">-- Belum ada data guru & karyawan --</option>
                 <?php else: ?>
                     <?php foreach ($karyawan_all as $ka): 
-                        $is_g = ($ka['tipe'] === 'guru');
-                        $t_label = $is_g ? "👨‍🏫 Guru" : "👔 Karyawan";
+                        $dept_label = !empty($ka['departemen']) ? " — " . h($ka['departemen']) : "";
                     ?>
                         <option value="<?php echo h($ka['pin']); ?>">
-                            [PIN: <?php echo h($ka['pin']); ?>] <?php echo h($ka['nama']); ?> (<?php echo h($ka['departemen'] ?: 'Staff'); ?> - <?php echo $t_label; ?>)
+                            <?php echo h($ka['nama']) . $dept_label; ?>
                         </option>
                     <?php endforeach; ?>
                 <?php endif; ?>
