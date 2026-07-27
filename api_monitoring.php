@@ -6,6 +6,9 @@
 
 require_once __DIR__ . '/auth.php';
 
+// Release lock file sesi segera agar request reload/F5 tidak terblokir
+session_write_close();
+
 header('Content-Type: application/json; charset=utf-8');
 
 $conn = getDB();
