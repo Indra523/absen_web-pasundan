@@ -32,7 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt_m->bind_param("ssss", $pin_m, $waktu_formatted, $status_clean, $tipe_verif);
 
             if ($stmt_m->execute()) {
-                $pesan_manual = "<div style='background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>✅ <b>Berhasil!</b> Log absen manual untuk PIN <b>" . h($pin_m) . "</b> (Waktu: " . h($waktu_formatted) . ") berhasil ditambahkan/diperbarui.</div>";
+                $tgl = $tgl_m; // Otomatis sesuaikan filter tanggal ke tanggal data yang diinput
+                $tgl_fmt_id = date('d-m-Y H:i:s', strtotime($waktu_formatted));
+                $pesan_manual = "<div style='background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;'>
+                    <div>
+                        ✅ <b>Berhasil Disimpan!</b> Log absen manual untuk PIN <b>" . h($pin_m) . "</b> (Waktu: <b>" . h($tgl_fmt_id) . "</b>) berhasil masuk ke database.<br>
+                        <span style='font-size:12px; font-weight:normal; opacity:0.9;'>💡 <b>Informasi:</b> Live Monitoring diurutkan dari jam terbaru ke tertua. Data jam sebelumnya tersusun sesuai kronologi urutan jamnya.</span>
+                    </div>
+                    <button type='button' class='btn' style='background:#155724; color:#fff; font-size:12px; padding:6px 12px; border:none;' onclick=\"findNewlyAddedLog('" . h($pin_m) . "', '" . h($tgl_m) . "')\">
+                        🔍 Sorot / Filter Data Ini
+                    </button>
+                </div>";
             } else {
                 $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Gagal:</b> " . h($conn->error) . "</div>";
             }
@@ -329,6 +339,16 @@ function fetchMonitoringData() {
         .catch(err => {
             console.error('AJAX polling error:', err);
         });
+}
+
+// Fungsi Sorot / Filter Data Baru
+function findNewlyAddedLog(pin, tgl) {
+    if (tgl) {
+        inputTgl.value = tgl;
+        currentTglMode = tgl;
+    }
+    inputQ.value = pin;
+    fetchMonitoringData();
 }
 
 // Shortcut Filter Tanggal
