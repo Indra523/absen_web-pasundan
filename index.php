@@ -16,14 +16,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (!is_superadmin()) {
         $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Akses Ditolak:</b> Hanya Superadmin yang berhak menambahkan log absen manual.</div>";
     } else {
-        $pin_m    = trim($_POST['pin_manual'] ?? '');
-        $waktu_m  = trim($_POST['waktu_manual'] ?? '');
-        $status_m = trim($_POST['status_manual'] ?? '0');
+        $pin_m        = trim($_POST['pin_manual'] ?? '');
+        $waktu_m      = trim($_POST['waktu_manual'] ?? '');
+        $status_m     = trim($_POST['status_manual'] ?? '0');
+        $tipe_verif_m = trim($_POST['tipe_verifikasi_manual'] ?? '0');
 
         if (!empty($pin_m) && !empty($waktu_m)) {
             $waktu_formatted = date('Y-m-d H:i:s', strtotime($waktu_m));
             $status_clean    = in_array($status_m, ['0', '1']) ? $status_m : '0';
-            $tipe_verif      = '0'; // 0 = Input Manual Admin
+            $tipe_verif      = in_array($tipe_verif_m, ['0', '1', '15']) ? $tipe_verif_m : '0';
 
             $stmt_m = $conn->prepare("INSERT INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status = VALUES(status), tipe_verifikasi = VALUES(tipe_verifikasi)");
             $stmt_m->bind_param("ssss", $pin_m, $waktu_formatted, $status_clean, $tipe_verif);
@@ -213,9 +214,16 @@ render_header("Live Monitoring Absensi", "index");
             <input type="datetime-local" id="waktu_manual" name="waktu_manual" value="<?php echo date('Y-m-d\TH:i'); ?>" required style="margin-bottom:18px;">
 
             <label for="status_manual" style="font-weight:700;">Status Absensi:</label>
-            <select id="status_manual" name="status_manual" style="margin-bottom:24px;">
+            <select id="status_manual" name="status_manual" style="margin-bottom:18px;">
                 <option value="0">🟢 Masuk</option>
                 <option value="1">🔴 Pulang</option>
+            </select>
+
+            <label for="tipe_verifikasi_manual" style="font-weight:700;">Tipe Verifikasi:</label>
+            <select id="tipe_verifikasi_manual" name="tipe_verifikasi_manual" style="margin-bottom:24px;">
+                <option value="0">✏️ Manual Admin</option>
+                <option value="1">👆 Sidik Jari</option>
+                <option value="15">👤 Wajah</option>
             </select>
 
             <div style="display:flex; gap:12px;">
