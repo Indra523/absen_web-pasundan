@@ -87,6 +87,7 @@ if ($result->num_rows > 0) {
         $tipe_teks = "Unknown";
         if ($row['tipe_verifikasi'] == '1') $tipe_teks = "Sidik Jari 👆";
         elseif ($row['tipe_verifikasi'] == '15') $tipe_teks = "Wajah 👤";
+        elseif ($row['tipe_verifikasi'] == '0' || $row['tipe_verifikasi'] == '99') $tipe_teks = "Manual Admin ✏️";
 
         // Cek Badge Jadwal Guru
         $badge_jadwal = "";

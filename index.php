@@ -7,6 +7,37 @@
 require_once __DIR__ . '/layout.php';
 
 $conn = getDB();
+$pesan_manual = "";
+
+// PROSES TAMBAH LOG ABSEN MANUAL (Hanya Superadmin - Mode Darurat / Maintenance Mesin)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'tambah_absen_manual') {
+    csrf_verify();
+    
+    if (!is_superadmin()) {
+        $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Akses Ditolak:</b> Hanya Superadmin yang berhak menambahkan log absen manual.</div>";
+    } else {
+        $pin_m    = trim($_POST['pin_manual'] ?? '');
+        $waktu_m  = trim($_POST['waktu_manual'] ?? '');
+        $status_m = trim($_POST['status_manual'] ?? '0');
+
+        if (!empty($pin_m) && !empty($waktu_m)) {
+            $waktu_formatted = date('Y-m-d H:i:s', strtotime($waktu_m));
+            $status_clean    = in_array($status_m, ['0', '1']) ? $status_m : '0';
+            $tipe_verif      = '0'; // 0 = Input Manual Admin
+
+            $stmt_m = $conn->prepare("INSERT INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, ?, ?)");
+            $stmt_m->bind_param("ssss", $pin_m, $waktu_formatted, $status_clean, $tipe_verif);
+
+            if ($stmt_m->execute()) {
+                $pesan_manual = "<div style='background:#d4edda; color:#155724; border:1px solid #c3e6cb; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>✅ <b>Berhasil!</b> Log absen manual untuk PIN <b>" . h($pin_m) . "</b> (Waktu: " . h($waktu_formatted) . ") berhasil ditambahkan.</div>";
+            } else {
+                $pesan_manual = "<div style='background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>⛔ <b>Gagal:</b> " . h($conn->error) . "</div>";
+            }
+        } else {
+            $pesan_manual = "<div style='background:#fff3cd; color:#856404; border:1px solid #ffeeba; padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; font-weight:600;'>Harap pilih karyawan dan tentukan waktu absen!</div>";
+        }
+    }
+}
 
 // Initial Filter Parameters (Default: Tanggal Hari Ini)
 $tgl           = trim($_GET['tgl'] ?? date('Y-m-d'));
@@ -15,8 +46,21 @@ $status_filter = trim($_GET['status'] ?? '');
 
 $export_url = "export_excel.php?" . http_build_query(['tgl' => $tgl, 'q' => $q, 'status' => $status_filter]);
 
+// Ambil semua data karyawan untuk modal input manual
+$karyawan_all = [];
+if (is_superadmin()) {
+    $res_k = $conn->query("SELECT pin, nama, departemen, tipe FROM master_karyawan ORDER BY CAST(pin AS UNSIGNED) ASC, pin ASC");
+    if ($res_k && $res_k->num_rows > 0) {
+        while ($rk = $res_k->fetch_assoc()) {
+            $karyawan_all[] = $rk;
+        }
+    }
+}
+
 render_header("Live Monitoring Absensi", "index");
 ?>
+
+<?php echo $pesan_manual; ?>
 
 <?php if (isset($_GET['error']) && $_GET['error'] === 'access_denied'): ?>
 <div style="background:#ffe4e6; color:#be123c; border:1px solid #fecdd3; padding:14px 18px; border-radius:12px; font-size:14px; font-weight:600; margin-bottom:20px;">
@@ -58,6 +102,12 @@ render_header("Live Monitoring Absensi", "index");
             </div>
 
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <?php if (is_superadmin()): ?>
+                <button type="button" class="btn" style="background:linear-gradient(135deg,#3b82f6,#6366f1); color:#fff; font-size:13px; padding:9px 14px; border:none; box-shadow:0 3px 10px rgba(59,130,246,0.3);" onclick="bukaModalManualAbsen()">
+                    ✏️ Input Absen Manual
+                </button>
+                <?php endif; ?>
+
                 <button type="button" id="btn-toggle-sync" class="btn" style="background:#f8fafc; color:#334155; font-size:13px; border:1px solid #cbd5e1; padding:9px 14px;" onclick="toggleAutoSync()">
                     <span id="sync-icon">🟢</span> <span id="sync-text">Auto-Sync</span>
                 </button>
@@ -104,6 +154,64 @@ render_header("Live Monitoring Absensi", "index");
     </div>
 </div>
 
+<?php if (is_superadmin()): ?>
+<!-- ================= MODAL INPUT ABSEN MANUAL (SUPERADMIN ONLY) ================= -->
+<div id="modal-manual-absen" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:20px; padding:32px; width:100%; max-width:480px; box-shadow:0 25px 60px rgba(0,0,0,0.25); animation:slideUp 0.25s ease;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="font-size:18px; font-weight:800; color:#0f172a;">✏️ Input Log Absen Manual</h3>
+            <button type="button" onclick="tutupModalManualAbsen()" style="background:#f1f5f9; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; color:#64748b;">✕</button>
+        </div>
+
+        <div style="margin-bottom:16px; font-size:12px; color:#64748b; background:#f8fafc; padding:12px 14px; border-radius:10px; border:1px solid #e2e8f0; line-height:1.5;">
+            💡 <b>Mode Darurat / Backup:</b> Gunakan fitur ini jika mesin absensi rusak atau sedang maintenance. Data akan otomatis muncul di Live Monitoring, Laporan Bulanan, dan Riwayat Karyawan.
+        </div>
+
+        <form method="POST" action="index.php">
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="action" value="tambah_absen_manual">
+
+            <label for="pin_manual" style="font-weight:700;">Pilih Guru / Karyawan:</label>
+            <select name="pin_manual" id="pin_manual" required style="margin-bottom:18px; font-size:14px; font-weight:600;">
+                <?php if (empty($karyawan_all)): ?>
+                    <option value="">-- Belum ada data guru & karyawan --</option>
+                <?php else: ?>
+                    <?php foreach ($karyawan_all as $ka): 
+                        $is_g = ($ka['tipe'] === 'guru');
+                        $t_label = $is_g ? "👨‍🏫 Guru" : "👔 Karyawan";
+                    ?>
+                        <option value="<?php echo h($ka['pin']); ?>">
+                            [PIN: <?php echo h($ka['pin']); ?>] <?php echo h($ka['nama']); ?> (<?php echo h($ka['departemen'] ?: 'Staff'); ?> - <?php echo $t_label; ?>)
+                        </option>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </select>
+
+            <label for="waktu_manual" style="font-weight:700;">Waktu Absen (Tanggal & Jam):</label>
+            <input type="datetime-local" id="waktu_manual" name="waktu_manual" value="<?php echo date('Y-m-d\TH:i'); ?>" required style="margin-bottom:18px;">
+
+            <label for="status_manual" style="font-weight:700;">Status Absensi:</label>
+            <select id="status_manual" name="status_manual" style="margin-bottom:24px;">
+                <option value="0">🟢 Masuk</option>
+                <option value="1">🔴 Pulang</option>
+            </select>
+
+            <div style="display:flex; gap:12px;">
+                <button type="button" onclick="tutupModalManualAbsen()" class="btn" style="flex:1; background:#f1f5f9; color:#334155; border:1px solid #e2e8f0;">Batal</button>
+                <button type="submit" class="btn btn-primary" style="flex:2;">💾 Simpan Absen Manual</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+<?php endif; ?>
+
 <!-- JAVASCRIPT AJAX REAL-TIME POLLING & DATE FILTER -->
 <script>
 let autoSyncActive = true;
@@ -122,6 +230,28 @@ const btnExport = document.getElementById('btn-export');
 const syncIcon = document.getElementById('sync-icon');
 const syncText = document.getElementById('sync-text');
 const btnToggleSync = document.getElementById('btn-toggle-sync');
+
+// Fungsi Modal Input Manual
+function bukaModalManualAbsen() {
+    const modal = document.getElementById('modal-manual-absen');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function tutupModalManualAbsen() {
+    const modal = document.getElementById('modal-manual-absen');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+const modalManual = document.getElementById('modal-manual-absen');
+if (modalManual) {
+    modalManual.addEventListener('click', function(e) {
+        if (e.target === this) tutupModalManualAbsen();
+    });
+}
 
 // Fungsi utama mengambil data via AJAX (Fetch API)
 function fetchMonitoringData() {
