@@ -57,48 +57,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tipe_verifikasi = isset($kolom[3]) ? trim($kolom[3]) : '';
             
             if ($pin !== '' && $waktu !== '') {
-                $tgl_log   = date('Y-m-d', strtotime($waktu));
-                $jam_num   = (int)date('H', strtotime($waktu));
-                $status_in = ($status === '1') ? '1' : '0';
+                $tgl_log  = date('Y-m-d', strtotime($waktu));
+                $waktu_ts = strtotime($waktu);
 
-                // SMART AUTO-CORRECTION:
-                // Cek log absensi karyawan tersebut yang sudah ada di tanggal yang sama
-                $stmt_hist = $conn->prepare("SELECT status FROM log_absen WHERE pin = ? AND DATE(waktu) = ? ORDER BY waktu ASC");
+                // CEK LOG HARI INI UNTUK KARYAWAN/GURU INI
+                $stmt_hist = $conn->prepare("SELECT id, status, waktu FROM log_absen WHERE pin = ? AND DATE(waktu) = ? ORDER BY waktu ASC");
                 $stmt_hist->bind_param("ss", $pin, $tgl_log);
                 $stmt_hist->execute();
                 $res_hist = $stmt_hist->get_result();
 
-                $has_masuk = false;
-                $has_pulang = false;
+                $waktu_masuk_ts  = null;
+                $waktu_pulang_ts = null;
+                $id_pulang_last  = null;
+
                 while ($h = $res_hist->fetch_assoc()) {
-                    if ($h['status'] === '0') $has_masuk = true;
-                    if ($h['status'] === '1') $has_pulang = true;
+                    $ts = strtotime($h['waktu']);
+                    if ($h['status'] === '0') {
+                        if ($waktu_masuk_ts === null || $ts < $waktu_masuk_ts) {
+                            $waktu_masuk_ts = $ts;
+                        }
+                    } elseif ($h['status'] === '1') {
+                        if ($waktu_pulang_ts === null || $ts > $waktu_pulang_ts) {
+                            $waktu_pulang_ts = $ts;
+                            $id_pulang_last = (int)$h['id'];
+                        }
+                    }
                 }
 
-                $status_clean = $status_in;
+                // --- ATURAN OTOMATISASI ABSENSI BARU ---
 
-                // Aturan Auto-Correction:
-                // 1. Scan Pertama Pagi Hari (< 12:00 WIB) & belum ada log Masuk hari ini -> Paksa Masuk (0)
-                if (!$has_masuk && $jam_num < 12) {
-                    $status_clean = '0';
+                // 1. ATURAN 1: Tap Pertama Hari Ini = MASUK (Mau Jam Berapa Pun)
+                if ($waktu_masuk_ts === null) {
+                    $stmt_ins = $conn->prepare("INSERT IGNORE INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, '0', ?)");
+                    $stmt_ins->bind_param("sss", $pin, $waktu, $tipe_verifikasi);
+                    $stmt_ins->execute();
                 }
-                // 2. Scan Siang/Sore Hari (>= 11:00 WIB) & sudah ada Masuk & belum ada Pulang -> Paksa Pulang (1)
-                elseif ($has_masuk && !$has_pulang && $jam_num >= 11) {
-                    $status_clean = '1';
-                }
+                // 2. ATURAN 2 & 3: Tap Kedua & Seterusnya (Setelah Ada Log Masuk)
+                else {
+                    $diff_masuk = $waktu_ts - $waktu_masuk_ts;
 
-                // CEK DE-DUPLIKASI (DOUBLE TAP PREVENTION):
-                // Jika user sudah memiliki log dengan status SAMA pada tanggal yang sama, abaikan tap susulan tersebut.
-                $stmt_cek = $conn->prepare("SELECT id FROM log_absen WHERE pin = ? AND DATE(waktu) = ? AND status = ? LIMIT 1");
-                $stmt_cek->bind_param("sss", $pin, $tgl_log, $status_clean);
-                $stmt_cek->execute();
-                $res_cek = $stmt_cek->get_result();
+                    // A. Jika tap terjadi dalam rentang 30 MENIT setelah Masuk (< 1800 detik):
+                    //    Abaikan/skip sebagai double tap agar tidak tidak sengaja masuk sebagai jam Pulang.
+                    if ($diff_masuk >= 0 && $diff_masuk < 1800) {
+                        // SKIPPED (Protected by 30-minute cooldown after Masuk)
+                        continue;
+                    }
 
-                if ($res_cek->num_rows === 0) {
-                    // Belum ada log untuk status ini pada tanggal tersebut -> Simpan data pertama
-                    $stmt = $conn->prepare("INSERT IGNORE INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, ?, ?)");
-                    $stmt->bind_param("ssss", $pin, $waktu, $status_clean, $tipe_verifikasi);
-                    $stmt->execute();
+                    // B. Jika tap terjadi setelah > 30 MENIT dari Masuk (>= 1800 detik):
+                    if ($diff_masuk >= 1800) {
+                        // B1. Belum ada log Pulang hari ini -> Simpan sebagai PULANG (status 1)
+                        if ($waktu_pulang_ts === null) {
+                            $stmt_ins = $conn->prepare("INSERT IGNORE INTO log_absen (pin, waktu, status, tipe_verifikasi) VALUES (?, ?, '1', ?)");
+                            $stmt_ins->bind_param("sss", $pin, $waktu, $tipe_verifikasi);
+                            $stmt_ins->execute();
+                        }
+                        // B2. Sudah ada log Pulang hari ini
+                        else {
+                            $diff_pulang = $waktu_ts - $waktu_pulang_ts;
+
+                            // Jika tap terjadi dalam rentang 30 MENIT setelah Pulang terakhir -> Skip (Double tap)
+                            if ($diff_pulang >= 0 && $diff_pulang < 1800) {
+                                // SKIPPED (Double tap Pulang)
+                                continue;
+                            }
+                            // Jika tap terjadi > 30 MENIT setelah Pulang terakhir -> Perbarui jam Pulang ke jam terkini
+                            elseif ($diff_pulang >= 1800 && $id_pulang_last !== null) {
+                                $stmt_upd = $conn->prepare("UPDATE log_absen SET waktu = ?, tipe_verifikasi = ? WHERE id = ?");
+                                $stmt_upd->bind_param("ssi", $waktu, $tipe_verifikasi, $id_pulang_last);
+                                $stmt_upd->execute();
+                            }
+                        }
+                    }
                 }
             }
         }
