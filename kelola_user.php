@@ -45,8 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username_baru = trim($_POST['username_baru'] ?? '');
         $password_baru = $_POST['password_baru'] ?? '';
         $role_baru     = $_POST['role_baru'] ?? 'admin';
+        $kode_khusus   = trim($_POST['kode_verifikasi_khusus'] ?? '');
 
-        if (empty($username_baru) || empty($password_baru)) {
+        if ($kode_khusus !== MASTER_SECURITY_CODE) {
+            $pesan_error = "⛔ <b>Akses Ditolak:</b> Kode Verifikasi Khusus Salah! Pembuatan user baru dibatalkan.";
+        } elseif (empty($username_baru) || empty($password_baru)) {
             $pesan_error = 'Username dan password tidak boleh kosong.';
         } elseif (!in_array($role_baru, ['superadmin', 'admin'])) {
             $pesan_error = 'Role tidak valid.';
@@ -242,10 +245,16 @@ render_header("Manajemen User", "users");
                 </div>
 
                 <label for="role_baru">Role / Hak Akses</label>
-                <select id="role_baru" name="role_baru" style="margin-bottom: 22px;">
+                <select id="role_baru" name="role_baru" style="margin-bottom: 18px;">
                     <option value="admin">👤 Admin — Hanya Live Monitoring</option>
                     <option value="superadmin">👑 Superadmin — Akses Penuh</option>
                 </select>
+
+                <label for="kode_verifikasi_khusus" style="font-weight:700; color:#b91c1c;">🔑 Kode Verifikasi Khusus Superadmin:</label>
+                <div style="position: relative; margin-bottom: 22px;">
+                    <input type="password" id="kode_verifikasi_khusus" name="kode_verifikasi_khusus" placeholder="Masukkan Kode Rahasia Superadmin" style="margin-bottom: 0; padding-right: 44px; border-color:#fca5a5; background:#fff5f5;" autocomplete="off" required>
+                    <button type="button" onclick="togglePass('kode_verifikasi_khusus', 'eye-kode-khusus')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:18px; color:#64748b;" id="eye-kode-khusus">👁️</button>
+                </div>
 
                 <button type="submit" class="btn btn-primary btn-block">
                     ➕ Tambah User
