@@ -369,11 +369,10 @@ render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
             </div>
         </div>
 
-        <!-- ACTION BUTTONS -->
+        <!-- ACTION BUTTONS (Single Export Button) -->
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <button type="submit" class="btn btn-primary">🔍 Tampilkan Laporan</button>
-            <a href="<?php echo 'export_excel_matriks.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori]); ?>" class="btn" style="background:#059669; color:#fff;">🗓️ Export Excel Matriks (31 Hari)</a>
-            <a href="<?php echo 'export_bulanan.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort, 'export' => 1]); ?>" class="btn btn-success">📊 Export Excel Rekap</a>
+            <a href="<?php echo 'export_excel_matriks.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort]); ?>" class="btn btn-success">📊 Export ke Excel</a>
         </div>
     </form>
 </div>
@@ -393,40 +392,6 @@ render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
         <div style="font-size:18px; font-weight:800; color:#10b981; margin-top:2px;"><?php echo count($rekap_data); ?> Orang</div>
     </div>
 </div>
-
-<?php
-// Helper URL untuk Header Sorting Clickable di Laporan Bulanan
-function b_sort_url($col_name, $current_sort, $bulan, $tahun, $kategori) {
-    $next_sort = ($current_sort === "{$col_name}_asc") ? "{$col_name}_desc" : "{$col_name}_asc";
-    if ($col_name === 'persen') {
-        $next_sort = ($current_sort === 'persen_desc') ? 'persen_asc' : 'persen_desc';
-    }
-    return "export_bulanan.php?" . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $next_sort]);
-}
-
-function b_sort_icon($col_name, $current_sort) {
-    if ($current_sort === "{$col_name}_asc") return " 🔼";
-    if ($current_sort === "{$col_name}_desc") return " 🔽";
-    return " <span style='color:#cbd5e1;'>↕</span>";
-}
-?>
-
-<!-- TAB SWITCHER MODE TAMPILAN LAPORAN -->
-<div style="display:flex; gap:10px; margin-bottom:20px;">
-    <a href="<?php echo 'export_bulanan.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort, 'view' => 'matriks']); ?>" 
-       class="btn" style="<?php echo $view === 'matriks' ? 'background:#2563eb; color:#fff; box-shadow:0 4px 12px rgba(37,99,235,0.25);' : 'background:#ffffff; color:#475569; border:1px solid #cbd5e1;'; ?> font-weight:700;">
-       🗓️ Matriks 30/31 Hari (Color-Coded)
-    </a>
-    <a href="<?php echo 'export_bulanan.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort, 'view' => 'rekap']); ?>" 
-       class="btn" style="<?php echo $view === 'rekap' ? 'background:#2563eb; color:#fff; box-shadow:0 4px 12px rgba(37,99,235,0.25);' : 'background:#ffffff; color:#475569; border:1px solid #cbd5e1;'; ?> font-weight:700;">
-       📋 Ringkasan Rekap Evaluasi
-    </a>
-</div>
-
-<?php if ($view === 'matriks'): ?>
-<!-- ============================================================ -->
-<!-- MODE 1: MATRIKS ABSENSI BULANAN 30/31 HARI -->
-<!-- ============================================================ -->
 
 <!-- CARD KETERANGAN WARNA (LEGEND) -->
 <div class="card" style="margin-bottom:20px; padding:16px; background:#f8fafc; border:1px solid #e2e8f0;">
@@ -449,141 +414,37 @@ function b_sort_icon($col_name, $current_sort) {
     </div>
 </div>
 
+<?php
+// Helper URL untuk Header Sorting Clickable di Laporan Bulanan
+function b_sort_url($col_name, $current_sort, $bulan, $tahun, $kategori) {
+    $next_sort = ($current_sort === "{$col_name}_asc") ? "{$col_name}_desc" : "{$col_name}_asc";
+    if ($col_name === 'persen') {
+        $next_sort = ($current_sort === 'persen_desc') ? 'persen_asc' : 'persen_desc';
+    }
+    return "export_bulanan.php?" . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $next_sort]);
+}
+
+function b_sort_icon($col_name, $current_sort) {
+    if ($current_sort === "{$col_name}_asc") return " 🔼";
+    if ($current_sort === "{$col_name}_desc") return " 🔽";
+    return " <span style='color:#cbd5e1;'>↕</span>";
+}
+?>
+
+<!-- TABEL MATRIKS & EVALUASI TERPADU -->
 <div class="card">
     <div class="card-header" style="flex-wrap:wrap; gap:12px; align-items:center;">
         <div class="card-title" style="margin-bottom:0;">
-            <span>🗓️ Matriks Kehadiran Bulanan (Tanggal 1 ➔ <?php echo $total_hari_bulan; ?>)</span>
+            <span>📋 Matriks & Evaluasi Kehadiran Bulanan (Tanggal 1 ➔ <?php echo $total_hari_bulan; ?>)</span>
         </div>
 
-        <form method="GET" action="export_bulanan.php" style="margin:0; display:flex; align-items:center; gap:8px;">
-            <input type="hidden" name="bulan" value="<?php echo $bulan; ?>">
-            <input type="hidden" name="tahun" value="<?php echo $tahun; ?>">
-            <input type="hidden" name="kategori" value="<?php echo h($kategori); ?>">
-            <input type="hidden" name="view" value="matriks">
-            
-            <label for="sort_m" style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:0; white-space:nowrap;">🔀 Urutkan:</label>
-            <select name="sort" id="sort_m" onchange="this.form.submit()" style="margin-bottom:0; height:38px; font-size:13px; padding:6px 12px; width:auto; cursor:pointer;">
-                <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 PIN (1 ➔ 99)</option>
-                <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 PIN (99 ➔ 1)</option>
-                <option value="nama_asc" <?php echo $sort === 'nama_asc' ? 'selected' : ''; ?>>🔤 Nama (A ➔ Z)</option>
-                <option value="nama_desc" <?php echo $sort === 'nama_desc' ? 'selected' : ''; ?>>🔤 Nama (Z ➔ A)</option>
-                <option value="tipe_desc" <?php echo $sort === 'tipe_desc' ? 'selected' : ''; ?>>👨‍🏫 Tipe (Guru Dulu)</option>
-                <option value="tipe_asc" <?php echo $sort === 'tipe_asc' ? 'selected' : ''; ?>>👔 Tipe (Karyawan Dulu)</option>
-            </select>
-        </form>
-    </div>
-
-    <div class="table-responsive" style="max-height:700px; overflow:auto;">
-        <table style="font-size:12px; min-width:1200px;">
-            <thead style="position:sticky; top:0; z-index:10; background:#1e293b; color:#fff;">
-                <tr>
-                    <th style="background:#0f172a; color:#fff; width:60px; min-width:60px;">PIN</th>
-                    <th style="background:#0f172a; color:#fff; text-align:left; min-width:180px;">Nama Guru & Karyawan</th>
-                    <?php for ($d = 1; $d <= $total_hari_bulan; $d++): 
-                        $tgl_sub  = sprintf("%04d-%02d-%02d", $tahun, $bulan, $d);
-                        $day_n    = (int)date('N', strtotime($tgl_sub));
-                        $h_singkat = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'][$day_n - 1];
-                        $bg_th    = ($day_n === 7) ? 'background:#ef4444; color:#fff;' : 'background:#1e293b; color:#fff;';
-                    ?>
-                        <th style="<?php echo $bg_th; ?> padding:6px 4px; font-size:11px; text-align:center; min-width:32px;">
-                            <?php echo $d; ?><br><span style="font-size:9px; font-weight:normal; opacity:0.8;"><?php echo $h_singkat; ?></span>
-                        </th>
-                    <?php endfor; ?>
-                    <th style="background:#166534; color:#fff; width:45px;" title="Total Hadir Lengkap">🟢</th>
-                    <th style="background:#854d0e; color:#fff; width:45px;" title="Total Hadir Parsial">🟡</th>
-                    <th style="background:#991b1b; color:#fff; width:45px;" title="Total Alpa">🔴</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                if (!empty($rekap_data)) {
-                    foreach ($rekap_data as $r) {
-                        $pin      = $r['pin'];
-                        $nama     = $r['nama'];
-                        $dept     = $r['dept'];
-                        $tipe     = $r['tipe'];
-                        $hari_arr = $r['list_hari'];
-                        $is_guru  = ($tipe === 'guru');
-
-                        $c_green  = 0;
-                        $c_yellow = 0;
-                        $c_red    = 0;
-
-                        echo "<tr>";
-                        echo "<td><code style='background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700; color:#0f172a;'>" . h($pin) . "</code></td>";
-                        echo "<td style='text-align:left; white-space:nowrap;'>
-                                <a href='riwayat_karyawan.php?pin=" . urlencode($pin) . "' style='color:#0f172a; text-decoration:none; font-weight:700;'>
-                                    " . h($nama) . "
-                                </a>
-                                <div style='font-size:10px; color:#64748b;'>" . h($dept) . "</div>
-                              </td>";
-
-                        for ($d = 1; $d <= $total_hari_bulan; $d++) {
-                            $tgl_key  = sprintf("%04d-%02d-%02d", $tahun, $bulan, $d);
-                            $day_num  = (int)date('N', strtotime($tgl_key));
-
-                            $has_sch = $is_guru ? in_array($day_num, $hari_arr) : ($day_num !== 7);
-                            $log_today = $absen_detail[$pin][$tgl_key] ?? null;
-
-                            if ($log_today !== null) {
-                                $m_jam = $log_today['masuk'] ?? '-';
-                                $p_jam = $log_today['pulang'] ?? '-';
-
-                                if ($log_today['masuk'] && $log_today['pulang']) {
-                                    $c_green++;
-                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Hadir Lengkap (Masuk: {$m_jam}, Pulang: {$p_jam})";
-                                    echo "<td style='background:#dcfce7; color:#166534; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>✔️</td>";
-                                } else {
-                                    $c_yellow++;
-                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Hadir Parsial (Masuk: {$m_jam}, Pulang: {$p_jam})";
-                                    echo "<td style='background:#fef9c3; color:#854d0e; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>⚠️</td>";
-                                }
-                            } else {
-                                if ($has_sch) {
-                                    $c_red++;
-                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Alpa / Tidak Hadir (Ada Jadwal 0 Log)";
-                                    echo "<td style='background:#fee2e2; color:#991b1b; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>❌</td>";
-                                } else {
-                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Libur / Tanpa Jadwal Mengajar";
-                                    echo "<td style='background:#f1f5f9; color:#94a3b8; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>-</td>";
-                                }
-                            }
-                        }
-
-                        echo "<td style='background:#f0fdf4; color:#166534; font-weight:800; font-size:12px;'>{$c_green}</td>";
-                        echo "<td style='background:#fefce8; color:#854d0e; font-weight:800; font-size:12px;'>{$c_yellow}</td>";
-                        echo "<td style='background:#fef2f2; color:#991b1b; font-weight:800; font-size:12px;'>{$c_red}</td>";
-                        echo "</tr>";
-                    }
-                } else {
-                    $cols = $total_hari_bulan + 5;
-                    echo "<tr><td colspan='{$cols}' style='padding:30px; color:#94a3b8;'>Data tidak ditemukan untuk periode ini.</td></tr>";
-                }
-                ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<?php else: ?>
-<!-- ============================================================ -->
-<!-- MODE 2: RINGKASAN REKAP EVALUASI -->
-<!-- ============================================================ -->
-<!-- TABEL REKAP EVALUASI (Dengan Dropdown Urutkan di Header Card) -->
-<div class="card">
-    <div class="card-header" style="flex-wrap:wrap; gap:12px; align-items:center;">
-        <div class="card-title" style="margin-bottom:0;">
-            <span>📋 Rekapitulasi Kehadiran & Evaluasi Kinerja</span>
-        </div>
-
-        <!-- DROPDOWN URUTKAN DI SAMPLING SAMBIL CARD TITLE -->
         <form method="GET" action="export_bulanan.php" style="margin:0; display:flex; align-items:center; gap:8px;">
             <input type="hidden" name="bulan" value="<?php echo $bulan; ?>">
             <input type="hidden" name="tahun" value="<?php echo $tahun; ?>">
             <input type="hidden" name="kategori" value="<?php echo h($kategori); ?>">
             
-            <label for="sort" style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:0; white-space:nowrap;">🔀 Urutkan:</label>
-            <select name="sort" id="sort" onchange="this.form.submit()" style="margin-bottom:0; height:38px; font-size:13px; padding:6px 12px; width:auto; cursor:pointer;">
+            <label for="sort_m" style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:0; white-space:nowrap;">🔀 Urutkan:</label>
+            <select name="sort" id="sort_m" onchange="this.form.submit()" style="margin-bottom:0; height:38px; font-size:13px; padding:6px 12px; width:auto; cursor:pointer;">
                 <option value="pin_asc" <?php echo $sort === 'pin_asc' ? 'selected' : ''; ?>>🔢 PIN (1 ➔ 99)</option>
                 <option value="pin_desc" <?php echo $sort === 'pin_desc' ? 'selected' : ''; ?>>🔢 PIN (99 ➔ 1)</option>
                 <option value="persen_desc" <?php echo $sort === 'persen_desc' ? 'selected' : ''; ?>>📊 % Kehadiran (Tertinggi)</option>
@@ -598,49 +459,53 @@ function b_sort_icon($col_name, $current_sort) {
         </form>
     </div>
 
-    <div class="table-responsive">
-        <table>
-            <thead>
+    <div class="table-responsive" style="max-height:750px; overflow:auto;">
+        <table style="font-size:12px; min-width:1400px;">
+            <thead style="position:sticky; top:0; z-index:10; background:#1e293b; color:#fff;">
                 <tr>
-                    <th>
-                        <a href="<?php echo b_sort_url('pin', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan PIN">
-                            PIN<?php echo b_sort_icon('pin', $sort); ?>
-                        </a>
+                    <th style="background:#0f172a; color:#fff; width:60px; min-width:60px;">
+                        <a href="<?php echo b_sort_url('pin', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;">PIN<?php echo b_sort_icon('pin', $sort); ?></a>
                     </th>
-                    <th style="text-align:left;">
-                        <a href="<?php echo b_sort_url('nama', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan Nama">
-                            Nama Guru & Karyawan<?php echo b_sort_icon('nama', $sort); ?>
-                        </a>
+                    <th style="background:#0f172a; color:#fff; text-align:left; min-width:180px;">
+                        <a href="<?php echo b_sort_url('nama', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;">Nama Guru & Karyawan<?php echo b_sort_icon('nama', $sort); ?></a>
                     </th>
-                    <th>
-                        <a href="<?php echo b_sort_url('tipe', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan Tipe">
-                            Tipe<?php echo b_sort_icon('tipe', $sort); ?>
-                        </a>
+                    <th style="background:#0f172a; color:#fff;">
+                        <a href="<?php echo b_sort_url('tipe', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;">Tipe<?php echo b_sort_icon('tipe', $sort); ?></a>
                     </th>
-                    <th>
-                        <a href="<?php echo b_sort_url('target', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan Target Hari">
-                            Target Hari<?php echo b_sort_icon('target', $sort); ?>
-                        </a>
+                    <?php for ($d = 1; $d <= $total_hari_bulan; $d++): 
+                        $tgl_sub  = sprintf("%04d-%02d-%02d", $tahun, $bulan, $d);
+                        $day_n    = (int)date('N', strtotime($tgl_sub));
+                        $h_singkat = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'][$day_n - 1];
+                        $bg_th    = ($day_n === 7) ? 'background:#ef4444; color:#fff;' : 'background:#1e293b; color:#fff;';
+                    ?>
+                        <th style="<?php echo $bg_th; ?> padding:6px 4px; font-size:11px; text-align:center; min-width:32px;">
+                            <?php echo $d; ?><br><span style="font-size:9px; font-weight:normal; opacity:0.8;"><?php echo $h_singkat; ?></span>
+                        </th>
+                    <?php endfor; ?>
+                    <th style="background:#0f172a; color:#fff;">
+                        <a href="<?php echo b_sort_url('target', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;">Target Hari<?php echo b_sort_icon('target', $sort); ?></a>
                     </th>
-                    <th>
-                        <a href="<?php echo b_sort_url('hadir', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan Hadir">
-                            Hadir Sesuai<?php echo b_sort_icon('hadir', $sort); ?>
-                        </a>
+                    <th style="background:#166534; color:#fff;">
+                        <a href="<?php echo b_sort_url('hadir', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;">Hadir Sesuai<?php echo b_sort_icon('hadir', $sort); ?></a>
                     </th>
-                    <th>Hadir Di Luar Jadwal</th>
-                    <th>
-                        <a href="<?php echo b_sort_url('persen', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;" title="Urutkan % Kehadiran">
-                            % Kehadiran<?php echo b_sort_icon('persen', $sort); ?>
-                        </a>
+                    <th style="background:#c2410c; color:#fff;">Hadir Di Luar</th>
+                    <th style="background:#1d4ed8; color:#fff;">
+                        <a href="<?php echo b_sort_url('persen', $sort, $bulan, $tahun, $kategori); ?>" style="color:inherit; text-decoration:none;">% Kehadiran<?php echo b_sort_icon('persen', $sort); ?></a>
                     </th>
-                    <th>Status Evaluasi</th>
+                    <th style="background:#475569; color:#fff;">Status Evaluasi</th>
                 </tr>
             </thead>
             <tbody>
                 <?php
                 if (!empty($rekap_data)) {
                     foreach ($rekap_data as $r) {
-                        $is_guru = ($r['tipe'] === 'guru');
+                        $pin      = $r['pin'];
+                        $nama     = $r['nama'];
+                        $dept     = $r['dept'];
+                        $tipe     = $r['tipe'];
+                        $hari_arr = $r['list_hari'];
+                        $is_guru  = ($tipe === 'guru');
+
                         $badge_tipe = $is_guru 
                             ? "<span class='badge' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;'>👨‍🏫 Guru</span>"
                             : "<span class='badge' style='background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;'>👔 Karyawan</span>";
@@ -657,34 +522,64 @@ function b_sort_icon($col_name, $current_sort) {
                         }
 
                         $diluar_text = ($r['hadir_diluar'] > 0)
-                            ? "<span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;'>⚠️ {$r['hadir_diluar']} Hari</span>"
+                            ? "<span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;'>⚠️ {$r['hadir_diluar']} hr</span>"
                             : "<span style='color:#94a3b8;'>-</span>";
 
-                        echo "<tr>
-                                <td><code style='background:#f1f5f9; padding:4px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($r['pin']) . "</code></td>
-                                <td style='text-align:left;'>
-                                    <a href='riwayat_karyawan.php?pin=" . urlencode($r['pin']) . "' style='color:#0f172a; text-decoration:none; font-weight:700;' title='Klik untuk melihat riwayat absensi lengkap'>
-                                        " . h($r['nama']) . " 📜
-                                    </a>
-                                    <div style='font-size:11px; color:#64748b;'>" . h($r['dept']) . "</div>
-                                </td>
-                                <td>{$badge_tipe}</td>
-                                <td><b>{$r['target_hari']} Hari</b></td>
-                                <td><b style='color:#10b981;'>{$r['hadir_sesuai']} Hari</b></td>
-                                <td>{$diluar_text}</td>
-                                <td><b style='font-size:15px; color:#0f172a;'>{$r['persen']}%</b></td>
-                                <td>{$status_eval}</td>
-                              </tr>";
+                        echo "<tr>";
+                        echo "<td><code style='background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700; color:#0f172a;'>" . h($pin) . "</code></td>";
+                        echo "<td style='text-align:left; white-space:nowrap;'>
+                                <a href='riwayat_karyawan.php?pin=" . urlencode($pin) . "' style='color:#0f172a; text-decoration:none; font-weight:700;' title='Klik untuk melihat riwayat absensi lengkap'>
+                                    " . h($nama) . " 📜
+                                </a>
+                                <div style='font-size:10px; color:#64748b;'>" . h($dept) . "</div>
+                              </td>";
+                        echo "<td>{$badge_tipe}</td>";
+
+                        for ($d = 1; $d <= $total_hari_bulan; $d++) {
+                            $tgl_key  = sprintf("%04d-%02d-%02d", $tahun, $bulan, $d);
+                            $day_num  = (int)date('N', strtotime($tgl_key));
+
+                            $has_sch = $is_guru ? in_array($day_num, $hari_arr) : ($day_num !== 7);
+                            $log_today = $absen_detail[$pin][$tgl_key] ?? null;
+
+                            if ($log_today !== null) {
+                                $m_jam = $log_today['masuk'] ?? '-';
+                                $p_jam = $log_today['pulang'] ?? '-';
+
+                                if ($log_today['masuk'] && $log_today['pulang']) {
+                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Hadir Lengkap (Masuk: {$m_jam}, Pulang: {$p_jam})";
+                                    echo "<td style='background:#dcfce7; color:#166534; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>✔️</td>";
+                                } else {
+                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Hadir Parsial (Masuk: {$m_jam}, Pulang: {$p_jam})";
+                                    echo "<td style='background:#fef9c3; color:#854d0e; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>⚠️</td>";
+                                }
+                            } else {
+                                if ($has_sch) {
+                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Alpa / Tidak Hadir (Ada Jadwal 0 Log)";
+                                    echo "<td style='background:#fee2e2; color:#991b1b; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>❌</td>";
+                                } else {
+                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Libur / Tanpa Jadwal Mengajar";
+                                    echo "<td style='background:#f1f5f9; color:#94a3b8; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>-</td>";
+                                }
+                            }
+                        }
+
+                        echo "<td><b>{$r['target_hari']} hr</b></td>";
+                        echo "<td><b style='color:#10b981;'>{$r['hadir_sesuai']} hr</b></td>";
+                        echo "<td>{$diluar_text}</td>";
+                        echo "<td><b style='font-size:14px; color:#0f172a;'>{$r['persen']}%</b></td>";
+                        echo "<td>{$status_eval}</td>";
+                        echo "</tr>";
                     }
                 } else {
-                    echo "<tr><td colspan='8' style='padding:30px; color:#94a3b8;'>Data tidak ditemukan untuk periode ini.</td></tr>";
+                    $cols = $total_hari_bulan + 8;
+                    echo "<tr><td colspan='{$cols}' style='padding:30px; color:#94a3b8;'>Data tidak ditemukan untuk periode ini.</td></tr>";
                 }
                 ?>
             </tbody>
         </table>
     </div>
 </div>
-<?php endif; ?>
 
 <?php if (!empty($log_diluar_jadwal_list)): ?>
 <!-- TABEL LOG GURU ABSEN DI LUAR JADWAL NGAJAR (Tanpa Kolom NO) -->
