@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // SCRIPT EKSPOR EXCEL MATRIKS & EVALUASI ABSENSI BULANAN (COMPREHENSIVE)
-// SMK Pasundan 2 Bandung
+// SMK Pasundan 2 Bandung (Dengan Fitur Hari Libur Kalender)
 // ============================================================
 
 require_once __DIR__ . '/auth.php';
@@ -22,17 +22,36 @@ $nama_bulan = [
     7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
 ];
 
-function get_hari_kerja_karyawan($thn, $bln) {
-    $total_h = cal_days_in_month(CAL_GREGORIAN, $bln, $thn);
-    $minggu = 0;
-    for ($d = 1; $d <= $total_h; $d++) {
-        $w = (int)date('N', mktime(0, 0, 0, $bln, $d, $thn));
-        if ($w === 7) $minggu++;
+// Ambil Daftar Hari Libur Kalender di Bulan & Tahun ini
+$start_hl = sprintf("%04d-%02d-01", $tahun, $bulan);
+$end_hl   = sprintf("%04d-%02d-%02d", $tahun, $bulan, $total_hari);
+
+$hari_libur_map = [];
+$sql_hl = "SELECT * FROM hari_libur WHERE tanggal >= ? AND tanggal <= ? ORDER BY tanggal ASC";
+$stmt_hl = $conn->prepare($sql_hl);
+if ($stmt_hl) {
+    $stmt_hl->bind_param("ss", $start_hl, $end_hl);
+    $stmt_hl->execute();
+    $res_hl = $stmt_hl->get_result();
+    while ($hl = $res_hl->fetch_assoc()) {
+        $hari_libur_map[$hl['tanggal']] = $hl;
     }
-    return $total_h - $minggu;
 }
 
-function get_target_hari_guru($conn, $pin, $thn, $bln) {
+function get_hari_kerja_karyawan($thn, $bln, $hari_libur_map = []) {
+    $total_h = cal_days_in_month(CAL_GREGORIAN, $bln, $thn);
+    $count = 0;
+    for ($d = 1; $d <= $total_h; $d++) {
+        $tgl_str = sprintf("%04d-%02d-%02d", $thn, $bln, $d);
+        $w = (int)date('N', mktime(0, 0, 0, $bln, $d, $thn));
+        if ($w !== 7 && !isset($hari_libur_map[$tgl_str])) {
+            $count++;
+        }
+    }
+    return $count;
+}
+
+function get_target_hari_guru($conn, $pin, $thn, $bln, $hari_libur_map = []) {
     $stmt = $conn->prepare("SELECT hari FROM jadwal_guru WHERE pin = ?");
     $stmt->bind_param("s", $pin);
     $stmt->execute();
@@ -47,13 +66,16 @@ function get_target_hari_guru($conn, $pin, $thn, $bln) {
     $total_h = cal_days_in_month(CAL_GREGORIAN, $bln, $thn);
     $count = 0;
     for ($d = 1; $d <= $total_h; $d++) {
+        $tgl_str = sprintf("%04d-%02d-%02d", $thn, $bln, $d);
         $w = (int)date('N', mktime(0, 0, 0, $bln, $d, $thn));
-        if (in_array($w, $hari_ngajar)) $count++;
+        if (in_array($w, $hari_ngajar) && !isset($hari_libur_map[$tgl_str])) {
+            $count++;
+        }
     }
     return $count;
 }
 
-$hari_kerja_karyawan_default = get_hari_kerja_karyawan($tahun, $bulan);
+$hari_kerja_karyawan_default = get_hari_kerja_karyawan($tahun, $bulan, $hari_libur_map);
 
 // Query Master Karyawan
 $where_kat = "";
@@ -129,16 +151,17 @@ if ($res_master->num_rows > 0) {
         $total_hadir_diluar = 0;
 
         $target_hari = $is_guru 
-            ? get_target_hari_guru($conn, $pin, $tahun, $bulan) 
+            ? get_target_hari_guru($conn, $pin, $tahun, $bulan, $hari_libur_map) 
             : $hari_kerja_karyawan_default;
 
         $tgl_logs = $absen_data[$pin] ?? [];
 
         foreach ($tgl_logs as $tgl_str => $hari_num) {
+            $is_custom_hol = isset($hari_libur_map[$tgl_str]);
             if ($is_guru) {
                 if (empty($hari_arr)) {
                     $total_hadir_diluar++;
-                } elseif (in_array($hari_num, $hari_arr)) {
+                } elseif (in_array($hari_num, $hari_arr) && !$is_custom_hol) {
                     $total_hadir_sesuai++;
                 } else {
                     $total_hadir_diluar++;
@@ -151,8 +174,10 @@ if ($res_master->num_rows > 0) {
                     ];
                 }
             } else {
-                if ($hari_num !== 7) {
+                if ($hari_num !== 7 && !$is_custom_hol) {
                     $total_hadir_sesuai++;
+                } else {
+                    $total_hadir_diluar++;
                 }
             }
         }
@@ -212,6 +237,7 @@ header("Expires: 0");
         .cell-green { background-color: #dcfce7; color: #166534; font-weight: bold; }
         .cell-yellow { background-color: #fef9c3; color: #854d0e; font-weight: bold; }
         .cell-red { background-color: #fee2e2; color: #991b1b; font-weight: bold; }
+        .cell-custom-hol { background-color: #f1f5f9; color: #475569; font-weight: bold; }
         .cell-gray { background-color: #f1f5f9; color: #94a3b8; }
         .badge-green { color: #15803d; font-weight: bold; }
         .badge-yellow { color: #b45309; font-weight: bold; }
@@ -233,9 +259,30 @@ header("Expires: 0");
             <td class="cell-green" style="padding:4px 10px;">🟢 HADIR LENGKAP (Masuk & Pulang)</td>
             <td class="cell-yellow" style="padding:4px 10px;">🟡 HADIR PARSIAL (Cuma Masuk / Pulang)</td>
             <td class="cell-red" style="padding:4px 10px;">🔴 ALPA / TIDAK HADIR (Ada Jadwal 0 Log)</td>
-            <td class="cell-gray" style="padding:4px 10px;">⚪ TANPA JADWAL / LIBUR (Tidak Dihitung Alpa)</td>
+            <td class="cell-custom-hol" style="padding:4px 10px;">🌴 LIBUR KALENDER (Potong Target)</td>
+            <td class="cell-gray" style="padding:4px 10px;">⚪ TANPA JADWAL / LIBUR RUTIN</td>
         </tr>
     </table>
+
+    <?php if (!empty($hari_libur_map)): ?>
+    <div style="font-size:9.5pt; font-weight:bold; color:#6b21a8; margin-bottom:6px;">🌴 DAFTAR HARI LIBUR KALENDER BULAN INI:</div>
+    <table style="width:auto; margin-bottom:14px;">
+        <thead>
+            <tr style="background-color:#f3e8ff; color:#6b21a8;">
+                <th>Tanggal</th>
+                <th>Keterangan Libur Sekolah / Nasional</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($hari_libur_map as $hl): ?>
+            <tr>
+                <td><b><?php echo date('d/m/Y', strtotime($hl['tanggal'])); ?></b></td>
+                <td class="text-left">🌴 <?php echo h($hl['keterangan']); ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
 
     <table>
         <thead>
@@ -247,8 +294,10 @@ header("Expires: 0");
                 <?php for ($d = 1; $d <= $total_hari; $d++): 
                     $tgl_sub = sprintf("%04d-%02d-%02d", $tahun, $bulan, $d);
                     $h_nama  = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'][(int)date('N', strtotime($tgl_sub)) - 1];
+                    $is_hol  = isset($hari_libur_map[$tgl_sub]);
+                    $bg_th   = $is_hol ? 'background-color:#8b5cf6;' : '';
                 ?>
-                    <th><?php echo $d; ?><br><span style="font-size:7.5pt; font-weight:normal;"><?php echo $h_nama; ?></span></th>
+                    <th style="<?php echo $bg_th; ?>"><?php echo $d; ?><br><span style="font-size:7.5pt; font-weight:normal;"><?php echo $is_hol ? '🌴' : $h_nama; ?></span></th>
                 <?php endfor; ?>
                 <th style="background-color:#0f172a;">Target Hari</th>
                 <th style="background-color:#166534;">Hadir Sesuai</th>
@@ -291,6 +340,7 @@ header("Expires: 0");
                         $tgl_key  = sprintf("%04d-%02d-%02d", $tahun, $bulan, $d);
                         $day_num  = (int)date('N', strtotime($tgl_key));
 
+                        $is_custom_hol = isset($hari_libur_map[$tgl_key]);
                         $has_sch = $is_guru ? in_array($day_num, $hari_arr) : ($day_num !== 7);
                         $log_today = $absen_detail[$pin][$tgl_key] ?? null;
 
@@ -301,10 +351,14 @@ header("Expires: 0");
                                 echo "<td class='cell-yellow'>⚠️</td>";
                             }
                         } else {
-                            if ($has_sch) {
-                                echo "<td class='cell-red'>❌</td>";
+                            if ($is_custom_hol) {
+                                echo "<td class='cell-custom-hol'>🌴</td>";
                             } else {
-                                echo "<td class='cell-gray'>-</td>";
+                                if ($has_sch) {
+                                    echo "<td class='cell-red'>❌</td>";
+                                } else {
+                                    echo "<td class='cell-gray'>-</td>";
+                                }
                             }
                         }
                     }

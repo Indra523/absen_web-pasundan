@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN LAPORAN EVALUASI ABSENSI BULANAN (Dengan Layout Presisi)
+// HALAMAN LAPORAN EVALUASI ABSENSI BULANAN (Dengan Kelola Hari Libur)
 // Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung
 // ============================================================
 
@@ -8,33 +8,96 @@ require_once __DIR__ . '/layout.php';
 
 $conn = getDB();
 
+// Auto Create Table hari_libur jika belum ada
+$conn->query("CREATE TABLE IF NOT EXISTS hari_libur (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tanggal DATE NOT NULL UNIQUE,
+    keterangan VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$pesan_sukses = '';
+$pesan_error  = '';
+
+// -------------------------------------------------------
+// POST HANDLER KELOLA HARI LIBUR (SUPERADMIN ONLY)
+// -------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_superadmin()) {
+    csrf_verify();
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'tambah_hari_libur') {
+        $tgl_libur = trim($_POST['tgl_libur'] ?? '');
+        $ket_libur = trim($_POST['ket_libur'] ?? '');
+
+        if (empty($tgl_libur) || empty($ket_libur)) {
+            $pesan_error = 'Tanggal dan Keterangan Libur tidak boleh kosong.';
+        } else {
+            $stmt_hl = $conn->prepare("INSERT INTO hari_libur (tanggal, keterangan) VALUES (?, ?) ON DUPLICATE KEY UPDATE keterangan = VALUES(keterangan)");
+            $stmt_hl->bind_param("ss", $tgl_libur, $ket_libur);
+            if ($stmt_hl->execute()) {
+                $pesan_sukses = "✅ Hari libur <b>" . h($tgl_libur) . " (" . h($ket_libur) . ")</b> berhasil disimpan.";
+            } else {
+                $pesan_error = "Gagal menyimpan hari libur: " . $conn->error;
+            }
+        }
+    } elseif ($action === 'hapus_hari_libur') {
+        $id_hl = (int)($_POST['id_hl'] ?? 0);
+        if ($id_hl > 0) {
+            $stmt_del = $conn->prepare("DELETE FROM hari_libur WHERE id = ?");
+            $stmt_del->bind_param("i", $id_hl);
+            if ($stmt_del->execute()) {
+                $pesan_sukses = "✅ Hari libur berhasil dihapus.";
+            } else {
+                $pesan_error = "Gagal menghapus hari libur: " . $conn->error;
+            }
+        }
+    }
+}
+
 // Input Parameter Bulan & Tahun (Default: Bulan & Tahun Saat Ini)
 $bulan    = (int)($_GET['bulan'] ?? date('n'));
 $tahun    = (int)($_GET['tahun'] ?? date('Y'));
 $kategori = $_GET['kategori'] ?? 'semua'; // 'semua', 'karyawan', 'guru'
 $sort     = $_GET['sort'] ?? 'pin_asc';
-$export   = isset($_GET['export']) && $_GET['export'] === '1';
-
-$view     = $_GET['view'] ?? 'matriks'; // 'matriks' (Grid 31 Hari) atau 'rekap' (Ringkasan Evaluasi)
 
 if ($bulan < 1 || $bulan > 12) $bulan = (int)date('n');
 if ($tahun < 2020 || $tahun > 2050) $tahun = (int)date('Y');
 
 $total_hari_bulan = cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun);
 
-// Helper: Hitung total hari kerja karyawan di bulan tsb (semua hari kecuali Minggu)
-function get_hari_kerja_karyawan($thn, $bln) {
-    $total_hari = cal_days_in_month(CAL_GREGORIAN, $bln, $thn);
-    $minggu = 0;
-    for ($d = 1; $d <= $total_hari; $d++) {
-        $w = (int)date('N', mktime(0, 0, 0, $bln, $d, $thn)); // 1=Senin...7=Minggu
-        if ($w === 7) $minggu++;
+// Ambil Daftar Hari Libur Kalender di Bulan & Tahun ini
+$start_hl = sprintf("%04d-%02d-01", $tahun, $bulan);
+$end_hl   = sprintf("%04d-%02d-%02d", $tahun, $bulan, $total_hari_bulan);
+
+$hari_libur_map = [];
+$sql_hl = "SELECT * FROM hari_libur WHERE tanggal >= ? AND tanggal <= ? ORDER BY tanggal ASC";
+$stmt_hl = $conn->prepare($sql_hl);
+if ($stmt_hl) {
+    $stmt_hl->bind_param("ss", $start_hl, $end_hl);
+    $stmt_hl->execute();
+    $res_hl = $stmt_hl->get_result();
+    while ($hl = $res_hl->fetch_assoc()) {
+        $hari_libur_map[$hl['tanggal']] = $hl;
     }
-    return $total_hari - $minggu;
 }
 
-// Helper: Hitung target hari ngajar guru di bulan tsb sesuai jadwal
-function get_target_hari_guru($conn, $pin, $thn, $bln) {
+// Helper: Hitung total hari kerja karyawan di bulan tsb (semua hari kecuali Minggu & Hari Libur Kalender)
+function get_hari_kerja_karyawan($thn, $bln, $hari_libur_map = []) {
+    $total_hari = cal_days_in_month(CAL_GREGORIAN, $bln, $thn);
+    $count = 0;
+    for ($d = 1; $d <= $total_hari; $d++) {
+        $tgl_str = sprintf("%04d-%02d-%02d", $thn, $bln, $d);
+        $w = (int)date('N', mktime(0, 0, 0, $bln, $d, $thn)); // 1=Senin...7=Minggu
+        if ($w !== 7 && !isset($hari_libur_map[$tgl_str])) {
+            $count++;
+        }
+    }
+    return $count;
+}
+
+// Helper: Hitung target hari ngajar guru di bulan tsb sesuai jadwal & dikurangi Hari Libur Kalender
+function get_target_hari_guru($conn, $pin, $thn, $bln, $hari_libur_map = []) {
     $stmt = $conn->prepare("SELECT hari FROM jadwal_guru WHERE pin = ?");
     $stmt->bind_param("s", $pin);
     $stmt->execute();
@@ -49,8 +112,9 @@ function get_target_hari_guru($conn, $pin, $thn, $bln) {
     $total_hari = cal_days_in_month(CAL_GREGORIAN, $bln, $thn);
     $count = 0;
     for ($d = 1; $d <= $total_hari; $d++) {
+        $tgl_str = sprintf("%04d-%02d-%02d", $thn, $bln, $d);
         $w = (int)date('N', mktime(0, 0, 0, $bln, $d, $thn)); // 1=Senin...6=Sabtu, 7=Minggu
-        if (in_array($w, $hari_ngajar)) {
+        if (in_array($w, $hari_ngajar) && !isset($hari_libur_map[$tgl_str])) {
             $count++;
         }
     }
@@ -62,7 +126,7 @@ $nama_bulan = [
     7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
 ];
 
-$hari_kerja_karyawan_default = get_hari_kerja_karyawan($tahun, $bulan);
+$hari_kerja_karyawan_default = get_hari_kerja_karyawan($tahun, $bulan, $hari_libur_map);
 
 // Query Data Master Karyawan
 $where_kat = "";
@@ -129,7 +193,7 @@ while ($l = $res_log->fetch_assoc()) {
     }
 }
 
-// Olah Rekap
+// Rekap Kehadiran
 $rekap_data = [];
 $log_diluar_jadwal_list = [];
 
@@ -146,16 +210,17 @@ if ($res_master->num_rows > 0) {
         $total_hadir_diluar = 0;
 
         $target_hari = $is_guru 
-            ? get_target_hari_guru($conn, $pin, $tahun, $bulan) 
+            ? get_target_hari_guru($conn, $pin, $tahun, $bulan, $hari_libur_map) 
             : $hari_kerja_karyawan_default;
 
         $tgl_logs = $absen_data[$pin] ?? [];
 
         foreach ($tgl_logs as $tgl_str => $hari_num) {
+            $is_custom_hol = isset($hari_libur_map[$tgl_str]);
             if ($is_guru) {
                 if (empty($hari_arr)) {
                     $total_hadir_diluar++;
-                } elseif (in_array($hari_num, $hari_arr)) {
+                } elseif (in_array($hari_num, $hari_arr) && !$is_custom_hol) {
                     $total_hadir_sesuai++;
                 } else {
                     $total_hadir_diluar++;
@@ -168,8 +233,10 @@ if ($res_master->num_rows > 0) {
                     ];
                 }
             } else {
-                if ($hari_num !== 7) {
+                if ($hari_num !== 7 && !$is_custom_hol) {
                     $total_hadir_sesuai++;
+                } else {
+                    $total_hadir_diluar++;
                 }
             }
         }
@@ -190,153 +257,43 @@ if ($res_master->num_rows > 0) {
     }
 }
 
-// SORTING ARRAY REKAP DATA
+// Sorting
 usort($rekap_data, function($a, $b) use ($sort) {
     switch ($sort) {
-        case 'pin_desc':
-            return ((int)$b['pin'] <=> (int)$a['pin']) ?: strcmp($b['pin'], $a['pin']);
-        case 'nama_asc':
-            return strcasecmp($a['nama'], $b['nama']);
-        case 'nama_desc':
-            return strcasecmp($b['nama'], $a['nama']);
-        case 'persen_desc':
-            return ($b['persen'] <=> $a['persen']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
-        case 'persen_asc':
-            return ($a['persen'] <=> $b['persen']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
-        case 'target_desc':
-            return ($b['target_hari'] <=> $a['target_hari']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
-        case 'hadir_desc':
-            return ($b['hadir_sesuai'] <=> $a['hadir_sesuai']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
-        case 'tipe_desc':
-            return strcmp($b['tipe'], $a['tipe']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
-        case 'tipe_asc':
-            return strcmp($a['tipe'], $b['tipe']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
-        case 'pin_asc':
-        default:
-            return ((int)$a['pin'] <=> (int)$b['pin']) ?: strcmp($a['pin'], $b['pin']);
+        case 'pin_desc': return ((int)$b['pin'] <=> (int)$a['pin']) ?: strcmp($b['pin'], $a['pin']);
+        case 'nama_asc': return strcasecmp($a['nama'], $b['nama']);
+        case 'nama_desc': return strcasecmp($b['nama'], $a['nama']);
+        case 'persen_desc': return ($b['persen'] <=> $a['persen']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'persen_asc': return ($a['persen'] <=> $b['persen']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'target_desc': return ($b['target_hari'] <=> $a['target_hari']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'hadir_desc': return ($b['hadir_sesuai'] <=> $a['hadir_sesuai']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'tipe_desc': return strcmp($b['tipe'], $a['tipe']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'tipe_asc': return strcmp($a['tipe'], $b['tipe']) ?: ((int)$a['pin'] <=> (int)$b['pin']);
+        case 'pin_asc': default: return ((int)$a['pin'] <=> (int)$a['pin']) ?: strcmp($a['pin'], $b['pin']);
     }
 });
 
-// PROSES EXPORT EXCEL (Tanpa Kolom NO)
-if ($export) {
-    $filename = "Laporan_Evaluasi_Kehadiran_{$nama_bulan[$bulan]}_{$tahun}.xls";
-    header("Content-Type: application/vnd.ms-excel; charset=utf-8");
-    header("Content-Disposition: attachment; filename=\"$filename\"");
-    header("Pragma: no-cache");
-    header("Expires: 0");
-    ?>
-    <!DOCTYPE html>
-    <html lang="id">
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            body { font-family: Arial, sans-serif; }
-            .header-title { font-size: 16pt; font-weight: bold; text-align: center; }
-            .header-school { font-size: 14pt; font-weight: bold; color: #3b82f6; text-align: center; margin-bottom: 10px; }
-            table { border-collapse: collapse; width: 100%; margin-bottom: 25px; }
-            th { background-color: #3b82f6; color: white; font-weight: bold; border: 1px solid #1d4ed8; padding: 8px; text-align: center; }
-            td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 10pt; text-align: center; }
-            .text-left { text-align: left; }
-            .badge-green { color: #15803d; font-weight: bold; }
-            .badge-yellow { color: #b45309; font-weight: bold; }
-            .badge-red { color: #be123c; font-weight: bold; }
-        </style>
-    </head>
-    <body>
-        <div class="header-title">LAPORAN EVALUASI KEHADIRAN BULANAN</div>
-        <div class="header-school">SMK PASUNDAN 2 BANDUNG</div>
-        <div style="text-align:center; font-size:11pt; margin-bottom:15px;">
-            <b>Bulan:</b> <?php echo $nama_bulan[$bulan] . ' ' . $tahun; ?> | 
-            <b>Kategori:</b> <?php echo ucfirst($kategori); ?> | 
-            <b>Hari Kerja Karyawan:</b> <?php echo $hari_kerja_karyawan_default; ?> Hari
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>PIN</th>
-                    <th>Nama Lengkap</th>
-                    <th>Departemen / Jabatan</th>
-                    <th>Tipe</th>
-                    <th>Target Hari</th>
-                    <th>Hadir Sesuai Jadwal</th>
-                    <th>Hadir di Luar Jadwal</th>
-                    <th>% Kehadiran</th>
-                    <th>Evaluasi Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                foreach ($rekap_data as $r) {
-                    $eval_text = "🟢 Baik (≥90%)";
-                    $eval_class = "badge-green";
-                    if ($r['target_hari'] == 0) {
-                        $eval_text = "❓ Belum Ada Jadwal";
-                        $eval_class = "";
-                    } elseif ($r['persen'] < 80) {
-                        $eval_text = "🔴 Perlu Perhatian (<80%)";
-                        $eval_class = "badge-red";
-                    } elseif ($r['persen'] < 90) {
-                        $eval_text = "🟡 Cukup (80-89%)";
-                        $eval_class = "badge-yellow";
-                    }
-
-                    echo "<tr>
-                            <td>'" . h($r['pin']) . "</td>
-                            <td class='text-left'>" . h($r['nama']) . "</td>
-                            <td class='text-left'>" . h($r['dept']) . "</td>
-                            <td>" . ucfirst($r['tipe']) . "</td>
-                            <td>{$r['target_hari']} hr</td>
-                            <td><b>{$r['hadir_sesuai']} hr</b></td>
-                            <td>" . ($r['hadir_diluar'] > 0 ? "{$r['hadir_diluar']} hr" : "-") . "</td>
-                            <td><b>{$r['persen']}%</b></td>
-                            <td class='{$eval_class}'>{$eval_text}</td>
-                          </tr>";
-                }
-                ?>
-            </tbody>
-        </table>
-
-        <?php if (!empty($log_diluar_jadwal_list)): ?>
-        <br>
-        <div style="font-size:12pt; font-weight:bold; color:#c2410c; margin-bottom:8px;">⚠️ CATATAN: RINCIAN GURU ABSEN DI LUAR HARI JADWAL NGAJAR</div>
-        <table>
-            <thead>
-                <tr style="background:#ffedd5; color:#9a3412;">
-                    <th>PIN</th>
-                    <th>Nama Guru</th>
-                    <th>Departemen</th>
-                    <th>Tanggal Absen</th>
-                    <th>Hari</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                foreach ($log_diluar_jadwal_list as $ld) {
-                    echo "<tr>
-                            <td>'" . h($ld['pin']) . "</td>
-                            <td class='text-left'>" . h($ld['nama']) . "</td>
-                            <td class='text-left'>" . h($ld['dept']) . "</td>
-                            <td>" . h($ld['waktu']) . "</td>
-                            <td>" . h($ld['hari_nama']) . " (Di luar jadwal)</td>
-                          </tr>";
-                }
-                ?>
-            </tbody>
-        </table>
-        <?php endif; ?>
-    </body>
-    </html>
-    <?php
-    exit;
-}
-
-render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
+render_header("Laporan Bulanan", "rekap");
 ?>
 
-<!-- FILTER CONTROL CARD (3 Kolom Filter + Tombol di Kanan) -->
-<div class="card" style="margin-bottom:20px; padding:20px;">
-    <form method="GET" action="export_bulanan.php" style="display:flex; justify-content:space-between; align-items:end; flex-wrap:wrap; gap:16px; margin:0;">
+<!-- NOTIFIKASI SUKSES / ERROR -->
+<?php if (!empty($pesan_sukses)): ?>
+<div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border: 1px solid #6ee7b7; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; color: #065f46; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+    <span style="font-size: 20px;">✅</span>
+    <span><?php echo $pesan_sukses; ?></span>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($pesan_error)): ?>
+<div style="background: linear-gradient(135deg, #fee2e2, #fecaca); border: 1px solid #f87171; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; color: #991b1b; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+    <span style="font-size: 20px;">⛔</span>
+    <span><?php echo $pesan_error; ?></span>
+</div>
+<?php endif; ?>
+
+<!-- KARTU FILTER LAPORAN -->
+<div class="card" style="margin-bottom:20px;">
+    <form method="GET" action="export_bulanan.php" style="display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;">
         <input type="hidden" name="sort" value="<?php echo h($sort); ?>">
 
         <!-- INPUT FILTERS -->
@@ -369,9 +326,12 @@ render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
             </div>
         </div>
 
-        <!-- ACTION BUTTONS (Single Export Button) -->
+        <!-- ACTION BUTTONS -->
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <button type="submit" class="btn btn-primary">🔍 Tampilkan Laporan</button>
+            <?php if (is_superadmin()): ?>
+            <button type="button" class="btn" style="background:#8b5cf6; color:#fff;" onclick="bukaModalHariLibur()">🌴 Kelola Hari Libur Kalender</button>
+            <?php endif; ?>
             <a href="<?php echo 'export_excel_matriks.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort]); ?>" class="btn btn-success">📊 Export ke Excel</a>
         </div>
     </form>
@@ -385,7 +345,11 @@ render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
     </div>
     <div class="card" style="margin-bottom:0; padding:16px;">
         <div style="font-size:12px; color:#64748b; font-weight:600;">Hari Kerja Karyawan</div>
-        <div style="font-size:18px; font-weight:800; color:#3b82f6; margin-top:2px;"><?php echo $hari_kerja_karyawan_default; ?> Hari <span style="font-size:11px; font-weight:500; color:#64748b;">(Excl. Minggu)</span></div>
+        <div style="font-size:18px; font-weight:800; color:#3b82f6; margin-top:2px;"><?php echo $hari_kerja_karyawan_default; ?> Hari <span style="font-size:11px; font-weight:500; color:#64748b;">(Excl. Minggu & Libur)</span></div>
+    </div>
+    <div class="card" style="margin-bottom:0; padding:16px;">
+        <div style="font-size:12px; color:#64748b; font-weight:600;">Hari Libur Kalender Bulan Ini</div>
+        <div style="font-size:18px; font-weight:800; color:#8b5cf6; margin-top:2px;"><?php echo count($hari_libur_map); ?> Hari Libur</div>
     </div>
     <div class="card" style="margin-bottom:0; padding:16px;">
         <div style="font-size:12px; color:#64748b; font-weight:600;">Total Master Evaluasi</div>
@@ -408,8 +372,11 @@ render_header("Laporan Evaluasi Bulanan", "laporan_bulanan");
         <div style="display:flex; align-items:center; gap:6px; background:#fee2e2; color:#991b1b; padding:6px 12px; border-radius:8px; border:1px solid #fecdd3;">
             <span>🔴 Tidak Hadir / Alpa</span> <span style="font-weight:normal; opacity:0.85;">(Ada Jadwal, 0 Log)</span>
         </div>
+        <div style="display:flex; align-items:center; gap:6px; background:#f1f5f9; color:#475569; padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1;">
+            <span>🌴 Libur Kalender</span> <span style="font-weight:normal; opacity:0.85;">(Bebas Alpa / Potong Target)</span>
+        </div>
         <div style="display:flex; align-items:center; gap:6px; background:#f1f5f9; color:#64748b; padding:6px 12px; border-radius:8px; border:1px solid #e2e8f0;">
-            <span>⚪ Libur / Tanpa Jadwal</span> <span style="font-weight:normal; opacity:0.85;">(Tidak Dihitung Alpa)</span>
+            <span>⚪ Libur Rutin / Tanpa Jadwal</span> <span style="font-weight:normal; opacity:0.85;">(Tidak Dihitung Alpa)</span>
         </div>
     </div>
 </div>
@@ -476,10 +443,20 @@ function b_sort_icon($col_name, $current_sort) {
                         $tgl_sub  = sprintf("%04d-%02d-%02d", $tahun, $bulan, $d);
                         $day_n    = (int)date('N', strtotime($tgl_sub));
                         $h_singkat = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'][$day_n - 1];
-                        $bg_th    = ($day_n === 7) ? 'background:#ef4444; color:#fff;' : 'background:#1e293b; color:#fff;';
+                        
+                        $is_custom_hol = isset($hari_libur_map[$tgl_sub]);
+                        $bg_th = 'background:#1e293b; color:#fff;';
+                        if ($is_custom_hol) {
+                            $bg_th = 'background:#8b5cf6; color:#fff; cursor:pointer;';
+                        } elseif ($day_n === 7) {
+                            $bg_th = 'background:#ef4444; color:#fff;';
+                        }
+                        
+                        $th_title = $is_custom_hol ? "Hari Libur: " . $hari_libur_map[$tgl_sub]['keterangan'] : "Tgl {$d} {$nama_bulan[$bulan]}";
+                        if (is_superadmin()) $th_title .= " (Klik untuk kelola libur)";
                     ?>
-                        <th style="<?php echo $bg_th; ?> padding:6px 4px; font-size:11px; text-align:center; min-width:32px;">
-                            <?php echo $d; ?><br><span style="font-size:9px; font-weight:normal; opacity:0.8;"><?php echo $h_singkat; ?></span>
+                        <th style="<?php echo $bg_th; ?> padding:6px 4px; font-size:11px; text-align:center; min-width:32px;" title="<?php echo h($th_title); ?>" <?php if (is_superadmin()): ?>onclick="setModalLiburTanggal('<?php echo $tgl_sub; ?>')"<?php endif; ?>>
+                            <?php echo $d; ?><br><span style="font-size:9px; font-weight:normal; opacity:0.9;"><?php echo $is_custom_hol ? '🌴' : $h_singkat; ?></span>
                         </th>
                     <?php endfor; ?>
                     <th style="background:#0f172a; color:#fff;">
@@ -539,6 +516,9 @@ function b_sort_icon($col_name, $current_sort) {
                             $tgl_key  = sprintf("%04d-%02d-%02d", $tahun, $bulan, $d);
                             $day_num  = (int)date('N', strtotime($tgl_key));
 
+                            $is_custom_hol = isset($hari_libur_map[$tgl_key]);
+                            $ket_custom = $is_custom_hol ? $hari_libur_map[$tgl_key]['keterangan'] : '';
+
                             $has_sch = $is_guru ? in_array($day_num, $hari_arr) : ($day_num !== 7);
                             $log_today = $absen_detail[$pin][$tgl_key] ?? null;
 
@@ -547,19 +527,24 @@ function b_sort_icon($col_name, $current_sort) {
                                 $p_jam = $log_today['pulang'] ?? '-';
 
                                 if ($log_today['masuk'] && $log_today['pulang']) {
-                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Hadir Lengkap (Masuk: {$m_jam}, Pulang: {$p_jam})";
+                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Hadir Lengkap (Masuk: {$m_jam}, Pulang: {$p_jam})" . ($is_custom_hol ? " [Libur: {$ket_custom}]" : "");
                                     echo "<td style='background:#dcfce7; color:#166534; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>✔️</td>";
                                 } else {
-                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Hadir Parsial (Masuk: {$m_jam}, Pulang: {$p_jam})";
+                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Hadir Parsial (Masuk: {$m_jam}, Pulang: {$p_jam})" . ($is_custom_hol ? " [Libur: {$ket_custom}]" : "");
                                     echo "<td style='background:#fef9c3; color:#854d0e; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>⚠️</td>";
                                 }
                             } else {
-                                if ($has_sch) {
-                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Alpa / Tidak Hadir (Ada Jadwal 0 Log)";
-                                    echo "<td style='background:#fee2e2; color:#991b1b; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>❌</td>";
+                                if ($is_custom_hol) {
+                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Libur Kalender Sekolah (" . $ket_custom . ")";
+                                    echo "<td style='background:#f1f5f9; color:#475569; font-weight:700; font-size:11px; text-align:center; padding:4px 0; border:1px solid #cbd5e1;' title='" . h($tooltip) . "'>🌴</td>";
                                 } else {
-                                    $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Libur / Tanpa Jadwal Mengajar";
-                                    echo "<td style='background:#f1f5f9; color:#94a3b8; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>-</td>";
+                                    if ($has_sch) {
+                                        $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Alpa / Tidak Hadir (Ada Jadwal 0 Log)";
+                                        echo "<td style='background:#fee2e2; color:#991b1b; font-weight:700; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>❌</td>";
+                                    } else {
+                                        $tooltip = "Tgl {$d} " . $nama_bulan[$bulan] . ": Libur / Tanpa Jadwal Mengajar";
+                                        echo "<td style='background:#f1f5f9; color:#94a3b8; font-size:11px; text-align:center; padding:4px 0;' title='" . h($tooltip) . "'>-</td>";
+                                    }
                                 }
                             }
                         }
@@ -620,6 +605,95 @@ function b_sort_icon($col_name, $current_sort) {
         </table>
     </div>
 </div>
+<?php endif; ?>
+
+<!-- ============================================================ -->
+<!-- MODAL KELOLA HARI LIBUR KALENDER (SUPERADMIN ONLY) -->
+<!-- ============================================================ -->
+<?php if (is_superadmin()): ?>
+<div id="modal-hari-libur" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+    <div class="card" style="width:100%; max-width:550px; margin:20px; background:#fff; border-radius:16px; max-height:90vh; overflow-y:auto; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+        <div class="card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title" style="margin-bottom:0; font-size:16px; color:#0f172a;">🌴 Kelola Hari Libur Kalender</div>
+            <button type="button" onclick="tutupModalHariLibur()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">✕</button>
+        </div>
+
+        <!-- FORM TAMBAH / UPDATE HARI LIBUR -->
+        <form method="POST" action="export_bulanan.php?<?php echo http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort]); ?>" style="margin-bottom:20px; background:#f8fafc; padding:14px; border-radius:12px; border:1px solid #e2e8f0;">
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="action" value="tambah_hari_libur">
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                <div style="flex:1; min-width:140px;">
+                    <label for="tgl_libur" style="font-size:12px; font-weight:700; color:#334155;">📆 Tanggal Libur:</label>
+                    <input type="date" id="tgl_libur" name="tgl_libur" required style="margin-bottom:0; font-size:13px;">
+                </div>
+                <div style="flex:2; min-width:180px;">
+                    <label for="ket_libur" style="font-size:12px; font-weight:700; color:#334155;">📝 Keterangan Libur:</label>
+                    <input type="text" id="ket_libur" name="ket_libur" placeholder="Contoh: HUT RI / Libur Semester" required style="margin-bottom:0; font-size:13px;" autocomplete="off">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="background:#8b5cf6; font-size:13px; font-weight:700;">
+                ➕ Simpan Hari Libur
+            </button>
+        </form>
+
+        <!-- DAFTAR HARI LIBUR BULAN INI -->
+        <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:10px;">
+            📋 Daftar Hari Libur Terdaftar (<?php echo $nama_bulan[$bulan] . ' ' . $tahun; ?>):
+        </div>
+
+        <div class="table-responsive">
+            <table style="font-size:12px;">
+                <thead>
+                    <tr style="background:#f1f5f9;">
+                        <th>Tanggal</th>
+                        <th>Keterangan</th>
+                        <th style="width:70px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($hari_libur_map)): ?>
+                        <?php foreach ($hari_libur_map as $hl): ?>
+                            <tr>
+                                <td><b><?php echo h(date('d/m/Y', strtotime($hl['tanggal']))); ?></b></td>
+                                <td style="text-align:left;"><span class="badge" style="background:#f3e8ff; color:#6b21a8; border:1px solid #e9d5ff;">🌴 <?php echo h($hl['keterangan']); ?></span></td>
+                                <td>
+                                    <form method="POST" action="export_bulanan.php?<?php echo http_build_query(['bulan' => $bulan, 'tahun' => $tahun, 'kategori' => $kategori, 'sort' => $sort]); ?>" style="margin:0;" onsubmit="return confirm('Hapus hari libur ini?')">
+                                        <?php echo csrf_field(); ?>
+                                        <input type="hidden" name="action" value="hapus_hari_libur">
+                                        <input type="hidden" name="id_hl" value="<?php echo $hl['id']; ?>">
+                                        <button type="submit" class="btn" style="background:#fee2e2; color:#dc2626; padding:3px 8px; font-size:11px;">🗑️ Hapus</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="3" style="color:#94a3b8; padding:16px;">Belum ada hari libur kalender yang didaftarkan bulan ini.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top:16px; text-align:right;">
+            <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" onclick="tutupModalHariLibur()">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function bukaModalHariLibur() {
+    document.getElementById('modal-hari-libur').style.display = 'flex';
+}
+function tutupModalHariLibur() {
+    document.getElementById('modal-hari-libur').style.display = 'none';
+}
+function setModalLiburTanggal(tglStr) {
+    document.getElementById('tgl_libur').value = tglStr;
+    bukaModalHariLibur();
+}
+</script>
 <?php endif; ?>
 
 <?php render_footer(); ?>
