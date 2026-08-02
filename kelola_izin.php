@@ -333,62 +333,63 @@ render_header("Kelola Cuti, Izin & Sakit", "kelola_izin");
 
 <!-- NOTIFIKASI SUKSES / ERROR -->
 <?php if (!empty($pesan_sukses)): ?>
-    <div style="background:linear-gradient(135deg,#dcfce7,#f0fdf4); color:#15803d; border:1px solid #86efac; padding:14px 20px; border-radius:12px; margin-bottom:20px; font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:10px;">
-        <span style="font-size:18px;">✓</span> <?php echo $pesan_sukses; ?>
+    <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5); color:#065f46; border-left:4px solid #10b981; padding:14px 20px; border-radius:0 12px 12px 0; margin-bottom:20px; font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(16,185,129,.12);">
+        <span style="font-size:11px; font-weight:900; background:#10b981; color:#fff; padding:2px 8px; border-radius:4px;">SUKSES</span>
+        <span><?php echo $pesan_sukses; ?></span>
     </div>
 <?php endif; ?>
 <?php if (!empty($pesan_error)): ?>
-    <div style="background:linear-gradient(135deg,#fee2e2,#fef2f2); color:#be123c; border:1px solid #fca5a5; padding:14px 20px; border-radius:12px; margin-bottom:20px; font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:10px;">
-        <span style="font-size:18px;">✕</span> <?php echo $pesan_error; ?>
+    <div style="background:linear-gradient(135deg,#fff1f2,#fee2e2); color:#991b1b; border-left:4px solid #ef4444; padding:14px 20px; border-radius:0 12px 12px 0; margin-bottom:20px; font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(239,68,68,.12);">
+        <span style="font-size:11px; font-weight:900; background:#ef4444; color:#fff; padding:2px 8px; border-radius:4px;">ERROR</span>
+        <span><?php echo $pesan_error; ?></span>
     </div>
 <?php endif; ?>
 
 <?php if (is_tatausaha()): ?>
-    <div style="background:#fff7ed; border:1px solid #fed7aa; color:#c2410c; padding:12px 18px; border-radius:12px; margin-bottom:20px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px;">
-        <span>⚠️</span> <b>Akses Tata Usaha:</b> Data perizinan dan rekap di bawah ini khusus menampilkan pengajuan kategori <b>Karyawan</b> saja.
+    <div style="background:#fff7ed; border:1px solid #fed7aa; border-left:4px solid #f97316; color:#c2410c; padding:12px 18px; border-radius:0 12px 12px 0; margin-bottom:20px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:10px;">
+        <span style="font-size:11px; font-weight:900; background:#ea580c; color:#fff; padding:2px 8px; border-radius:4px;">TATA USAHA</span>
+        <span><b>Akses Tata Usaha:</b> Data perizinan dan rekap di bawah ini khusus menampilkan pengajuan kategori <b>Karyawan</b> saja.</span>
     </div>
 <?php endif; ?>
 
 <!-- RINGKASAN STATISTIK -->
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:20px;">
-    <div class="stat-card">
-        <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Total Berkas</div>
-        <div style="font-size:22px; font-weight:800; color:#0f172a; margin-top:2px;"><?php echo $stat['total']; ?> <span style="font-size:12px; font-weight:500; color:#64748b;">Berkas</span></div>
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:22px;">
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b); border-radius:16px; padding:20px 22px; color:#fff; box-shadow:0 4px 16px rgba(15,23,42,.15);">
+        <div style="font-size:11px; color:#94a3b8; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">TOTAL BERKAS</div>
+        <div style="font-size:26px; font-weight:900; color:#38bdf8; margin-top:4px;"><?php echo $stat['total']; ?> <span style="font-size:13px; font-weight:600; color:#94a3b8;">Berkas</span></div>
     </div>
-    <div class="stat-card">
-        <div style="font-size:11px; color:#d97706; font-weight:700; text-transform:uppercase;">Menunggu Approval</div>
-        <div style="font-size:22px; font-weight:800; color:#d97706; margin-top:2px;"><?php echo $stat['pending']; ?></div>
+    <div style="background:linear-gradient(135deg,#78350f,#d97706); border-radius:16px; padding:20px 22px; color:#fff; box-shadow:0 4px 16px rgba(217,119,6,.2);">
+        <div style="font-size:11px; color:#fde68a; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">MENUNGGU APPROVAL</div>
+        <div style="font-size:26px; font-weight:900; color:#fff; margin-top:4px;"><?php echo $stat['pending']; ?></div>
     </div>
-    <div class="stat-card">
-        <div style="font-size:11px; color:#15803d; font-weight:700; text-transform:uppercase;">Disetujui</div>
-        <div style="font-size:22px; font-weight:800; color:#15803d; margin-top:2px;"><?php echo $stat['disetujui']; ?></div>
+    <div style="background:linear-gradient(135deg,#065f46,#059669); border-radius:16px; padding:20px 22px; color:#fff; box-shadow:0 4px 16px rgba(5,150,105,.2);">
+        <div style="font-size:11px; color:#a7f3d0; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">DISETUJUI</div>
+        <div style="font-size:26px; font-weight:900; color:#fff; margin-top:4px;"><?php echo $stat['disetujui']; ?></div>
     </div>
-    <div class="stat-card">
-        <div style="font-size:11px; color:#be123c; font-weight:700; text-transform:uppercase;">Ditolak</div>
-        <div style="font-size:22px; font-weight:800; color:#be123c; margin-top:2px;"><?php echo $stat['ditolak']; ?></div>
+    <div style="background:linear-gradient(135deg,#881337,#e11d48); border-radius:16px; padding:20px 22px; color:#fff; box-shadow:0 4px 16px rgba(225,29,72,.2);">
+        <div style="font-size:11px; color:#fecdd3; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">DITOLAK</div>
+        <div style="font-size:26px; font-weight:900; color:#fff; margin-top:4px;"><?php echo $stat['ditolak']; ?></div>
     </div>
 </div>
 
 <div class="kelola-grid">
 
     <!-- FORM INPUT CUTI / IZIN / SAKIT -->
-    <div class="card" style="margin-bottom:0;">
-        <div class="card-header" style="border-bottom:1px solid #f1f5f9; padding-bottom:12px; margin-bottom:16px;">
-            <div class="card-title" style="margin-bottom:0;">
-                <span>Catat Cuti / Izin / Sakit</span>
-            </div>
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(15,23,42,.06);">
+        <div style="background:linear-gradient(135deg,#0f172a,#1e293b); padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:15px; font-weight:800; color:#fff;">Catat Perizinan Pegawai</div>
         </div>
 
-        <form method="POST" action="kelola_izin.php" id="form-izin">
+        <form method="POST" action="kelola_izin.php" id="form-izin" style="padding:20px;">
             <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="simpan_izin">
 
             <!-- SEARCHABLE AUTOCOMPLETE DROPDOWN KARYAWAN -->
             <div style="margin-bottom:14px;">
-                <label for="input-search-emp" style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;"><?php echo is_tatausaha() ? 'Pilih Karyawan' : 'Pilih Guru / Karyawan'; ?></label>
+                <label for="input-search-emp" style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;"><?php echo is_tatausaha() ? 'Pilih Karyawan' : 'Pilih Guru / Karyawan'; ?></label>
                 <div class="searchable-select-wrapper">
                     <input type="hidden" name="pin" id="selected-pin" required>
-                    <input type="text" id="input-search-emp" class="searchable-input" placeholder="🔍 Ketik PIN atau Nama..." autocomplete="off" required>
+                    <input type="text" id="input-search-emp" class="searchable-input" placeholder="Ketik PIN atau Nama..." autocomplete="off" required>
                     
                     <div class="searchable-dropdown-list" id="dropdown-emp-list">
                         <?php foreach ($master_employees as $e): 
@@ -406,21 +407,21 @@ render_header("Kelola Cuti, Izin & Sakit", "kelola_izin");
                 </div>
             </div>
 
-            <!-- RENTANG TANGGAL (PAS DI CARD) -->
+            <!-- RENTANG TANGGAL -->
             <div class="date-range-admin-grid">
                 <div>
-                    <label for="tgl_mulai" style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">Dari Tanggal</label>
+                    <label for="tgl_mulai" style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;">Dari Tanggal</label>
                     <input type="date" id="tgl_mulai" name="tgl_mulai" value="<?php echo date('Y-m-d'); ?>" class="searchable-input" required>
                 </div>
                 <div>
-                    <label for="tgl_selesai" style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">Sampai Tanggal</label>
+                    <label for="tgl_selesai" style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;">Sampai Tanggal</label>
                     <input type="date" id="tgl_selesai" name="tgl_selesai" value="<?php echo date('Y-m-d'); ?>" class="searchable-input" required>
                 </div>
             </div>
 
             <div style="margin-bottom:14px;">
-                <label for="tipe_izin" style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">Jenis Perizinan</label>
-                <select id="tipe_izin" name="tipe_izin" class="searchable-input" required>
+                <label for="tipe_izin" style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;">Jenis Perizinan</label>
+                <select id="tipe_izin" name="tipe_izin" class="searchable-input" style="font-weight:600;" required>
                     <option value="cuti">Cuti Resmi Kalender / Tahunan</option>
                     <option value="izin">Izin Keperluan Pribadi / Tugas</option>
                     <option value="sakit">Sakit (Dengan / Tanpa Surat)</option>
@@ -428,52 +429,52 @@ render_header("Kelola Cuti, Izin & Sakit", "kelola_izin");
             </div>
 
             <div style="margin-bottom:20px;">
-                <label for="keterangan" style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">Keterangan / Alasan</label>
+                <label for="keterangan" style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;">Keterangan / Alasan</label>
                 <textarea id="keterangan" name="keterangan" rows="3" placeholder="Contoh: Sakit demam, Izin dinas luar..." class="searchable-input" style="resize:vertical; line-height:1.5;"></textarea>
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:13.5px; font-weight:700; border-radius:10px; min-height:42px;">
+            <button type="submit" style="width:100%; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border:none; padding:12px; font-size:13px; font-weight:800; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px rgba(37,99,235,.35);">
                 Simpan Data Perizinan
             </button>
         </form>
     </div>
 
     <!-- TABEL DAFTAR PERIZINAN & PAGINASI -->
-    <div class="card" style="margin-bottom:0;">
-        <div class="card-header" style="flex-wrap:wrap; gap:12px; align-items:center;">
-            <div class="card-title" style="margin-bottom:0;">Riwayat &amp; Data Perizinan</div>
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(15,23,42,.06);">
+        <div style="background:#ffffff; border-bottom:1px solid #e2e8f0; padding:18px 22px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+            <div style="font-size:16px; font-weight:800; color:#0f172a;">Riwayat &amp; Data Perizinan</div>
 
             <!-- FILTER & SEARCH BAR -->
             <form method="GET" action="kelola_izin.php" style="margin:0; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                <input type="text" name="q" value="<?php echo h($search); ?>" placeholder="🔍 Cari PIN / Nama / Alasan..." style="width:180px; margin-bottom:0; padding:7px 12px; font-size:12.5px; border:1.5px solid #cbd5e1; border-radius:8px;">
-                <select name="tipe" style="width:120px; margin-bottom:0; padding:7px 10px; font-size:12.5px; border:1.5px solid #cbd5e1; border-radius:8px;" onchange="this.form.submit()">
+                <input type="text" name="q" value="<?php echo h($search); ?>" placeholder="Cari PIN / Nama / Alasan..." style="width:180px; margin-bottom:0; padding:8px 12px; font-size:12px; border:1px solid #cbd5e1; border-radius:8px; outline:none;">
+                <select name="tipe" style="width:120px; margin-bottom:0; padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:8px; font-weight:600; outline:none;" onchange="this.form.submit()">
                     <option value="semua" <?php echo $filter_tipe === 'semua' ? 'selected' : ''; ?>>Semua Tipe</option>
                     <option value="cuti" <?php echo $filter_tipe === 'cuti' ? 'selected' : ''; ?>>Cuti</option>
                     <option value="izin" <?php echo $filter_tipe === 'izin' ? 'selected' : ''; ?>>Izin</option>
                     <option value="sakit" <?php echo $filter_tipe === 'sakit' ? 'selected' : ''; ?>>Sakit</option>
                 </select>
-                <select name="status" style="width:130px; margin-bottom:0; padding:7px 10px; font-size:12.5px; border:1.5px solid #cbd5e1; border-radius:8px;" onchange="this.form.submit()">
+                <select name="status" style="width:130px; margin-bottom:0; padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:8px; font-weight:600; outline:none;" onchange="this.form.submit()">
                     <option value="semua" <?php echo $filter_st === 'semua' ? 'selected' : ''; ?>>Semua Status</option>
                     <option value="pending" <?php echo $filter_st === 'pending' ? 'selected' : ''; ?>>Menunggu</option>
                     <option value="disetujui" <?php echo $filter_st === 'disetujui' ? 'selected' : ''; ?>>Disetujui</option>
                     <option value="ditolak" <?php echo $filter_st === 'ditolak' ? 'selected' : ''; ?>>Ditolak</option>
                 </select>
-                <button type="submit" class="btn" style="background:#f1f5f9; color:#334155; padding:7px 14px; font-size:12.5px; border:1px solid #cbd5e1;">Cari</button>
+                <button type="submit" style="background:#f1f5f9; color:#334155; padding:8px 14px; font-size:12px; font-weight:700; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer;">Cari</button>
             </form>
         </div>
 
-        <div class="table-responsive" style="overflow-x:auto;">
-            <table style="min-width:760px; font-size:13px;">
-                <thead>
+        <div class="table-responsive" style="max-height:700px; overflow:auto;">
+            <table style="min-width:760px; font-size:13px; width:100%; border-collapse:collapse;">
+                <thead style="position:sticky; top:0; z-index:10; background:#f8fafc; border-bottom:2px solid #e2e8f0;">
                     <tr>
-                        <th style="width:40px;">No</th>
-                        <th>Periode Tanggal</th>
-                        <th>PIN</th>
-                        <th style="text-align:left;">Nama Karyawan</th>
-                        <th>Jenis</th>
-                        <th style="text-align:left;">Keterangan</th>
-                        <th>Status</th>
-                        <th>Aksi</th>
+                        <th style="width:45px; background:#f8fafc; color:#475569; padding:12px 8px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">No</th>
+                        <th style="background:#f8fafc; color:#475569; padding:12px 14px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Periode Tanggal</th>
+                        <th style="width:80px; background:#f8fafc; color:#475569; padding:12px 8px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">PIN</th>
+                        <th style="background:#f8fafc; color:#475569; padding:12px 16px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:left; border-right:1px solid #e2e8f0;">Nama Karyawan</th>
+                        <th style="width:90px; background:#f8fafc; color:#475569; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Jenis</th>
+                        <th style="background:#f8fafc; color:#475569; padding:12px 16px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:left; border-right:1px solid #e2e8f0;">Keterangan</th>
+                        <th style="width:120px; background:#f8fafc; color:#475569; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Status</th>
+                        <th style="width:140px; background:#f8fafc; color:#475569; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -293,17 +293,22 @@ render_header("Pengajuan Perizinan", "user_izin");
 </style>
 
 <?php if (!empty($pesan_sukses)): ?>
-    <div class="toast-notice-success"><span style="font-size:18px;">✓</span> <?php echo $pesan_sukses; ?></div>
+    <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5); color:#065f46; border-left:4px solid #10b981; padding:14px 20px; border-radius:0 12px 12px 0; margin-bottom:20px; font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(16,185,129,.12);">
+        <span style="font-size:11px; font-weight:900; background:#10b981; color:#fff; padding:2px 8px; border-radius:4px;">SUKSES</span>
+        <span><?php echo $pesan_sukses; ?></span>
+    </div>
 <?php endif; ?>
 
 <?php if (!empty($pesan_error)): ?>
-    <div class="toast-notice-error"><span style="font-size:18px;">✕</span> <?php echo $pesan_error; ?></div>
+    <div style="background:linear-gradient(135deg,#fff1f2,#fee2e2); color:#991b1b; border-left:4px solid #ef4444; padding:14px 20px; border-radius:0 12px 12px 0; margin-bottom:20px; font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(239,68,68,.12);">
+        <span style="font-size:11px; font-weight:900; background:#ef4444; color:#fff; padding:2px 8px; border-radius:4px;">ERROR</span>
+        <span><?php echo $pesan_error; ?></span>
+    </div>
 <?php endif; ?>
 
 <?php if (empty($pin) || !$detail_user): ?>
     <div class="izin-card" style="text-align:center; padding:60px 20px;">
-        <div style="font-size:40px; color:#cbd5e1; margin-bottom:12px;">👤</div>
-        <h3 style="font-size:18px; font-weight:700; color:#0f172a; margin-bottom:8px;">Akun Belum Terhubung Karyawan</h3>
+        <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin-bottom:8px;">Akun Belum Terhubung Karyawan</h3>
         <p style="color:#64748b; font-size:13.5px; max-width:440px; margin:0 auto;">
             Akun <code><?php echo h($_SESSION['username']); ?></code> belum terhubung ke data PIN karyawan. Hubungi Administrator.
         </p>
@@ -311,44 +316,41 @@ render_header("Pengajuan Perizinan", "user_izin");
 <?php else: ?>
 
 <!-- RINGKASAN STATISTIK IZIN SAYA -->
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:20px;">
-    <div class="izin-card" style="padding:16px 20px;">
-        <div style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Total Berkas</div>
-        <div style="font-size:22px; font-weight:800; color:#0f172a; margin-top:2px;" id="stat_total"><?php echo $stat_count['total']; ?> <span style="font-size:12px; font-weight:500; color:#64748b;">Berkas</span></div>
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:22px;">
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b); border-radius:16px; padding:20px 22px; color:#fff; box-shadow:0 4px 16px rgba(15,23,42,.15);">
+        <div style="font-size:11px; color:#94a3b8; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">TOTAL BERKAS</div>
+        <div style="font-size:26px; font-weight:900; color:#38bdf8; margin-top:4px;" id="stat_total"><?php echo $stat_count['total']; ?> <span style="font-size:13px; font-weight:600; color:#94a3b8;">Berkas</span></div>
     </div>
-    <div class="izin-card" style="padding:16px 20px;">
-        <div style="font-size:11px; color:#15803d; font-weight:700; text-transform:uppercase;">Disetujui</div>
-        <div style="font-size:22px; font-weight:800; color:#15803d; margin-top:2px;" id="stat_disetujui"><?php echo $stat_count['disetujui']; ?></div>
+    <div style="background:linear-gradient(135deg,#065f46,#059669); border-radius:16px; padding:20px 22px; color:#fff; box-shadow:0 4px 16px rgba(5,150,105,.2);">
+        <div style="font-size:11px; color:#a7f3d0; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">DISETUJUI</div>
+        <div style="font-size:26px; font-weight:900; color:#fff; margin-top:4px;" id="stat_disetujui"><?php echo $stat_count['disetujui']; ?></div>
     </div>
-    <div class="izin-card" style="padding:16px 20px;">
-        <div style="font-size:11px; color:#b45309; font-weight:700; text-transform:uppercase;">Menunggu Approval</div>
-        <div style="font-size:22px; font-weight:800; color:#d97706; margin-top:2px;" id="stat_pending"><?php echo $stat_count['pending']; ?></div>
+    <div style="background:linear-gradient(135deg,#78350f,#d97706); border-radius:16px; padding:20px 22px; color:#fff; box-shadow:0 4px 16px rgba(217,119,6,.2);">
+        <div style="font-size:11px; color:#fde68a; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">MENUNGGU APPROVAL</div>
+        <div style="font-size:26px; font-weight:900; color:#fff; margin-top:4px;" id="stat_pending"><?php echo $stat_count['pending']; ?></div>
     </div>
-    <div class="izin-card" style="padding:16px 20px;">
-        <div style="font-size:11px; color:#be123c; font-weight:700; text-transform:uppercase;">Ditolak</div>
-        <div style="font-size:22px; font-weight:800; color:#be123c; margin-top:2px;" id="stat_ditolak"><?php echo $stat_count['ditolak']; ?></div>
+    <div style="background:linear-gradient(135deg,#881337,#e11d48); border-radius:16px; padding:20px 22px; color:#fff; box-shadow:0 4px 16px rgba(225,29,72,.2);">
+        <div style="font-size:11px; color:#fecdd3; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">DITOLAK</div>
+        <div style="font-size:26px; font-weight:900; color:#fff; margin-top:4px;" id="stat_ditolak"><?php echo $stat_count['ditolak']; ?></div>
     </div>
 </div>
 
 <div class="user-izin-grid">
 
     <!-- FORM PENGAJUAN IZIN SAYA -->
-    <div class="izin-card">
-        <div class="izin-header">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                Form Pengajuan Izin / Cuti
-            </div>
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(15,23,42,.06);">
+        <div style="background:linear-gradient(135deg,#0f172a,#1e293b); padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:15px; font-weight:800; color:#fff;">Form Pengajuan Perizinan</div>
         </div>
 
-        <div style="padding: 18px;">
+        <div style="padding: 20px;">
             <!-- PROFIL PEGAWAI SIMPEL -->
-            <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; margin-bottom:16px;">
                 <div style="width:36px; height:36px; border-radius:50%; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; flex-shrink:0;">
                     <?php echo strtoupper(mb_substr($detail_user['nama'], 0, 1)); ?>
                 </div>
                 <div style="flex:1; min-width:0;">
-                    <div style="font-size:12.5px; font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo h($detail_user['nama']); ?></div>
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo h($detail_user['nama']); ?></div>
                     <div style="font-size:11px; color:#64748b;">PIN: <code style="font-weight:700; color:#0f172a;"><?php echo h($detail_user['pin']); ?></code> &bull; <?php echo h($detail_user['departemen'] ?: 'Umum'); ?></div>
                 </div>
             </div>
@@ -357,7 +359,7 @@ render_header("Pengajuan Perizinan", "user_izin");
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="simpan_izin_mandiri">
 
-                <!-- RENTANG TANGGAL PERIZINAN (PAS DI CARD) -->
+                <!-- RENTANG TANGGAL PERIZINAN -->
                 <div class="date-range-grid">
                     <div>
                         <label for="tgl_mulai" class="form-label-custom">Dari Tanggal</label>
@@ -370,8 +372,8 @@ render_header("Pengajuan Perizinan", "user_izin");
                 </div>
 
                 <!-- INFO DURASI HARI -->
-                <div id="durasi_badge" style="font-size:11.5px; font-weight:700; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:7px 10px; border-radius:8px; margin-bottom:14px; display:flex; align-items:center; gap:6px;">
-                    📅 Durasi: <b>1 Hari</b> (Single Day)
+                <div id="durasi_badge" style="font-size:11.5px; font-weight:700; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:8px 12px; border-radius:8px; margin-bottom:14px;">
+                    Durasi: <b>1 Hari</b> (Single Day)
                 </div>
 
                 <!-- JENIS PERIZINAN (RADIO CARDS) -->
@@ -381,21 +383,18 @@ render_header("Pengajuan Perizinan", "user_izin");
 
                     <div class="type-selector-grid">
                         <div class="type-card-option active" id="card_cuti" onclick="selectType('cuti')">
-                            <div style="font-size:16px;">🏖️</div>
-                            <div class="type-title">Cuti</div>
-                            <div class="type-desc">Resmi</div>
+                            <div class="type-title" style="font-size:13px; font-weight:800;">Cuti</div>
+                            <div class="type-desc" style="font-size:10.5px; font-weight:600;">Resmi Kalender</div>
                         </div>
 
                         <div class="type-card-option" id="card_izin" onclick="selectType('izin')">
-                            <div style="font-size:16px;">📋</div>
-                            <div class="type-title">Izin</div>
-                            <div class="type-desc">Dinas</div>
+                            <div class="type-title" style="font-size:13px; font-weight:800;">Izin</div>
+                            <div class="type-desc" style="font-size:10.5px; font-weight:600;">Dinas / Pribadi</div>
                         </div>
 
                         <div class="type-card-option" id="card_sakit" onclick="selectType('sakit')">
-                            <div style="font-size:16px;">💊</div>
-                            <div class="type-title">Sakit</div>
-                            <div class="type-desc">Surat</div>
+                            <div class="type-title" style="font-size:13px; font-weight:800;">Sakit</div>
+                            <div class="type-desc" style="font-size:10.5px; font-weight:600;">Dengan / Tanpa Surat</div>
                         </div>
                     </div>
                 </div>
@@ -406,7 +405,7 @@ render_header("Pengajuan Perizinan", "user_izin");
                     <textarea id="keterangan" name="keterangan" rows="3" class="form-input-custom" placeholder="Jelaskan alasan pengajuan izin secara singkat dan jelas..." style="resize:vertical; margin-bottom:0;" required></textarea>
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:13px; font-weight:700; border-radius:10px; min-height:40px;">
+                <button type="submit" style="width:100%; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border:none; padding:12px; font-size:13px; font-weight:800; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px rgba(37,99,235,.35);">
                     Kirim Pengajuan
                 </button>
             </form>
@@ -414,27 +413,24 @@ render_header("Pengajuan Perizinan", "user_izin");
     </div>
 
     <!-- TABEL RIWAYAT PENGAJUAN SAYA -->
-    <div class="izin-card">
-        <div class="izin-header">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Riwayat Pengajuan Saya
-            </div>
-            <div style="font-size:11px; color:#22c55e; font-weight:600; display:flex; align-items:center; gap:6px;">
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(15,23,42,.06);">
+        <div style="background:#ffffff; border-bottom:1px solid #e2e8f0; padding:18px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div style="font-size:16px; font-weight:800; color:#0f172a;">Riwayat Pengajuan Saya</div>
+            <div style="font-size:11px; color:#166534; font-weight:700; background:#dcfce7; border:1px solid #bbf7d0; padding:4px 12px; border-radius:20px; display:flex; align-items:center; gap:6px;">
                 <span class="pulse-live-dot"></span> Realtime Sync (5s)
             </div>
         </div>
 
-        <div class="table-responsive" style="overflow-x:auto;">
-            <table style="font-size:13px; min-width:560px;">
-                <thead>
+        <div class="table-responsive" style="max-height:700px; overflow:auto;">
+            <table style="font-size:13px; min-width:560px; width:100%; border-collapse:collapse;">
+                <thead style="position:sticky; top:0; z-index:10; background:#f8fafc; border-bottom:2px solid #e2e8f0;">
                     <tr>
-                        <th style="width:40px;">No</th>
-                        <th>Periode Tanggal</th>
-                        <th>Jenis</th>
-                        <th style="text-align:left;">Keterangan / Alasan</th>
-                        <th>Status Approval</th>
-                        <th>Diajukan Pada</th>
+                        <th style="width:45px; background:#f8fafc; color:#475569; padding:12px 8px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">No</th>
+                        <th style="background:#f8fafc; color:#475569; padding:12px 14px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Periode Tanggal</th>
+                        <th style="width:90px; background:#f8fafc; color:#475569; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Jenis</th>
+                        <th style="background:#f8fafc; color:#475569; padding:12px 16px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:left; border-right:1px solid #e2e8f0;">Keterangan / Alasan</th>
+                        <th style="width:130px; background:#f8fafc; color:#475569; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Status Approval</th>
+                        <th style="width:140px; background:#f8fafc; color:#475569; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center;">Diajukan Pada</th>
                     </tr>
                 </thead>
                 <tbody id="user_izin_tbody">
@@ -527,7 +523,7 @@ function updateDurasiInfo() {
         badge.style.background = '#fef2f2';
         badge.style.borderColor = '#fca5a5';
         badge.style.color = '#dc2626';
-        badge.innerHTML = '⚠️ Tanggal selesai tidak boleh lebih awal dari tanggal mulai';
+        badge.innerHTML = 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai';
         return;
     }
 
@@ -539,11 +535,11 @@ function updateDurasiInfo() {
     badge.style.color = '#1d4ed8';
 
     if (diffDays === 1) {
-        badge.innerHTML = '📅 Durasi: <b>1 Hari</b> (Single Day)';
+        badge.innerHTML = 'Durasi: <b>1 Hari</b> (Single Day)';
     } else {
         const fmt1 = t1.split('-').reverse().join('/');
         const fmt2 = t2.split('-').reverse().join('/');
-        badge.innerHTML = `📅 Durasi: <b>${diffDays} Hari</b> (${fmt1} s.d ${fmt2})`;
+        badge.innerHTML = `Durasi: <b>${diffDays} Hari</b> (${fmt1} s.d ${fmt2})`;
     }
 }
 
@@ -606,7 +602,7 @@ function showLiveToast(title, msg) {
     const toast = document.createElement('div');
     toast.style.cssText = 'position:fixed; top:20px; right:20px; background:#0f172a; color:#fff; padding:14px 20px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.25); z-index:9999; display:flex; align-items:center; gap:12px; max-width:380px; animation:slideInRight 0.3s ease; border-left:4px solid #22c55e;';
     toast.innerHTML = `
-        <div style="font-size:22px;">✅</div>
+        <div style="font-size:11px; font-weight:900; background:#22c55e; color:#fff; padding:3px 8px; border-radius:4px;">UPDATE</div>
         <div>
             <div style="font-weight:700; font-size:13px; color:#fff;">${title}</div>
             <div style="font-size:12.5px; color:#e2e8f0; margin-top:2px;">${msg}</div>
