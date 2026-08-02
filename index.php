@@ -6,6 +6,11 @@
 
 require_once __DIR__ . '/layout.php';
 
+if (is_user_role()) {
+    header("Location: user_profile.php");
+    exit;
+}
+
 $conn = getDB();
 $pesan_manual = "";
 
@@ -127,50 +132,83 @@ render_header("Live Monitoring Absensi", "index");
 </div>
 <?php endif; ?>
 
-<!-- KARTU CONTROL PANEL & FILTER PENCARIAN -->
-<div class="card" style="margin-bottom: 20px;">
-    <form id="search-form" method="GET" action="" onsubmit="return false;">
-        <!-- FILTER INPUTS: stack di mobile, grid di desktop -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
+<?php if (is_tatausaha()): ?>
+<div style="background:#fff7ed; color:#c2410c; border:1px solid #ffedd5; padding:12px 16px; border-radius:12px; font-size:13px; font-weight:600; margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+    <span>💼</span>
+    <span><b>Akses Tata Usaha:</b> Live Monitoring ini khusus menampilkan presensi kategori <b>Karyawan</b> saja.</span>
+</div>
+<?php endif; ?>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PANEL FILTER & KONTROL LIVE MONITORING -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#1e3a5f 100%); border-radius:18px; padding:24px 28px 22px; margin-bottom:22px; box-shadow:0 8px 32px rgba(15,23,42,.35); position:relative; overflow:hidden;">
+    <!-- decorative circles -->
+    <div style="position:absolute; top:-40px; right:-40px; width:160px; height:160px; border-radius:50%; background:rgba(99,102,241,.15); pointer-events:none;"></div>
+    <div style="position:absolute; bottom:-30px; left:60px; width:100px; height:100px; border-radius:50%; background:rgba(16,185,129,.1); pointer-events:none;"></div>
+
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:18px; position:relative; z-index:1;">
+        <div>
+            <div style="font-size:11px; font-weight:700; letter-spacing:2px; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">📡 REAL-TIME ABSENSI FEED</div>
+            <div style="font-size:22px; font-weight:800; color:#f1f5f9; display:flex; align-items:center; gap:10px;">
+                Live Monitoring Absensi
+                <span id="pulse-dot" style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981; box-shadow:0 0 0 4px rgba(16,185,129,.25); animation:pulse 2s infinite;"></span>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="background:rgba(255,255,255,.08); color:#cbd5e1; font-size:12px; font-weight:600; padding:6px 12px; border-radius:20px; border:1px solid rgba(255,255,255,.12); display:flex; align-items:center; gap:6px;">
+                📟 Mesin: <b style="color:#fff;">Solution X606-S</b>
+            </span>
+            <span style="background:rgba(255,255,255,.08); color:#cbd5e1; font-size:12px; font-weight:600; padding:6px 12px; border-radius:20px; border:1px solid rgba(255,255,255,.12); display:flex; align-items:center; gap:6px;">
+                🕒 Live: <b id="last-update-time" style="color:#38bdf8;">-</b>
+            </span>
+        </div>
+    </div>
+
+    <form id="search-form" method="GET" action="" onsubmit="return false;" style="position:relative; z-index:1;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
+            <!-- Filter Tanggal -->
             <div>
-                <label for="tgl" style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">📅 Filter Tanggal:</label>
-                <input type="date" id="tgl" name="tgl" value="<?php echo h($tgl === 'all' ? '' : $tgl); ?>" style="width:100%; margin-bottom:0;">
+                <label for="tgl" style="display:block; font-size:11px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">📅 Tanggal</label>
+                <input type="date" id="tgl" name="tgl" value="<?php echo h($tgl === 'all' ? '' : $tgl); ?>" style="margin:0; background:#1e293b; color:#f1f5f9; border:1px solid #334155; border-radius:10px; padding:9px 12px; font-size:13px; font-weight:600; width:100%; outline:none;">
             </div>
 
-            <div>
-                <label for="q" style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">🔍 Pencarian:</label>
-                <input type="text" id="q" name="q" value="<?php echo h($q); ?>" placeholder="Nama, PIN, departemen..." style="width:100%; margin-bottom:0;" autocomplete="off">
+            <!-- Pencarian -->
+            <div style="grid-column: span 2;">
+                <label for="q" style="display:block; font-size:11px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">🔍 Cari Nama / PIN / Dept</label>
+                <input type="text" id="q" name="q" value="<?php echo h($q); ?>" placeholder="Ketik nama pegawai, PIN, atau departemen..." style="margin:0; background:#1e293b; color:#f1f5f9; border:1px solid #334155; border-radius:10px; padding:9px 14px; font-size:13px; width:100%; outline:none;" autocomplete="off">
             </div>
 
+            <!-- Filter Status -->
             <div>
-                <label for="status" style="font-weight:600; font-size:13px; color:#334155; margin-bottom:6px; display:block;">Status Absensi:</label>
-                <select id="status" name="status" style="width:100%; margin-bottom:0;">
-                    <option value="">-- Semua Status --</option>
-                    <option value="0" <?php echo $status_filter === '0' ? 'selected' : ''; ?>>🟢 Masuk</option>
-                    <option value="1" <?php echo $status_filter === '1' ? 'selected' : ''; ?>>🔴 Pulang</option>
+                <label for="status" style="display:block; font-size:11px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">Status Absensi</label>
+                <select id="status" name="status" style="margin:0; background:#1e293b; color:#f1f5f9; border:1px solid #334155; border-radius:10px; padding:9px 12px; font-size:13px; font-weight:600; width:100%; outline:none; cursor:pointer;">
+                    <option value="" style="background:#1e293b;">-- Semua Status --</option>
+                    <option value="0" <?php echo $status_filter === '0' ? 'selected' : ''; ?> style="background:#1e293b;">🟢 Masuk</option>
+                    <option value="1" <?php echo $status_filter === '1' ? 'selected' : ''; ?> style="background:#1e293b;">🔴 Pulang</option>
                 </select>
             </div>
         </div>
 
-        <!-- ACTION BUTTONS: flex-wrap agar rapi di mobile -->
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-top:14px; border-top:1px solid #f1f5f9;">
+        <!-- BAR PINTASAN & AKSI -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-top:14px; border-top:1px solid rgba(255,255,255,.1);">
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <span style="font-size:12px; font-weight:600; color:#64748b;">Pintasan:</span>
-                <button type="button" class="btn" style="background:#f1f5f9; color:#0f172a; font-size:13px; padding:8px 12px; border:1px solid #e2e8f0;" onclick="setToday()">🗓️ Hari Ini</button>
-                <button type="button" class="btn" style="background:#f1f5f9; color:#0f172a; font-size:13px; padding:8px 12px; border:1px solid #e2e8f0;" onclick="setAllDates()">📑 Semua</button>
+                <span style="font-size:11px; font-weight:700; color:#94a3b8; letter-spacing:1px; text-transform:uppercase;">Pintasan:</span>
+                <button type="button" onclick="setToday()" style="background:rgba(255,255,255,.08); color:#f1f5f9; border:1px solid rgba(255,255,255,.15); border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s;" onmouseover="this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">🗓️ Hari Ini</button>
+                <button type="button" onclick="setAllDates()" style="background:rgba(255,255,255,.08); color:#f1f5f9; border:1px solid rgba(255,255,255,.15); border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s;" onmouseover="this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">📑 Semua Tanggal</button>
             </div>
 
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                 <?php if (is_superadmin()): ?>
-                <button type="button" class="btn" style="background:linear-gradient(135deg,#3b82f6,#6366f1); color:#fff; font-size:13px; padding:9px 14px; border:none; box-shadow:0 3px 10px rgba(59,130,246,0.3);" onclick="bukaModalManualAbsen()">
+                <button type="button" onclick="bukaModalManualAbsen()" style="display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border:none; border-radius:9px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 4px 14px rgba(99,102,241,.4);">
                     ✏️ Input Absen Manual
                 </button>
                 <?php endif; ?>
 
-                <button type="button" id="btn-toggle-sync" class="btn" style="background:#f8fafc; color:#334155; font-size:13px; border:1px solid #cbd5e1; padding:9px 14px;" onclick="toggleAutoSync()">
-                    <span id="sync-icon">🟢</span> <span id="sync-text">Auto-Sync</span>
+                <button type="button" id="btn-toggle-sync" onclick="toggleAutoSync()" style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,.08); color:#f1f5f9; border:1px solid rgba(255,255,255,.15); border-radius:9px; padding:9px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                    <span id="sync-icon">🟢</span> <span id="sync-text">Auto-Sync (5s)</span>
                 </button>
-                <a id="btn-export" href="<?php echo h($export_url); ?>" class="btn btn-success" style="padding:9px 14px; font-size:13px;">
+                <a id="btn-export" href="<?php echo h($export_url); ?>" style="display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border-radius:9px; padding:9px 16px; font-size:13px; font-weight:700; text-decoration:none; box-shadow:0 4px 14px rgba(16,185,129,.4);">
                     📊 Export Excel
                 </a>
             </div>
@@ -178,38 +216,56 @@ render_header("Live Monitoring Absensi", "index");
     </form>
 </div>
 
-<!-- KARTU TABEL DATA LIVE MONITORING -->
-<div class="card" style="padding: 24px;">
-    <div class="card-header" style="margin-bottom: 20px;">
-        <div class="card-title" style="font-size: 17px;">
-            <span>📡 Live Feed Data Absensi (<span id="data-count">...</span> Data)</span>
-        </div>
+<style>
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16,185,129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129, 0); }
+}
+</style>
 
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span class="badge badge-verif" id="filter-date-badge" style="font-size:12px; padding: 6px 12px;">📅 Tanggal: <?php echo h($tgl === 'all' ? 'Semua Tanggal' : date('d-m-Y', strtotime($tgl))); ?></span>
-            <span class="badge badge-verif" style="font-size:12px; padding: 6px 12px; background:#f8fafc;">🕒 Update: <b id="last-update-time" style="color:#0f172a; margin-left:4px;">-</b></span>
-            <span class="badge badge-verif" style="font-size:12px; padding: 6px 12px; background:#f8fafc;">📟 Mesin: <b>Solution X606-S</b></span>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TABEL DATA LIVE FEED ABSENSI -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(15,23,42,.06); margin-bottom:24px;">
+    <!-- Card Header Light & Clean -->
+    <div style="background:#ffffff; border-bottom:1px solid #e2e8f0; padding:18px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div style="font-size:16px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                📋 Log Presensi Kehadiran
+            </div>
+            <span style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:12px; font-weight:800; padding:3px 12px; border-radius:20px;">
+                <span id="data-count">...</span> Record
+            </span>
+        </div>
+        <div>
+            <span id="filter-date-badge" style="background:#f8fafc; color:#334155; border:1px solid #cbd5e1; font-size:12px; font-weight:700; padding:6px 14px; border-radius:20px;">
+                📅 Tanggal: <?php echo h($tgl === 'all' ? 'Semua Tanggal' : date('d-m-Y', strtotime($tgl))); ?>
+            </span>
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table>
-            <thead>
+    <div class="table-responsive" style="max-height:750px; overflow:auto;">
+        <table style="font-size:13px; width:100%; border-collapse:collapse;">
+            <thead style="position:sticky; top:0; z-index:10; background:#f8fafc; border-bottom:2px solid #e2e8f0;">
                 <tr>
-                    <th>No</th>
-                    <th>PIN / ID</th>
-                    <th>Nama Guru & Karyawan</th>
-                    <th>Waktu Absen</th>
-                    <th>Status Absensi</th>
-                    <th>Tipe Verifikasi</th>
+                    <th style="background:#f8fafc; color:#475569; width:55px; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">NO</th>
+                    <th style="background:#f8fafc; color:#475569; width:95px; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">PIN / ID</th>
+                    <th style="background:#f8fafc; color:#475569; padding:12px 16px; font-size:11px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; text-align:left; border-right:1px solid #e2e8f0;">Nama Pegawai</th>
+                    <th style="background:#f8fafc; color:#475569; width:180px; padding:12px 14px; font-size:11px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Waktu Absen</th>
+                    <th style="background:#f8fafc; color:#475569; width:140px; padding:12px 14px; font-size:11px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Status Absensi</th>
+                    <th style="background:#f8fafc; color:#475569; width:160px; padding:12px 14px; font-size:11px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">Verifikasi</th>
                     <?php if (is_superadmin()): ?>
-                    <th>Aksi</th>
+                    <th style="background:#f8fafc; color:#475569; width:90px; padding:12px 10px; font-size:11px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; text-align:center;">Aksi</th>
                     <?php endif; ?>
                 </tr>
             </thead>
             <tbody id="tbody-monitoring">
                 <tr>
-                    <td colspan="<?php echo is_superadmin() ? '7' : '6'; ?>" style="padding: 35px; color:#94a3b8; text-align:center;">Memuat data absensi...</td>
+                    <td colspan="<?php echo is_superadmin() ? '7' : '6'; ?>" style="padding:48px 30px; text-align:center; color:#94a3b8;">
+                        <div style="font-size:32px; margin-bottom:10px;">⏳</div>
+                        <div style="font-size:14px; font-weight:700; color:#64748b;">Memuat data absensi real-time...</div>
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -218,74 +274,81 @@ render_header("Live Monitoring Absensi", "index");
 
 <?php if (is_superadmin()): ?>
 <!-- ================= MODAL INPUT ABSEN MANUAL (SUPERADMIN ONLY) ================= -->
-<div id="modal-manual-absen" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:20px; padding:32px; width:100%; max-width:480px; box-shadow:0 25px 60px rgba(0,0,0,0.25); animation:slideUp 0.25s ease;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="font-size:18px; font-weight:800; color:#0f172a;">✏️ Input Log Absen Manual</h3>
-            <button type="button" onclick="tutupModalManualAbsen()" style="background:#f1f5f9; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:16px; color:#64748b;">✕</button>
+<div id="modal-manual-absen" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:20px; width:100%; max-width:480px; margin:20px; box-shadow:0 30px 60px -12px rgba(0,0,0,0.35); overflow:hidden;">
+        <!-- Modal Header -->
+        <div style="background:linear-gradient(135deg,#1e293b,#0f172a); padding:20px 24px; display:flex; align-items:center; justify-content:space-between;">
+            <div>
+                <div style="font-size:11px; font-weight:700; color:#6366f1; letter-spacing:2px; text-transform:uppercase; margin-bottom:2px;">SUPERADMIN ACTION</div>
+                <div style="font-size:17px; font-weight:800; color:#fff;">✏️ Input Log Absen Manual</div>
+            </div>
+            <button type="button" onclick="tutupModalManualAbsen()" style="background:rgba(255,255,255,.1); border:none; width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer; color:#fff; display:flex; align-items:center; justify-content:center;">✕</button>
         </div>
 
-        <div style="margin-bottom:16px; font-size:12px; color:#64748b; background:#f8fafc; padding:12px 14px; border-radius:10px; border:1px solid #e2e8f0; line-height:1.5;">
-            💡 <b>Mode Darurat / Backup:</b> Gunakan fitur ini jika mesin absensi rusak atau sedang maintenance. Data akan otomatis muncul di Live Monitoring, Laporan Bulanan, dan Riwayat Karyawan.
+        <div style="padding:24px;">
+            <div style="margin-bottom:18px; font-size:12px; color:#475569; background:#eff6ff; padding:12px 14px; border-radius:12px; border:1px solid #bfdbfe; line-height:1.5;">
+                💡 <b>Mode Darurat / Maintenance:</b> Gunakan fitur ini jika mesin rusak/piket. Data akan tersinkron otomatis ke Laporan & Riwayat Karyawan.
+            </div>
+
+            <form method="POST" action="index.php">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="action" value="tambah_absen_manual">
+
+                <div style="margin-bottom:16px;">
+                    <label for="pin_manual" style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Pilih Pegawai:</label>
+                    <select name="pin_manual" id="pin_manual" required style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:13px; font-weight:600; outline:none;">
+                        <?php if (empty($karyawan_all)): ?>
+                            <option value="">-- Belum ada data pegawai --</option>
+                        <?php else: ?>
+                            <?php foreach ($karyawan_all as $ka): 
+                                $dept_label = !empty($ka['departemen']) ? " — " . h($ka['departemen']) : "";
+                                $tipe_badge = ($ka['tipe'] === 'guru') ? " [Guru]" : " [Karyawan]";
+                            ?>
+                                <option value="<?php echo h($ka['pin']); ?>">
+                                    <?php echo h($ka['nama']) . $dept_label . $tipe_badge; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div>
+                        <label for="tgl_manual" style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">📅 Tanggal</label>
+                        <input type="date" id="tgl_manual" name="tgl_manual" value="<?php echo date('Y-m-d'); ?>" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:13px; font-weight:600; outline:none; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label for="jam_manual" style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">⏰ Jam Absen</label>
+                        <input type="time" id="jam_manual" name="jam_manual" value="<?php echo date('H:i:s'); ?>" step="1" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:13px; font-weight:600; outline:none; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:22px;">
+                    <div>
+                        <label for="status_manual" style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Status Absen</label>
+                        <select id="status_manual" name="status_manual" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:13px; font-weight:600; outline:none;">
+                            <option value="0">🟢 Masuk</option>
+                            <option value="1">🔴 Pulang</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="tipe_verifikasi_manual" style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Verifikasi</label>
+                        <select id="tipe_verifikasi_manual" name="tipe_verifikasi_manual" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:13px; font-weight:600; outline:none;">
+                            <option value="0">✏️ Manual Admin</option>
+                            <option value="1">👆 Sidik Jari</option>
+                            <option value="15">👤 Wajah</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <button type="button" onclick="tutupModalManualAbsen()" style="flex:1; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:10px; padding:10px; font-size:13px; font-weight:700; cursor:pointer;">Batal</button>
+                    <button type="submit" style="flex:2; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; border:none; border-radius:10px; padding:10px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px rgba(59,130,246,.3);">💾 Simpan Absen Manual</button>
+                </div>
+            </form>
         </div>
-
-        <form method="POST" action="index.php">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="action" value="tambah_absen_manual">
-
-            <label for="pin_manual" style="font-weight:700;">Pilih Guru / Karyawan:</label>
-            <select name="pin_manual" id="pin_manual" required style="margin-bottom:18px; font-size:14px; font-weight:600;">
-                <?php if (empty($karyawan_all)): ?>
-                    <option value="">-- Belum ada data guru & karyawan --</option>
-                <?php else: ?>
-                    <?php foreach ($karyawan_all as $ka): 
-                        $dept_label = !empty($ka['departemen']) ? " — " . h($ka['departemen']) : "";
-                    ?>
-                        <option value="<?php echo h($ka['pin']); ?>">
-                            <?php echo h($ka['nama']) . $dept_label; ?>
-                        </option>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </select>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;">
-                <div>
-                    <label for="tgl_manual" style="font-weight:700;">📅 Tanggal Absen:</label>
-                    <input type="date" id="tgl_manual" name="tgl_manual" value="<?php echo date('Y-m-d'); ?>" required style="margin-bottom:0;">
-                </div>
-                <div>
-                    <label for="jam_manual" style="font-weight:700;">⏰ Jam Absen:</label>
-                    <input type="time" id="jam_manual" name="jam_manual" value="<?php echo date('H:i:s'); ?>" step="1" required style="margin-bottom:0;">
-                </div>
-            </div>
-
-            <label for="status_manual" style="font-weight:700;">Status Absensi:</label>
-            <select id="status_manual" name="status_manual" style="margin-bottom:18px;">
-                <option value="0">🟢 Masuk</option>
-                <option value="1">🔴 Pulang</option>
-            </select>
-
-            <label for="tipe_verifikasi_manual" style="font-weight:700;">Tipe Verifikasi:</label>
-            <select id="tipe_verifikasi_manual" name="tipe_verifikasi_manual" style="margin-bottom:24px;">
-                <option value="0">✏️ Manual Admin</option>
-                <option value="1">👆 Sidik Jari</option>
-                <option value="15">👤 Wajah</option>
-            </select>
-
-            <div style="display:flex; gap:12px;">
-                <button type="button" onclick="tutupModalManualAbsen()" class="btn" style="flex:1; background:#f1f5f9; color:#334155; border:1px solid #e2e8f0;">Batal</button>
-                <button type="submit" class="btn btn-primary" style="flex:2;">💾 Simpan Absen Manual</button>
-            </div>
-        </form>
     </div>
 </div>
-
-<style>
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-</style>
 <?php endif; ?>
 
 <!-- JAVASCRIPT AJAX REAL-TIME POLLING & DATE FILTER -->
@@ -394,15 +457,21 @@ function setAllDates() {
 // Toggle Auto Sync (Pause / Resume)
 function toggleAutoSync() {
     autoSyncActive = !autoSyncActive;
+    const pulseDot = document.getElementById('pulse-dot');
     if (autoSyncActive) {
         syncIcon.textContent = '🟢';
         syncText.textContent = 'Auto-Sync (5s)';
-        btnToggleSync.style.background = '#f8fafc';
+        btnToggleSync.style.background = 'rgba(255,255,255,.08)';
+        btnToggleSync.style.borderColor = 'rgba(255,255,255,.15)';
+        if (pulseDot) pulseDot.style.background = '#10b981';
         startPolling();
     } else {
         syncIcon.textContent = '⏸️';
         syncText.textContent = 'Sync Paused';
         btnToggleSync.style.background = '#fef3c7';
+        btnToggleSync.style.color = '#92400e';
+        btnToggleSync.style.borderColor = '#fde68a';
+        if (pulseDot) pulseDot.style.background = '#f59e0b';
         stopPolling();
     }
 }

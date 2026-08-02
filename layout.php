@@ -23,7 +23,7 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --sidebar-width: 280px;
+            --sidebar-width: 260px;
             --bg-main: #f8fafc;
             --sidebar-bg: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
             --primary: #3b82f6;
@@ -49,41 +49,50 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         /* SIDEBAR */
         .sidebar {
             width: var(--sidebar-width);
+            max-width: 85vw;
             background: var(--sidebar-bg);
             color: #f8fafc;
             display: flex;
             flex-direction: column;
             position: fixed;
             top: 0; bottom: 0; left: 0;
-            z-index: 200;
-            box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
+            z-index: 999;
+            box-shadow: 4px 0 25px rgba(0, 0, 0, 0.2);
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.15) transparent;
         }
+
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
         .sidebar-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.55);
-            z-index: 199;
-            backdrop-filter: blur(2px);
+            background: rgba(15, 23, 42, 0.65);
+            z-index: 998;
+            backdrop-filter: blur(4px);
             animation: fadeIn 0.25s ease;
         }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .sidebar-brand {
-            padding: 20px 18px;
+            padding: 18px 16px;
             display: flex;
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             flex-shrink: 0;
+            position: relative;
         }
 
         .brand-logo {
-            width: 42px; height: 42px; min-width: 42px;
+            width: 40px; height: 40px; min-width: 40px;
             background: #fff;
             border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
@@ -94,38 +103,67 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
 
         .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
 
-        .brand-text h1 { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.25; }
-        .brand-text p  { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .brand-text h1 { font-size: 13.5px; font-weight: 700; color: #fff; line-height: 1.25; }
+        .brand-text p  { font-size: 10.5px; color: #94a3b8; font-weight: 500; margin-top: 1px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .sidebar-menu { padding: 16px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .close-sidebar-btn {
+            display: none;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #cbd5e1;
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            align-items: center; justify-content: center;
+            margin-left: auto;
+            transition: all 0.2s;
+        }
+        .close-sidebar-btn:hover { background: rgba(239,68,68,0.2); color: #fca5a5; border-color: rgba(239,68,68,0.3); }
 
-        .menu-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; padding: 10px 12px 5px 12px; }
+        .sidebar-nav, .sidebar-menu { padding: 14px 10px; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+        .menu-label {
+            font-size: 10px; font-weight: 700; color: #64748b;
+            text-transform: uppercase; letter-spacing: 1.2px;
+            padding: 10px 10px 4px 10px;
+        }
+        .menu-label:not(:first-child) {
+            border-top: 1px solid rgba(255,255,255,0.06);
+            margin-top: 8px;
+            padding-top: 12px;
+        }
 
         .nav-item {
-            display: flex; align-items: center; gap: 12px;
-            padding: 12px 14px;
+            display: flex; align-items: center; gap: 11px;
+            padding: 9.5px 12px;
             color: #cbd5e1;
             text-decoration: none;
-            font-size: 13.5px; font-weight: 500;
+            font-size: 13px; font-weight: 500;
             border-radius: 10px;
             transition: all 0.2s ease;
-            min-height: 44px;
+            min-height: 42px;
+        }
+
+        .nav-item span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .nav-item .icon-svg {
-            width: 20px; height: 20px;
+            width: 18px; height: 18px;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
             color: #94a3b8;
             transition: color 0.2s ease;
         }
 
-        .nav-item:hover { color: #fff; background: rgba(255,255,255,0.06); transform: translateX(3px); }
+        .nav-item:hover { color: #fff; background: rgba(255,255,255,0.08); transform: translateX(3px); }
         .nav-item:hover .icon-svg { color: #fff; }
 
         .nav-item.active {
             color: #fff;
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
             font-weight: 600;
             box-shadow: 0 4px 14px 0 rgba(37,99,235,0.35);
         }
@@ -173,26 +211,33 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             display: none;
             position: fixed;
             top: 0; left: 0; right: 0;
-            height: 58px;
-            background: #0f172a;
-            z-index: 198;
+            height: 56px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 997;
             align-items: center;
-            padding: 0 16px;
+            padding: 0 14px;
             gap: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
         }
 
         .hamburger-btn {
-            background: none; border: none; cursor: pointer;
-            padding: 8px; border-radius: 8px;
-            display: flex; flex-direction: column; gap: 5px;
-            transition: background 0.2s;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            width: 38px; height: 38px;
+            border-radius: 9px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4.5px;
+            transition: background 0.2s, border-color 0.2s;
+            flex-shrink: 0;
         }
 
-        .hamburger-btn span { display: block; width: 22px; height: 2px; background: #f1f5f9; border-radius: 2px; }
-        .hamburger-btn:hover { background: rgba(255,255,255,0.08); }
+        .hamburger-btn span { display: block; width: 20px; height: 2px; background: #f1f5f9; border-radius: 2px; transition: all 0.2s; }
+        .hamburger-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2); }
 
-        .topbar-logo { width: 32px; height: 32px; background: #fff; border-radius: 8px; overflow: hidden; padding: 3px; flex-shrink: 0; }
+        .topbar-logo { width: 30px; height: 30px; background: #fff; border-radius: 8px; overflow: hidden; padding: 2px; flex-shrink: 0; }
         .topbar-logo img { width: 100%; height: 100%; object-fit: contain; }
 
         .topbar-title { font-size: 13px; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -273,36 +318,185 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         .badge-pulang { background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }
         .badge-verif  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 
+        /* MODERN PAGINATION STYLING */
+        .pagination-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            border-radius: 0 0 16px 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .pagination-info {
+            font-size: 12.5px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .pagination-pill {
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9px;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-decoration: none;
+            color: #334155;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            transition: all 0.2s ease;
+            user-select: none;
+            box-sizing: border-box;
+        }
+        .pagination-pill:hover:not(.disabled):not(.active) {
+            background: #eff6ff;
+            color: #2563eb;
+            border-color: #bfdbfe;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(37,99,235,0.12);
+        }
+        .pagination-pill.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff !important;
+            border-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+            font-weight: 700;
+        }
+        .pagination-pill.disabled {
+            color: #94a3b8;
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .pagination-dots {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 34px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        /* NOTIFICATION BELL & DROPDOWN */
+        .notif-btn {
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            color: #475569;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            transition: all 0.2s;
+        }
+        .notif-btn:hover { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+        .notif-badge {
+            position: absolute;
+            top: -4px; right: -4px;
+            background: #ef4444; color: #fff;
+            font-size: 10px; font-weight: 800;
+            min-width: 18px; height: 18px;
+            border-radius: 99px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 4px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(239,68,68,0.4);
+        }
+        .notif-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            left: auto;
+            width: 350px;
+            max-width: min(350px, calc(100vw - 32px));
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            box-shadow: 0 12px 35px rgba(15,23,42,0.2);
+            z-index: 10000;
+            display: none;
+            overflow: hidden;
+            animation: dropdownFade 0.2s ease;
+        }
+        @keyframes dropdownFade { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+        .notif-header {
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 12.5px; font-weight: 700; color: #0f172a;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .notif-list { max-height: 340px; overflow-y: auto; }
+        .notif-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            text-decoration: none;
+            display: block;
+            transition: background 0.15s;
+            word-break: break-word;
+        }
+        .notif-item:hover { background: #f8fafc; }
+        .notif-item.unread { background: #f0f9ff; }
+        .notif-item-title { font-size: 12.5px; font-weight: 700; color: #0f172a; margin-bottom: 3px; line-height: 1.35; }
+        .notif-item-msg { font-size: 11.5px; color: #475569; line-height: 1.45; word-break: break-word; }
+        .notif-item-time { font-size: 10.5px; color: #94a3b8; margin-top: 4px; font-weight: 500; }
+        
+        .toast-notif-popup {
+            position: fixed;
+            top: 20px; right: 20px;
+            background: #0f172a; color: #fff;
+            padding: 14px 20px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            z-index: 9999;
+            display: flex; align-items: center; gap: 12px;
+            max-width: 380px;
+            animation: slideInRight 0.3s ease;
+            border-left: 4px solid #3b82f6;
+        }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
         .nama-container { text-align: left; }
         .nama-title { font-weight: 700; color: #0f172a; font-size: 13px; }
         .dept-subtitle { font-size: 11px; color: #64748b; margin-top: 2px; }
         .text-unregistered { color: #94a3b8; font-style: italic; text-align: left; font-size: 12px; }
 
         @media (max-width: 1024px) {
-            .main-content { padding: 28px 22px; }
+            .main-content { padding: 28px 20px; }
         }
 
         @media (max-width: 768px) {
             .topbar-mobile { display: flex; }
-            .sidebar { transform: translateX(-100%); }
+            .close-sidebar-btn { display: flex; }
+            .sidebar { transform: translateX(-100%); width: min(275px, 85vw); }
             .sidebar.open { transform: translateX(0); }
             .sidebar-overlay.open { display: block; }
-            .main-content { margin-left: 0; padding: 74px 14px 24px 14px; }
+            .main-content { margin-left: 0 !important; padding: 72px 14px 24px 14px; }
             .page-title h2 { font-size: 17px; }
             .page-title p  { font-size: 12px; }
             .live-badge { font-size: 11px; padding: 6px 10px; }
             .card { padding: 14px; border-radius: 12px; }
             .card-title { font-size: 14px; }
             .card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .notif-dropdown-menu { left: auto; right: 0; width: 310px; max-width: calc(100vw - 28px); }
         }
 
         @media (max-width: 480px) {
-            .main-content { padding: 70px 10px 20px 10px; }
+            .main-content { padding: 68px 10px 20px 10px; }
             .card { padding: 12px; }
-            .btn { padding: 9px 12px; font-size: 13px; min-height: 40px; }
-            .page-header { flex-direction: column; align-items: flex-start; }
-            th { font-size: 10px; padding: 11px 10px; }
-            td { padding: 10px 10px; font-size: 12px; }
+            .btn { padding: 8.5px 12px; font-size: 12.5px; min-height: 40px; }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            th { font-size: 10.5px; padding: 10px 8px; }
+            td { padding: 9px 8px; font-size: 12px; }
         }
     </style>
 </head>
@@ -334,38 +528,148 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
                 <h1>SMK Pasundan 2</h1>
                 <p>Kota Bandung</p>
             </div>
+            <button class="close-sidebar-btn" onclick="closeSidebar()" aria-label="Tutup Menu">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
 
-        <nav class="sidebar-menu">
+        <nav class="sidebar-nav">
+            <?php if (is_user_role()): ?>
+            <div class="menu-label">Portal Mandiri</div>
+
+            <?php if (can_access_page('user_profile')): ?>
+            <a href="user_profile.php" class="nav-item <?php echo $active_menu === 'user_profile' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </span>
+                <span>Profil &amp; Data Diri</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (can_access_page('user_izin')): ?>
+            <a href="user_izin.php" class="nav-item <?php echo $active_menu === 'user_izin' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </span>
+                <span>Pengajuan Cuti/Izin/Sakit</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (can_access_page('user_riwayat')): ?>
+            <a href="user_riwayat.php" class="nav-item <?php echo $active_menu === 'user_riwayat' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+                <span>Riwayat Presensi Saya</span>
+            </a>
+            <?php endif; ?>
+
+            <a href="ganti_password.php" class="nav-item <?php echo $active_menu === 'ganti_password' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                </span>
+                <span>Ganti Password Akun</span>
+            </a>
+
+            <?php else: ?>
+
+            <?php if (!is_superadmin() && (can_access_page('user_profile') || can_access_page('user_izin') || can_access_page('user_riwayat'))): ?>
+            <div class="menu-label">Portal Mandiri Saya</div>
+
+            <?php if (can_access_page('user_profile')): ?>
+            <a href="user_profile.php" class="nav-item <?php echo $active_menu === 'user_profile' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </span>
+                <span>Profil &amp; Data Diri</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (can_access_page('user_izin')): ?>
+            <a href="user_izin.php" class="nav-item <?php echo $active_menu === 'user_izin' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </span>
+                <span>Pengajuan Cuti/Izin/Sakit</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (can_access_page('user_riwayat')): ?>
+            <a href="user_riwayat.php" class="nav-item <?php echo $active_menu === 'user_riwayat' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+                <span>Riwayat Presensi Saya</span>
+            </a>
+            <?php endif; ?>
+            <?php endif; ?>
+
             <div class="menu-label">Navigasi Utama</div>
 
+            <?php if (can_access_page('index')): ?>
             <a href="index.php" class="nav-item <?php echo $active_menu === 'index' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon-svg">
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </span>
                 <span>Live Monitoring</span>
             </a>
+            <?php endif; ?>
 
+            <?php if (can_access_page('export_bulanan')): ?>
             <a href="export_bulanan.php" class="nav-item <?php echo $active_menu === 'laporan_bulanan' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon-svg">
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 </span>
                 <span>Laporan Bulanan</span>
             </a>
+            <?php endif; ?>
 
+            <?php if (can_access_page('riwayat')): ?>
             <a href="riwayat_karyawan.php" class="nav-item <?php echo $active_menu === 'riwayat' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon-svg">
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
                 <span>Riwayat Individual</span>
             </a>
+            <?php endif; ?>
+
+            <?php if (can_access_page('kelola_izin')): ?>
+            <a href="kelola_izin.php" class="nav-item <?php echo $active_menu === 'kelola_izin' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </span>
+                <span>Cuti, Izin &amp; Sakit</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (can_access_page('rnd_analytics') || can_access_page('audit_log')): ?>
+            <div class="menu-label" style="margin-top: 10px;">Fitur Riset &amp; Audit</div>
+            <?php endif; ?>
+
+            <?php if (can_access_page('rnd_analytics')): ?>
+            <a href="rnd_analytics.php" class="nav-item <?php echo $active_menu === 'rnd_analytics' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </span>
+                <span>RnD Analytics</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (can_access_page('audit_log')): ?>
+            <a href="audit_log.php" class="nav-item <?php echo $active_menu === 'audit_log' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                </span>
+                <span>Audit Log System</span>
+            </a>
+            <?php endif; ?>
 
             <?php if (is_superadmin()): ?>
             <a href="input_karyawan.php" class="nav-item <?php echo $active_menu === 'karyawan' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon-svg">
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 100 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 </span>
-                <span>Kelola Guru & Karyawan</span>
+                <span>Kelola Guru &amp; Karyawan</span>
             </a>
 
             <a href="tarik_nama.php" class="nav-item <?php echo $active_menu === 'sinkron' ? 'active' : ''; ?>" onclick="closeSidebar()">
@@ -374,20 +678,40 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
                 </span>
                 <span>Sinkronisasi Mesin</span>
             </a>
+            <?php endif; ?>
 
             <div class="menu-label" style="margin-top: 10px;">Pengaturan</div>
+
+            <?php if (can_access_page('jadwal_guru')): ?>
             <a href="kelola_jadwal.php" class="nav-item <?php echo $active_menu === 'jadwal_guru' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon-svg">
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </span>
                 <span>Kelola Jadwal Guru</span>
             </a>
+            <?php endif; ?>
 
+            <?php if (is_superadmin()): ?>
             <a href="kelola_user.php" class="nav-item <?php echo $active_menu === 'users' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon-svg">
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
                 </span>
                 <span>Manajemen User</span>
+            </a>
+
+            <a href="kelola_permissions.php" class="nav-item <?php echo $active_menu === 'kelola_permissions' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </span>
+                <span>Hak Akses Role</span>
+            </a>
+            <?php endif; ?>
+
+            <a href="ganti_password.php" class="nav-item <?php echo $active_menu === 'ganti_password' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                </span>
+                <span>Ganti Password Akun</span>
             </a>
             <?php endif; ?>
         </nav>
@@ -399,7 +723,15 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
                 </div>
                 <div>
                     <div class="user-name"><?php echo $username; ?></div>
-                    <div class="user-role"><?php echo is_superadmin() ? 'Superadmin' : 'Operator Admin'; ?></div>
+                    <div class="user-role"><?php echo is_superadmin() ? 'Superadmin' : (is_rnd() ? 'RnD Researcher' : (is_user_role() ? 'User Karyawan' : (is_tatausaha() ? 'Tata Usaha' : (is_staff() ? 'Staff' : 'Operator Admin')))); ?></div>
+                    <?php 
+                    $pin_connected = $_SESSION['pin'] ?? '';
+                    if (!empty($pin_connected)): 
+                    ?>
+                        <div style="font-size:10px; color:#38bdf8; margin-top:2px; font-weight:600;">
+                            🔗 PIN: <?php echo h($pin_connected); ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
             <a href="logout.php" class="btn-logout" title="Logout">Logout</a>
@@ -421,12 +753,34 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
                 <h2>Monitoring Absensi Guru & Karyawan SMK Pasundan 2 Bandung</h2>
                 <p>Sistem Pemantauan Absensi Real-Time Mesin Solution X606-S</p>
             </div>
-            <?php if ($active_menu === 'index'): ?>
-            <div class="live-badge">
-                <span class="pulse-dot"></span>
-                <span>Live Refresh (5s)</span>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <?php if (can_access_page('notifikasi')): ?>
+                <!-- NOTIFICATION BELL DROPDOWN -->
+                <div class="notif-dropdown-container" style="position:relative;">
+                    <button type="button" class="notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" title="Notifikasi Real-time">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+                    </button>
+                    <!-- DROPDOWN MENU -->
+                    <div class="notif-dropdown-menu" id="notifMenu">
+                        <div class="notif-header">
+                            <span>🔔 Notifikasi Real-time</span>
+                            <a href="javascript:void(0)" onclick="markAllNotifRead()" style="font-size:11px; color:#2563eb; text-decoration:none; font-weight:600;">Tandai Dibaca</a>
+                        </div>
+                        <div class="notif-list" id="notifList">
+                            <div style="padding:20px; text-align:center; color:#94a3b8; font-size:12px;">Memuat notifikasi...</div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php if ($active_menu === 'index'): ?>
+                <div class="live-badge">
+                    <span class="pulse-dot"></span>
+                    <span>Live Refresh (5s)</span>
+                </div>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
         </header>
     <?php
 }
@@ -458,10 +812,166 @@ function closeSidebar() {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeSidebar();
 });
+
+<?php if (can_access_page('notifikasi')): ?>
+// REALTIME NOTIFICATION SYSTEM JS
+let lastUnreadCount = null;
+
+function fetchNotif() {
+    fetch('api_notifikasi.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const badge = document.getElementById('notifBadge');
+                const list = document.getElementById('notifList');
+                
+                if (badge) {
+                    if (data.unread_count > 0) {
+                        badge.textContent = data.unread_count;
+                        badge.style.display = 'flex';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+
+                // If unread count increased, show real-time popup!
+                if (lastUnreadCount !== null && data.unread_count > lastUnreadCount && data.items.length > 0) {
+                    const newest = data.items[0];
+                    showToastNotif(newest.title, newest.message);
+                }
+                lastUnreadCount = data.unread_count;
+
+                // Render list
+                if (list) {
+                    if (data.items.length === 0) {
+                        list.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:12px;">Belum ada notifikasi</div>';
+                    } else {
+                        let html = '';
+                        data.items.forEach(item => {
+                            const unreadClass = item.is_read ? '' : 'unread';
+                            html += `
+                                <a href="${item.link}" class="notif-item ${unreadClass}" onclick="markNotifRead(${item.id})">
+                                    <div class="notif-item-title">${item.title}</div>
+                                    <div class="notif-item-msg">${item.message}</div>
+                                    <div class="notif-item-time">${item.time_str}</div>
+                                </a>
+                            `;
+                        });
+                        list.innerHTML = html;
+                    }
+                }
+            }
+        })
+        .catch(err => console.error('Notif error:', err));
+}
+
+function toggleNotifDropdown() {
+    const menu = document.getElementById('notifMenu');
+    if (menu) {
+        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+}
+
+function markAllNotifRead() {
+    const formData = new FormData();
+    formData.append('action', 'mark_all_read');
+    fetch('api_notifikasi.php', { method: 'POST', body: formData })
+        .then(() => fetchNotif());
+}
+
+function markNotifRead(id) {
+    const formData = new FormData();
+    formData.append('action', 'mark_read');
+    formData.append('id', id);
+    fetch('api_notifikasi.php', { method: 'POST', body: formData });
+}
+
+function showToastNotif(title, msg) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notif-popup';
+    toast.innerHTML = `
+        <div style="font-size:20px;">🔔</div>
+        <div>
+            <div style="font-weight:700; font-size:13px; color:#fff;">${title}</div>
+            <div style="font-size:12px; color:#cbd5e1; margin-top:2px;">${msg}</div>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.5s';
+        setTimeout(() => toast.remove(), 500);
+    }, 6000);
+}
+
+document.addEventListener('click', function(e) {
+    const container = e.target.closest('.notif-dropdown-container');
+    if (!container) {
+        const menu = document.getElementById('notifMenu');
+        if (menu) menu.style.display = 'none';
+    }
+});
+
+// Polling notifikasi setiap 8 detik secara real-time
+fetchNotif();
+setInterval(fetchNotif, 8000);
+<?php endif; ?>
 </script>
 
 </body>
 </html>
     <?php
+}
+
+// HELPER FUNCTION RENDER PAGINATION MODERN & SMART (ELLIPSIS WINDOWING)
+function render_smart_pagination($current_page, $total_pages, $base_params = []) {
+    if ($total_pages <= 1) return '';
+
+    $html = '<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">';
+
+    $get_url = function($p) use ($base_params) {
+        $params = array_merge($base_params, ['page' => $p]);
+        return '?' . http_build_query($params);
+    };
+
+    // Button Prev
+    if ($current_page > 1) {
+        $html .= '<a href="' . $get_url($current_page - 1) . '" class="pagination-pill">‹ Prev</a>';
+    } else {
+        $html .= '<span class="pagination-pill disabled">‹ Prev</span>';
+    }
+
+    // Determine range of page numbers to show
+    $range = 1;
+    $show_pages = [];
+
+    for ($i = 1; $i <= $total_pages; $i++) {
+        if ($i == 1 || $i == $total_pages || ($i >= $current_page - $range && $i <= $current_page + $range)) {
+            $show_pages[] = $i;
+        }
+    }
+
+    $prev_p = 0;
+    foreach ($show_pages as $p) {
+        if ($prev_p > 0 && $p - $prev_p > 1) {
+            $html .= '<span class="pagination-dots">…</span>';
+        }
+        if ($p == $current_page) {
+            $html .= '<span class="pagination-pill active">' . $p . '</span>';
+        } else {
+            $html .= '<a href="' . $get_url($p) . '" class="pagination-pill">' . $p . '</a>';
+        }
+        $prev_p = $p;
+    }
+
+    // Button Next
+    if ($current_page < $total_pages) {
+        $html .= '<a href="' . $get_url($current_page + 1) . '" class="pagination-pill">Next ›</a>';
+    } else {
+        $html .= '<span class="pagination-pill disabled">Next ›</span>';
+    }
+
+    $html .= '</div>';
+    return $html;
 }
 ?>

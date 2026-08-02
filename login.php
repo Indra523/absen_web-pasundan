@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!empty($username) && !empty($password)) {
         $conn = getDB();
-        $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ?");
+        $stmt = $conn->prepare("SELECT id, username, password, role, pin FROM users WHERE username = ?");
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -28,16 +28,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
             if (password_verify($password, $user['password'])) {
-                $_SESSION['user_id'] = $user['id'];
+                // Fix Bug #5: Regenerasi session ID setelah login sukses (mencegah session fixation)
+                session_regenerate_id(true);
+                $_SESSION['user_id']  = $user['id'];
                 $_SESSION['username'] = $user['username'];
-                $_SESSION['role'] = $user['role'] ?? 'admin';
+                $_SESSION['role']     = $user['role'] ?? 'admin';
+                $_SESSION['pin']      = $user['pin'] ?? null;
+
+                // Audit Log Login
+                $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+                $stmt_log = $conn->prepare("INSERT INTO audit_logs (user_id, username, role, action, details, ip_address) VALUES (?, ?, ?, 'LOGIN', ?, ?)");
+                $log_det = "Login berhasil ke sistem";
+                $stmt_log->bind_param("issss", $user['id'], $user['username'], $user['role'], $log_det, $ip);
+                $stmt_log->execute();
+
                 header("Location: index.php");
                 exit;
             } else {
-                $error = "Password salah!";
+                // Fix Bug #4: Pesan generik — tidak membedakan username vs password salah
+                $error = "Username atau password yang Anda masukkan salah!";
             }
         } else {
-            $error = "Username tidak ditemukan!";
+            // Fix Bug #4: Pesan sama agar attacker tidak bisa enumerate username valid
+            $error = "Username atau password yang Anda masukkan salah!";
         }
     } else {
         $error = "Username dan password wajib diisi!";

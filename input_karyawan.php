@@ -213,9 +213,10 @@ if (isset($_POST['import_excel'])) {
     }
 }
 
-// --- 6. PROSES HAPUS SINGLE KARYAWAN ---
-if (isset($_GET['hapus'])) {
-    $pin_hapus = $_GET['hapus'];
+// --- 6. PROSES HAPUS SINGLE KARYAWAN (via POST + CSRF) ---
+if (isset($_POST['hapus_single'])) {
+    csrf_verify();
+    $pin_hapus = $_POST['hapus_single'];
     $stmt = $conn->prepare("DELETE FROM master_karyawan WHERE pin = ?");
     $stmt->bind_param("s", $pin_hapus);
     if ($stmt->execute()) {
@@ -433,11 +434,11 @@ render_header("Kelola Guru & Karyawan", "karyawan");
                                                 onclick='bukaModalEditKaryawan(\"{$pin_attr}\", \"{$nama_attr}\", \"{$dept_attr}\", \"{$tipe_attr}\")'>
                                             ✏️ Edit
                                         </button>
-                                        <a class='btn' style='background:#fee2e2; color:#dc2626; font-size:12px; padding:6px 12px; border:1px solid #fca5a5; text-decoration:none;' 
-                                           href='input_karyawan.php?hapus=" . urlencode($row['pin']) . "' 
-                                           onclick=\"return confirm('Yakin ingin menghapus data {$nama_attr}?')\">
-                                            🗑️ Hapus
-                                        </a>
+                                        <form method='POST' action='input_karyawan.php' style='display:inline;' onsubmit=\"return confirm('Yakin ingin menghapus data {$nama_attr}?')\">
+                                            <input type='hidden' name='hapus_single' value='" . h($row['pin']) . "'>
+                                            <input type='hidden' name='csrf_token' value='" . h($_SESSION['csrf_token'] ?? csrf_token()) . "'>
+                                            <button type='submit' class='btn' style='background:#fee2e2; color:#dc2626; font-size:12px; padding:6px 12px; border:1px solid #fca5a5; cursor:pointer;'>🗑️ Hapus</button>
+                                        </form>
                                     </div>
                                 </td>
                               </tr>";

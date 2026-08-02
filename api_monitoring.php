@@ -46,6 +46,11 @@ if ($status_filter !== '' && in_array($status_filter, ['0', '1'])) {
     $types .= "s";
 }
 
+// KHUSUS ROLE TATAUSAHA: Hanya tampilkan kategori Karyawan
+if (is_tatausaha()) {
+    $where[] = "master_karyawan.tipe = 'karyawan'";
+}
+
 $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
 // Query utama + LEFT JOIN ke master_karyawan dan check jadwal guru
@@ -103,45 +108,61 @@ if ($result->num_rows > 0) {
             }
         }
 
+        $waktu_ts   = strtotime($row['waktu']);
+        $waktu_tgl  = date('Y-m-d', $waktu_ts);
+        $waktu_jam  = date('H:i:s', $waktu_ts);
+        $tampil_waktu = "<div style='font-size:11px; color:#64748b;'>{$waktu_tgl}</div><div style='font-size:13px; font-weight:800; color:#0f172a;'>{$waktu_jam}</div>";
+
         if (!empty($row['nama'])) {
             $nama_escaped = h($row['nama']);
             $dept_escaped = h($row['departemen']);
             $tipe_label   = $is_guru ? "👨‍🏫 Guru" : "👔 Karyawan";
-            $tampil_nama = "<td class='nama-container'>
-                                <div style='display:flex; align-items:center; gap:6px;'>
-                                    <div class='nama-title'>{$nama_escaped}</div>
-                                    <span style='font-size:10px; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:600;'>{$tipe_label}</span>
+            $tipe_bg      = $is_guru ? "background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;" : "background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;";
+            $tampil_nama = "<td style='padding:12px 16px; text-align:left; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'>
+                                <div style='display:flex; align-items:center; gap:8px; flex-wrap:wrap;'>
+                                    <span style='font-weight:700; color:#0f172a; font-size:13px;'>{$nama_escaped}</span>
+                                    <span style='font-size:10px; {$tipe_bg} padding:2px 8px; border-radius:12px; font-weight:700;'>{$tipe_label}</span>
                                 </div>
-                                <div class='dept-subtitle'>{$dept_escaped}</div>
+                                <div style='font-size:11px; color:#64748b; margin-top:2px;'>{$dept_escaped}</div>
                             </td>";
         } else {
-            $tampil_nama = "<td class='text-unregistered'>⚠️ Belum Terdaftar di Master</td>";
+            $tampil_nama = "<td style='padding:12px 16px; text-align:left; color:#e11d48; font-weight:700; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'>⚠️ Belum Terdaftar di Master</td>";
         }
 
         $td_aksi = "";
         if (is_superadmin()) {
             $csrf_tok = csrf_token();
-            $td_aksi = "<td>
-                            <div style='display:flex; gap:4px; justify-content:center;'>
-                                <form method='POST' action='index.php' style='margin:0;' onsubmit=\"return confirm('Yakin ingin menghapus data log absen ini?')\">
-                                    <input type='hidden' name='csrf_token' value='{$csrf_tok}'>
-                                    <input type='hidden' name='action' value='hapus_log_absen'>
-                                    <input type='hidden' name='id_log_hapus' value='{$row['id']}'>
-                                    <button type='submit' class='btn' style='background:#fee2e2; color:#dc2626; font-size:11px; padding:4px 8px; border:1px solid #fca5a5;'>🗑️ Hapus</button>
-                                </form>
-                            </div>
+            $td_aksi = "<td style='padding:10px; text-align:center; border-bottom:1px solid #f1f5f9;'>
+                            <form method='POST' action='index.php' style='margin:0;' onsubmit=\"return confirm('Yakin ingin menghapus data log absen ini?')\">
+                                <input type='hidden' name='csrf_token' value='{$csrf_tok}'>
+                                <input type='hidden' name='action' value='hapus_log_absen'>
+                                <input type='hidden' name='id_log_hapus' value='{$row['id']}'>
+                                <button type='submit' style='background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; border-radius:8px; font-size:11px; font-weight:700; padding:5px 10px; cursor:pointer; transition:all .15s;' onmouseover=\"this.style.background='#ffe4e6'\" onmouseout=\"this.style.background='#fff1f2'\">🗑️ Hapus</button>
+                            </form>
                         </td>";
         }
 
-        echo "<tr>
-                <td><b>{$no}</b></td>
-                <td><code style='background:#f1f5f9; padding:3px 8px; border-radius:6px; font-weight:700; color:#0f172a;'>" . h($row['pin']) . "</code></td>
+        // Status Badge Style
+        $badge_status_style = ($row['status'] == '0')
+            ? "background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;"
+            : "background:#fee2e2; color:#dc2626; border:1px solid #fecdd3;";
+
+        // Verif Badge Style
+        $verif_style = "background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;";
+        if ($row['tipe_verifikasi'] == '1') $verif_style = "background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;";
+        elseif ($row['tipe_verifikasi'] == '15') $verif_style = "background:#f3e8ff; color:#7e22ce; border:1px solid #e9d5ff;";
+        elseif ($row['tipe_verifikasi'] == '0' || $row['tipe_verifikasi'] == '99') $verif_style = "background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;";
+
+        $row_bg = ($no % 2 === 0) ? '#ffffff' : '#f8fafc';
+        echo "<tr style='background:{$row_bg}; transition:background .15s;' onmouseover=\"this.style.background='#eff6ff'\" onmouseout=\"this.style.background='{$row_bg}'\">
+                <td style='padding:12px 10px; text-align:center; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'><b style='color:#64748b; font-size:12px;'>{$no}</b></td>
+                <td style='padding:12px 10px; text-align:center; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'><code style='background:#1e293b; color:#38bdf8; padding:3px 9px; border-radius:6px; font-weight:800; font-size:12px; font-family:monospace;'>" . h($row['pin']) . "</code></td>
                 {$tampil_nama}
-                <td><b>" . h($row['waktu']) . "</b></td>
-                <td><span class='badge {$badge_class}'>" . h($status_teks) . "</span></td>
-                <td>
+                <td style='padding:12px 14px; text-align:center; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'>{$tampil_waktu}</td>
+                <td style='padding:12px 14px; text-align:center; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'><span style='{$badge_status_style} padding:5px 14px; border-radius:20px; font-weight:800; font-size:12px; display:inline-block;'>" . h($status_teks) . "</span></td>
+                <td style='padding:10px 14px; text-align:center; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'>
                     <div style='display:flex; flex-direction:column; align-items:center; gap:4px;'>
-                        <span class='badge badge-verif'>" . h($tipe_teks) . "</span>
+                        <span style='{$verif_style} padding:4px 12px; border-radius:20px; font-weight:700; font-size:11px; display:inline-block;'>" . h($tipe_teks) . "</span>
                         {$badge_jadwal}
                     </div>
                 </td>

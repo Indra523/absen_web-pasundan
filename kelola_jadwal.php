@@ -5,7 +5,10 @@
 // ============================================================
 
 require_once __DIR__ . '/layout.php';
-require_role(['superadmin']);
+if (!can_access_page('jadwal_guru')) {
+    header("Location: index.php?error=access_denied");
+    exit;
+}
 
 $conn = getDB();
 $pesan_sukses = "";

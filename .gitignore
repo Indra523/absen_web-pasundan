@@ -9,6 +9,7 @@ config.php
 # === FILE TEMPORARY & TOOLS ===
 plink.exe
 pscp.exe
+auto_sync.ps1
 *.log
 *.tmp
 test_*.php

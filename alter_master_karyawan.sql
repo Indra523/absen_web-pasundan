@@ -1,0 +1,7 @@
+
+ALTER TABLE master_karyawan ADD COLUMN IF NOT EXISTS foto VARCHAR(255) NULL AFTER tipe;
+ALTER TABLE master_karyawan ADD COLUMN IF NOT EXISTS no_hp VARCHAR(30) NULL AFTER foto;
+ALTER TABLE master_karyawan ADD COLUMN IF NOT EXISTS tempat_lahir VARCHAR(100) NULL AFTER no_hp;
+ALTER TABLE master_karyawan ADD COLUMN IF NOT EXISTS tanggal_lahir DATE NULL AFTER tempat_lahir;
+ALTER TABLE master_karyawan ADD COLUMN IF NOT EXISTS alamat TEXT NULL AFTER tanggal_lahir;
+

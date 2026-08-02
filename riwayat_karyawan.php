@@ -5,6 +5,10 @@
 // ============================================================
 
 require_once __DIR__ . '/layout.php';
+if (!can_access_page('riwayat')) {
+    header("Location: index.php?error=access_denied");
+    exit;
+}
 
 $conn = getDB();
 $pesan_sukses = "";
@@ -56,12 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Parameter PIN, Range Tanggal, & Sorting
+// Parameter PIN, Range Tanggal, Sorting, & Tab Aktif
 $pin_selected = trim($_GET['pin'] ?? $_POST['pin_selected'] ?? '');
 $tgl_mulai    = trim($_GET['tgl_mulai'] ?? '');
 $tgl_selesai  = trim($_GET['tgl_selesai'] ?? '');
-$sort_order   = $_GET['sort'] ?? 'desc'; // 'desc' (terbaru ke tertua) atau 'asc' (pertama ke terbaru)
+$sort_order   = $_GET['sort'] ?? 'desc';
 $export       = isset($_GET['export']) && $_GET['export'] === '1';
+$active_tab   = $_GET['tab'] ?? 'riwayat'; // 'riwayat' atau 'profil'
 
 // Ambil semua daftar karyawan untuk dropdown pencarian
 $sql_all = "SELECT pin, nama, departemen, tipe FROM master_karyawan ORDER BY CAST(pin AS UNSIGNED) ASC, pin ASC";
@@ -282,22 +287,34 @@ render_header("Riwayat Absensi Individual", "riwayat");
 <div class="card" style="margin-bottom:20px; padding:20px;">
     <form method="GET" action="riwayat_karyawan.php" style="margin:0;">
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:16px;">
-            <!-- SELECT / SEARCH GURU & KARYAWAN -->
+            <!-- SELECT / SEARCH GURU & KARYAWAN AUTOCOMPLETE -->
             <div style="grid-column: span 2;">
-                <label for="pin" style="font-weight:700; color:#0f172a;">🔍 Pilih / Cari Guru & Karyawan:</label>
-                <select name="pin" id="pin" onchange="this.form.submit()" style="margin-bottom:0; font-size:14px; font-weight:600; cursor:pointer;">
-                    <?php if (empty($karyawan_list)): ?>
-                        <option value="">-- Tidak ada data karyawan --</option>
-                    <?php else: ?>
+                <label for="input-search-emp" style="font-weight:700; color:#0f172a;">🔍 <?php echo is_tatausaha() ? 'Pilih / Ketik Nama Karyawan:' : 'Pilih / Ketik Nama Guru & Karyawan:'; ?></label>
+                <div style="position:relative;">
+                    <input type="hidden" name="pin" id="selected-pin" value="<?php echo h($pin_selected); ?>">
+                    <input type="text" id="input-search-emp" class="searchable-input" 
+                           value="<?php 
+                           if ($detail_user) {
+                               echo "[" . h($detail_user['pin']) . "] " . h($detail_user['nama']) . ($detail_user['departemen'] ? " — " . h($detail_user['departemen']) : "");
+                           }
+                           ?>" 
+                           placeholder="🔍 Ketik PIN, Nama, atau Departemen..." autocomplete="off">
+                    
+                    <div class="searchable-dropdown-list" id="dropdown-emp-list" style="position:absolute; top:100%; left:0; right:0; max-height:240px; overflow-y:auto; background:#fff; border:1.5px solid #cbd5e1; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.15); z-index:99; display:none;">
                         <?php foreach ($karyawan_list as $k): 
-                            $dept_label = !empty($k['departemen']) ? " — " . h($k['departemen']) : "";
+                            $label_k = "[" . h($k['pin']) . "] " . h($k['nama']) . ($k['departemen'] ? " — " . h($k['departemen']) : "");
                         ?>
-                            <option value="<?php echo h($k['pin']); ?>" <?php echo $pin_selected === $k['pin'] ? 'selected' : ''; ?>>
-                                <?php echo h($k['nama']) . $dept_label; ?>
-                            </option>
+                            <div class="searchable-item" 
+                                 style="padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; font-size:13.5px;"
+                                 data-pin="<?php echo h($k['pin']); ?>" 
+                                 data-text="<?php echo h(strtolower($k['pin'] . ' ' . $k['nama'] . ' ' . $k['departemen'])); ?>"
+                                 onclick="selectEmployee('<?php echo h($k['pin']); ?>', '<?php echo h($label_k); ?>')">
+                                <b>[<?php echo h($k['pin']); ?>]</b> <?php echo h($k['nama']); ?>
+                                <span style="font-size:11.5px; color:#64748b; display:block;"><?php echo h($k['departemen'] ?: '-'); ?> (<?php echo ucfirst($k['tipe']); ?>)</span>
+                            </div>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                </select>
+                    </div>
+                </div>
             </div>
 
             <!-- FILTER DATE RANGE -->
@@ -323,14 +340,19 @@ render_header("Riwayat Absensi Individual", "riwayat");
 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-top:14px; border-top:1px solid #f1f5f9;">
             <div style="font-size:12px; color:#64748b;">
-                💡 <b>Petunjuk:</b> Pilih nama guru/karyawan untuk melihat riwayat absensi lengkap dari awal hingga akhir.
+                💡 <b>Petunjuk:</b> Ketik nama/PIN untuk mencari karyawan. Pilih rentang tanggal jika ingin memfilter data.
             </div>
 
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <button type="submit" class="btn btn-primary">🔍 Tampilkan Riwayat</button>
                 <?php if ($detail_user): ?>
+                <?php if (can_access_rnd()): ?>
+                <a href="<?php echo 'export_pdf_riwayat.php?' . http_build_query(['pin' => $pin_selected, 'tgl_dari' => $tgl_mulai, 'tgl_sampai' => $tgl_selesai, 'auto_print' => 1]); ?>" target="_blank" class="btn" style="background:#ef4444; color:#fff; font-weight:600; text-decoration:none;">
+                    📄 Export PDF Official
+                </a>
+                <?php endif; ?>
                 <a href="<?php echo 'riwayat_karyawan.php?' . http_build_query(['pin' => $pin_selected, 'tgl_mulai' => $tgl_mulai, 'tgl_selesai' => $tgl_selesai, 'sort' => $sort_order, 'export' => 1]); ?>" class="btn btn-success">
-                    📊 Export Riwayat ke Excel
+                    📊 Export ke Excel
                 </a>
                 <?php endif; ?>
             </div>
@@ -338,72 +360,234 @@ render_header("Riwayat Absensi Individual", "riwayat");
     </form>
 </div>
 
+<script>
+const inputEmp = document.getElementById('input-search-emp');
+const dropdownEmp = document.getElementById('dropdown-emp-list');
+const selectedPin = document.getElementById('selected-pin');
+const itemsEmp = document.querySelectorAll('.searchable-item');
+
+if (inputEmp && dropdownEmp) {
+    inputEmp.addEventListener('focus', () => { dropdownEmp.style.display = 'block'; });
+
+    inputEmp.addEventListener('input', function() {
+        const q = this.value.toLowerCase().trim();
+        dropdownEmp.style.display = 'block';
+        
+        itemsEmp.forEach(item => {
+            const text = item.getAttribute('data-text');
+            if (text.includes(q)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#input-search-emp') && !e.target.closest('#dropdown-emp-list')) {
+            dropdownEmp.style.display = 'none';
+        }
+    });
+}
+
+function selectEmployee(pin, label) {
+    selectedPin.value = pin;
+    inputEmp.value = label;
+    dropdownEmp.style.display = 'none';
+}
+</script>
+
 <?php if ($detail_user): ?>
-<!-- STATISTIK & PROFILE HEADER CARD -->
-<div class="card" style="margin-bottom:20px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #e2e8f0;">
-        <div style="display:flex; align-items:center; gap:14px;">
-            <div style="width:52px; height:52px; background:#eff6ff; border:2px solid #bfdbfe; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px;">
-                <?php echo $detail_user['tipe'] === 'guru' ? '👨‍🏫' : '👔'; ?>
-            </div>
-            <div>
-                <h3 style="font-size:20px; font-weight:800; color:#0f172a; margin-bottom:2px;"><?php echo h($detail_user['nama']); ?></h3>
-                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px; color:#64748b;">
-                    <span>PIN: <code style="background:#f1f5f9; padding:2px 8px; border-radius:6px; font-weight:700; color:#0f172a;"><?php echo h($detail_user['pin']); ?></code></span>
-                    <span>•</span>
-                    <span>Departemen: <b><?php echo h($detail_user['departemen'] ?: '-'); ?></b></span>
-                    <span>•</span>
-                    <?php if ($detail_user['tipe'] === 'guru'): ?>
-                        <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">👨‍🏫 Guru Pengajar</span>
-                    <?php else: ?>
-                        <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;">👔 Karyawan / Staff</span>
-                    <?php endif; ?>
+
+<?php
+// Fetch data profil tambahan (foto, no_hp, ttl, dll)
+$detail_profil = $detail_user; // sudah include semua kolom dari SELECT *
+// Hitung usia
+$usia_str = '';
+if (!empty($detail_profil['tanggal_lahir'])) {
+    $dob = new DateTime($detail_profil['tanggal_lahir']);
+    $usia_str = $dob->diff(new DateTime())->y . ' Tahun';
+}
+?>
+
+<!-- HERO HEADER CARD KARYAWAN -->
+<div style="background:linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e293b 100%); border-radius:20px; padding:28px 32px; margin-bottom:20px; position:relative; overflow:hidden; color:#fff;">
+    <div style="position:absolute; top:-50px; right:-50px; width:200px; height:200px; background:rgba(59,130,246,0.1); border-radius:50%;"></div>
+    <div style="position:absolute; bottom:-30px; left:25%; width:150px; height:150px; background:rgba(99,102,241,0.07); border-radius:50%;"></div>
+
+    <div style="position:relative; z-index:1; display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+        <!-- Avatar -->
+        <div style="position:relative; width:80px; height:80px; flex-shrink:0;">
+            <?php if (!empty($detail_profil['foto']) && file_exists(__DIR__ . '/' . $detail_profil['foto'])): ?>
+                <img src="<?php echo h($detail_profil['foto']); ?>" alt="Foto" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,0.25);">
+            <?php else: ?>
+                <div style="width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.1); border:3px solid rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:800; color:#fff;">
+                    <?php echo strtoupper(mb_substr($detail_profil['nama'], 0, 1)); ?>
                 </div>
+            <?php endif; ?>
+            <div style="position:absolute; bottom:2px; right:2px; width:18px; height:18px; background:#22c55e; border-radius:50%; border:2px solid #0f172a;"></div>
+        </div>
+
+        <!-- Identity -->
+        <div style="flex:1; min-width:180px;">
+            <div style="font-size:10px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">
+                <?php echo $detail_user['tipe'] === 'guru' ? 'Guru / Pendidik' : 'Tenaga Kependidikan'; ?>
+            </div>
+            <h3 style="font-size:20px; font-weight:800; color:#fff; margin-bottom:6px; line-height:1.2;"><?php echo h($detail_profil['nama']); ?></h3>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <span style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.18); color:#e2e8f0; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600;"><?php echo h($detail_profil['departemen'] ?: 'Umum'); ?></span>
+                <span style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.3); color:#93c5fd; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600;">PIN: <?php echo h($pin_selected); ?></span>
+                <?php if ($usia_str): ?>
+                <span style="background:rgba(168,85,247,0.2); border:1px solid rgba(168,85,247,0.3); color:#c4b5fd; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:600;"><?php echo $usia_str; ?></span>
+                <?php endif; ?>
             </div>
         </div>
 
-        <?php if (is_superadmin()): ?>
-        <a href="input_karyawan.php" class="btn" style="background:#f1f5f9; color:#334155; font-size:12px; padding:6px 12px; border:1px solid #cbd5e1;">✏️ Edit Profil Karyawan</a>
-        <?php endif; ?>
-    </div>
-
-    <!-- 4 SUMMARY CARDS -->
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap:14px;">
-        <div style="background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
-            <div style="font-size:12px; color:#64748b; font-weight:600;">Total Record Absensi</div>
-            <div style="font-size:22px; font-weight:800; color:#0f172a; margin-top:4px;"><?php echo count($logs); ?> <span style="font-size:12px; font-weight:500; color:#64748b;">Log</span></div>
-            <div style="font-size:11px; color:#10b981; margin-top:4px; font-weight:600;">🟢 <?php echo $total_masuk; ?> Masuk · 🔴 <?php echo $total_pulang; ?> Pulang</div>
-        </div>
-
-        <div style="background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
-            <div style="font-size:12px; color:#64748b; font-weight:600;">Absen Pertama Kali</div>
-            <div style="font-size:14px; font-weight:700; color:#2563eb; margin-top:6px;"><?php echo $absen_pertama; ?></div>
-            <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Awal rekaman absensi</div>
-        </div>
-
-        <div style="background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
-            <div style="font-size:12px; color:#64748b; font-weight:600;">Absen Terakhir Kali</div>
-            <div style="font-size:14px; font-weight:700; color:#059669; margin-top:6px;"><?php echo $absen_terakhir; ?></div>
-            <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Rekaman absensi terkini</div>
-        </div>
-
-        <div style="background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
-            <div style="font-size:12px; color:#64748b; font-weight:600;">Pengaturan Jadwal</div>
-            <div style="font-size:13px; font-weight:700; color:#0f172a; margin-top:6px;">
-                <?php
-                if ($detail_user['tipe'] === 'guru') {
-                    echo empty($hari_ngajar_arr) ? "<span style='color:#d97706;'>❓ Belum Ada Jadwal</span>" : "<span style='color:#1d4ed8;'>" . count($hari_ngajar_arr) . " Hari Ngajar / Wk</span>";
-                } else {
-                    echo "<span style='color:#475569;'>Kalender Kerja (Senin–Sabtu)</span>";
-                }
-                ?>
+        <!-- Stats -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:10px 16px; text-align:center;">
+                <div style="font-size:20px; font-weight:800; color:#4ade80;"><?php echo count($logs); ?></div>
+                <div style="font-size:10px; color:#94a3b8;">Total Log</div>
             </div>
-            <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Status skema jadwal</div>
+            <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:10px 16px; text-align:center;">
+                <div style="font-size:20px; font-weight:800; color:#60a5fa;"><?php echo $total_masuk; ?></div>
+                <div style="font-size:10px; color:#94a3b8;">Masuk</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:10px 16px; text-align:center;">
+                <div style="font-size:20px; font-weight:800; color:#f87171;"><?php echo $total_pulang; ?></div>
+                <div style="font-size:10px; color:#94a3b8;">Pulang</div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- TABEL DETAIL RIWAYAT ABSENSI -->
+<!-- TAB NAVIGATION -->
+<?php $tab_url_base = 'riwayat_karyawan.php?' . http_build_query(['pin' => $pin_selected, 'tgl_mulai' => $tgl_mulai, 'tgl_selesai' => $tgl_selesai, 'sort' => $sort_order]); ?>
+<div style="display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:0;">
+    <a href="<?php echo $tab_url_base . '&tab=riwayat'; ?>" style="padding:10px 20px; font-size:13.5px; font-weight:700; text-decoration:none; border-radius:10px 10px 0 0; border:1px solid <?php echo $active_tab !== 'profil' ? '#e2e8f0' : 'transparent'; ?>; border-bottom:none; background:<?php echo $active_tab !== 'profil' ? '#fff' : 'transparent'; ?>; color:<?php echo $active_tab !== 'profil' ? '#2563eb' : '#64748b'; ?>; margin-bottom:-2px;">
+        Riwayat Absensi
+    </a>
+    <a href="<?php echo $tab_url_base . '&tab=profil'; ?>" style="padding:10px 20px; font-size:13.5px; font-weight:700; text-decoration:none; border-radius:10px 10px 0 0; border:1px solid <?php echo $active_tab === 'profil' ? '#e2e8f0' : 'transparent'; ?>; border-bottom:none; background:<?php echo $active_tab === 'profil' ? '#fff' : 'transparent'; ?>; color:<?php echo $active_tab === 'profil' ? '#2563eb' : '#64748b'; ?>; margin-bottom:-2px;">
+        Profil Karyawan
+    </a>
+</div>
+
+<?php if ($active_tab === 'profil'): ?>
+<!-- TAB PROFIL -->
+<div style="display:grid; grid-template-columns: 300px 1fr; gap:20px; align-items:start;">
+
+    <!-- Info Panel -->
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 2px 12px rgba(15,23,42,0.04);">
+        <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:14px 20px; font-size:13px; font-weight:700; color:#0f172a;">Informasi Pegawai</div>
+        <?php
+        $rows_profil = [
+            'PIN'          => '<code style="background:#f1f5f9; padding:2px 8px; border-radius:6px; font-weight:700;">' . h($detail_profil['pin']) . '</code>',
+            'Nama Lengkap' => h($detail_profil['nama']),
+            'Departemen'   => h($detail_profil['departemen'] ?: '-'),
+            'Jabatan'      => $detail_profil['tipe'] === 'guru' ? '<span style="background:#eff6ff; color:#1d4ed8; padding:2px 10px; border-radius:20px; font-size:12px; font-weight:700; border:1px solid #bfdbfe;">Guru / Pendidik</span>' : '<span style="background:#f1f5f9; color:#475569; padding:2px 10px; border-radius:20px; font-size:12px; font-weight:700; border:1px solid #e2e8f0;">Tenaga Kependidikan</span>',
+            'No. Telepon'  => h($detail_profil['no_hp'] ?: '-'),
+            'TTL'          => h((!empty($detail_profil['tempat_lahir']) ? $detail_profil['tempat_lahir'] . ', ' : '') . (!empty($detail_profil['tanggal_lahir']) ? date('d F Y', strtotime($detail_profil['tanggal_lahir'])) : (!empty($detail_profil['tempat_lahir']) ? '' : '-'))),
+            'Alamat'       => h($detail_profil['alamat'] ?: '-'),
+        ];
+        foreach ($rows_profil as $lbl => $val):
+        ?>
+        <div style="display:flex; padding:12px 20px; border-bottom:1px solid #f1f5f9; font-size:13px; gap:12px;">
+            <span style="width:110px; flex-shrink:0; color:#64748b; font-weight:500;"><?php echo $lbl; ?></span>
+            <span style="color:#0f172a; font-weight:600; flex:1; line-height:1.5;"><?php echo $val; ?></span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- Form Edit Profil (Superadmin bisa edit, user bisa di user_profile.php) -->
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 2px 12px rgba(15,23,42,0.04);">
+        <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:14px 20px; font-size:13px; font-weight:700; color:#0f172a; display:flex; justify-content:space-between; align-items:center;">
+            <span>Edit Data Diri</span>
+            <?php if (is_superadmin() || is_rnd()): ?>
+            <span style="font-size:11px; color:#3b82f6; font-weight:500;">Superadmin Access</span>
+            <?php endif; ?>
+        </div>
+        <form method="POST" action="user_profile.php?pin=<?php echo urlencode($pin_selected); ?>&tab_redirect=riwayat_karyawan" enctype="multipart/form-data" style="padding:24px;">
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="action" value="update_profil_mandiri">
+            <input type="hidden" name="target_pin" value="<?php echo h($pin_selected); ?>">
+
+            <!-- Preview & Upload Foto -->
+            <div style="display:flex; gap:16px; align-items:center; margin-bottom:20px;">
+                <div style="width:56px; height:56px; border-radius:50%; overflow:hidden; border:2px solid #e2e8f0; background:#f8fafc; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:#94a3b8;">
+                    <?php if (!empty($detail_profil['foto']) && file_exists(__DIR__ . '/' . $detail_profil['foto'])): ?>
+                        <img src="<?php echo h($detail_profil['foto']); ?>" style="width:100%; height:100%; object-fit:cover;">
+                    <?php else: ?>
+                        <?php echo strtoupper(mb_substr($detail_profil['nama'], 0, 1)); ?>
+                    <?php endif; ?>
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">Foto Profil (JPG/PNG, Maks 2MB)</label>
+                    <input type="file" name="foto_profil" accept="image/jpeg,image/png,image/webp" style="width:100%; padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13px; background:#fff; margin-bottom:0;">
+                </div>
+            </div>
+
+            <div style="height:1px; background:#f1f5f9; margin-bottom:18px;"></div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase;">No. Telepon / WhatsApp</label>
+                    <input type="text" name="no_hp" value="<?php echo h($detail_profil['no_hp'] ?? ''); ?>" placeholder="08xxxxxxxxxx" style="padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; margin-bottom:0;">
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase;">Tempat Lahir</label>
+                    <input type="text" name="tempat_lahir" value="<?php echo h($detail_profil['tempat_lahir'] ?? ''); ?>" placeholder="Kota kelahiran" style="padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; margin-bottom:0;">
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase;">Tanggal Lahir</label>
+                    <input type="date" name="tanggal_lahir" value="<?php echo h($detail_profil['tanggal_lahir'] ?? ''); ?>" style="padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; margin-bottom:0;">
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:20px;">
+                <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase;">Alamat Lengkap</label>
+                <textarea name="alamat" rows="3" style="padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; resize:vertical; line-height:1.6;"><?php echo h($detail_profil['alamat'] ?? ''); ?></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #f1f5f9; padding-top:16px;">
+                <button type="reset" style="padding:8px 16px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#475569; font-size:13px; cursor:pointer;">Reset</button>
+                <button type="submit" class="btn btn-primary" style="padding:9px 22px; font-size:13.5px; font-weight:700;">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php else: ?>
+<!-- TAB RIWAYAT: 4 SUMMARY CARDS -->
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-bottom:20px;">
+    <div style="background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        <div style="font-size:12px; color:#64748b; font-weight:600;">Total Record Absensi</div>
+        <div style="font-size:22px; font-weight:800; color:#0f172a; margin-top:4px;"><?php echo count($logs); ?> <span style="font-size:12px; font-weight:500; color:#64748b;">Log</span></div>
+        <div style="font-size:11px; color:#10b981; margin-top:4px; font-weight:600;">🟢 <?php echo $total_masuk; ?> Masuk · 🔴 <?php echo $total_pulang; ?> Pulang</div>
+    </div>
+    <div style="background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        <div style="font-size:12px; color:#64748b; font-weight:600;">Absen Pertama Kali</div>
+        <div style="font-size:14px; font-weight:700; color:#2563eb; margin-top:6px;"><?php echo $absen_pertama; ?></div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Awal rekaman absensi</div>
+    </div>
+    <div style="background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        <div style="font-size:12px; color:#64748b; font-weight:600;">Absen Terakhir Kali</div>
+        <div style="font-size:14px; font-weight:700; color:#059669; margin-top:6px;"><?php echo $absen_terakhir; ?></div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Rekaman absensi terkini</div>
+    </div>
+    <div style="background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        <div style="font-size:12px; color:#64748b; font-weight:600;">Pengaturan Jadwal</div>
+        <div style="font-size:13px; font-weight:700; color:#0f172a; margin-top:6px;">
+            <?php
+            if ($detail_user['tipe'] === 'guru') {
+                echo empty($hari_ngajar_arr) ? "<span style='color:#d97706;'>❓ Belum Ada Jadwal</span>" : "<span style='color:#1d4ed8;'>" . count($hari_ngajar_arr) . " Hari Ngajar / Wk</span>";
+            } else {
+                echo "<span style='color:#475569;'>Kalender Kerja (Senin–Sabtu)</span>";
+            }
+            ?>
+        </div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Status skema jadwal</div>
+    </div>
+</div>
+
+<!-- TABEL DETAIL RIWAYAT ABSENSI (hanya tampil di tab riwayat) -->
 <div class="card">
     <div class="card-header">
         <div class="card-title">
@@ -514,6 +698,7 @@ render_header("Riwayat Absensi Individual", "riwayat");
         </table>
     </div>
 </div>
-<?php endif; ?>
+<?php endif; // end tab riwayat ?>
+<?php endif; // end active_tab check ?>
 
 <?php render_footer(); ?>

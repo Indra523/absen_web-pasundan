@@ -40,6 +40,10 @@ if ($status_filter !== '' && in_array($status_filter, ['0', '1'])) {
     $types .= "s";
 }
 
+if (is_tatausaha()) {
+    $where[] = "master_karyawan.tipe = 'karyawan'";
+}
+
 $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
 $sql = "SELECT log_absen.*, master_karyawan.nama, master_karyawan.departemen 
@@ -156,7 +160,7 @@ header("Expires: 0");
 
                     echo "<tr>
                             <td class='text-center'>{$no}</td>
-                            <td class='text-center'>'" . h($row['pin']) . "</td>
+                            <td class='text-center'>" . h($row['pin']) . "</td>
                             <td class='text-left'>" . h($nama) . "</td>
                             <td class='text-left'>" . h($dept) . "</td>
                             <td class='text-center'>" . h($row['waktu']) . "</td>
