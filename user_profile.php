@@ -1661,57 +1661,85 @@ render_header("Profil & Data Diri", "user_profile");
             const y2 = face.bottomRight[1];
             const fW = x2 - x1;
             const fH = y2 - y1;
+            const fcX = (x1 + x2) / 2;
+            const fcY = (y1 + y2) / 2;
 
-            // 1. Cek ukuran proporsi wajah di frame (wajah tidak boleh terlalu kecil atau terlalu besar)
+            const cX = vW / 2;
+            const cY = vH / 2;
+
+            // 1. Cek ukuran proporsi wajah di frame (radius diperketat agar pas dengan bingkai oval)
             const fRatioW = fW / vW;
             const fRatioH = fH / vH;
-            if (fRatioW < 0.20 || fRatioH < 0.20) {
-                return { valid: false, reason: 'Wajah terlalu jauh. Posisikan lebih dekat ke kamera.' };
+            if (fRatioW < 0.24 || fRatioH < 0.26) {
+                return { valid: false, reason: 'Wajah terlalu jauh. Posisikan wajah pas di dalam oval.' };
             }
-            if (fRatioW > 0.88 || fRatioH > 0.90) {
+            if (fRatioW > 0.72 || fRatioH > 0.78) {
                 return { valid: false, reason: 'Wajah terlalu dekat. Mundurkan sedikit agar full wajah masuk.' };
             }
 
-            // 2. Cek apakah wajah terpotong di tepi kamera (harus full masuk di frame)
+            // 2. Cek posisi pusat wajah harus berada di area tengah oval
+            if (Math.abs(fcX - cX) > vW * 0.16 || Math.abs(fcY - cY) > vH * 0.18) {
+                return { valid: false, reason: 'Posisikan wajah tepat di tengah-tengah lingkaran oval.' };
+            }
+
+            // 3. Cek apakah wajah terpotong di tepi kamera
             if (x1 < 0 || y1 < 0 || x2 > vW || y2 > vH) {
                 return { valid: false, reason: 'Wajah terpotong di tepi kamera. Posisikan tepat di tengah oval.' };
             }
 
-            // 3. Validasi titik biometrik esensial (2 mata, hidung, bibir):
+            // 4. Validasi Landmark Biometrik Wajib (2 mata, hidung, bibir)
             if (face.landmarks && face.landmarks.length >= 4) {
                 const rightEye = face.landmarks[0]; // [x, y]
                 const leftEye  = face.landmarks[1]; // [x, y]
                 const nose     = face.landmarks[2]; // [x, y]
                 const mouth    = face.landmarks[3]; // [x, y]
 
-                // A. Pastikan semua titik (2 mata, hidung, bibir) berada di dalam frame
-                const keyPoints = [rightEye, leftEye, nose, mouth];
+                const rx = vW * 0.32; // radius horizontal oval
+                const ry = vH * 0.40; // radius vertikal oval
+
+                // A. Pastikan semua titik (2 mata, hidung, bibir) berada DI DALAM OVAL PANDUAN
+                const keyPoints = [
+                    { name: 'Mata Kanan', pt: rightEye },
+                    { name: 'Mata Kiri',  pt: leftEye },
+                    { name: 'Hidung',     pt: nose },
+                    { name: 'Bibir',      pt: mouth }
+                ];
                 for (let i = 0; i < keyPoints.length; i++) {
-                    const pt = keyPoints[i];
-                    if (pt[0] < vW * 0.04 || pt[0] > vW * 0.96 || pt[1] < vH * 0.04 || pt[1] > vH * 0.96) {
-                        return { valid: false, reason: 'Pastikan 2 mata, hidung, dan bibir terlihat penuh di kamera.' };
+                    const kp = keyPoints[i];
+                    const dx = (kp.pt[0] - cX) / rx;
+                    const dy = (kp.pt[1] - cY) / ry;
+                    if (dx * dx + dy * dy > 1.0) {
+                        return { valid: false, reason: kp.name + ' berada di luar oval. Posisikan full wajah di dalam oval.' };
                     }
                 }
 
-                // B. Pastikan kedua mata terlihat terpisah (bukan setengah muka atau profil samping)
+                // B. Pastikan kedua mata terpisah dan sejajar (bukan satu mata/miring ekstrem)
                 const eyeDist = Math.hypot(leftEye[0] - rightEye[0], leftEye[1] - rightEye[1]);
-                if (eyeDist < fW * 0.16) {
-                    return { valid: false, reason: 'Posisikan kedua mata terlihat jelas (jangan miring/setengah wajah).' };
+                if (eyeDist < fW * 0.20) {
+                    return { valid: false, reason: 'Posisikan kedua mata terlihat jelas dan menghadap lurus ke kamera.' };
                 }
 
-                // C. Pastikan struktur vertikal wajah lengkap (Mata di atas, hidung di tengah, bibir di bawah)
+                // C. Pastikan mata berada di bagian atas oval (di atas hidung)
                 const avgEyeY = (rightEye[1] + leftEye[1]) / 2;
-                if (nose[1] <= avgEyeY) {
-                    return { valid: false, reason: 'Posisikan mata dan hidung terlihat jelas.' };
-                }
-                if (mouth[1] <= nose[1]) {
-                    return { valid: false, reason: 'Bibir/mulut tidak terlihat. Posisikan seluruh wajah di dalam frame.' };
+                if (nose[1] <= avgEyeY + fH * 0.08) {
+                    return { valid: false, reason: 'Hidung tidak terdeteksi di bawah mata. Posisikan wajah tegak.' };
                 }
 
-                // D. Jarak vertikal mata ke mulut minimal 18% tinggi wajah (mencegah hanya dahi/rambut)
+                // D. Pastikan bibir/mulut berada di bagian bawah hidung
+                if (mouth[1] <= nose[1] + fH * 0.08) {
+                    return { valid: false, reason: 'Bibir/mulut tidak terlihat. Pastikan wajah bagian bawah masuk oval.' };
+                }
+
+                // E. Jarak dari mata ke mulut harus proporsional (minimal 24% tinggi wajah)
                 const eyeToMouthDist = mouth[1] - avgEyeY;
-                if (eyeToMouthDist < fH * 0.18) {
-                    return { valid: false, reason: 'Full wajah (dahi sampai dagu) harus terlihat di dalam kamera.' };
+                if (eyeToMouthDist < fH * 0.24) {
+                    return { valid: false, reason: 'Full wajah (mata, hidung, bibir) harus masuk lengkap ke dalam oval.' };
+                }
+            } else {
+                // Jika fallback ke detector tanpa landmarks, wajib pastikan aspect ratio wajah portrait wajar
+                const aspect = fH / fW;
+                if (aspect < 1.05 || aspect > 1.6) {
+                    return { valid: false, reason: 'Posisikan seluruh wajah tegak di dalam oval.' };
                 }
             }
 
@@ -2334,6 +2362,10 @@ render_header("Profil & Data Diri", "user_profile");
                 btnSubmit.innerHTML = 'Lengkapi: ' + missing.join(', ');
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initFaceDetectors();
+        });
         </script>
         <?php endif; ?>
 
