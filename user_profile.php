@@ -1652,6 +1652,72 @@ render_header("Profil & Data Diri", "user_profile");
             return faces;
         }
 
+        function validateFullFaceCriteria(face, vW, vH) {
+            if (!face) return { valid: false, reason: 'Wajah tidak terdeteksi (Arahkan kamera ke wajah Anda)' };
+
+            const x1 = face.topLeft[0];
+            const y1 = face.topLeft[1];
+            const x2 = face.bottomRight[0];
+            const y2 = face.bottomRight[1];
+            const fW = x2 - x1;
+            const fH = y2 - y1;
+
+            // 1. Cek ukuran proporsi wajah di frame (wajah tidak boleh terlalu kecil atau terlalu besar)
+            const fRatioW = fW / vW;
+            const fRatioH = fH / vH;
+            if (fRatioW < 0.20 || fRatioH < 0.20) {
+                return { valid: false, reason: 'Wajah terlalu jauh. Posisikan lebih dekat ke kamera.' };
+            }
+            if (fRatioW > 0.88 || fRatioH > 0.90) {
+                return { valid: false, reason: 'Wajah terlalu dekat. Mundurkan sedikit agar full wajah masuk.' };
+            }
+
+            // 2. Cek apakah wajah terpotong di tepi kamera (harus full masuk di frame)
+            if (x1 < 0 || y1 < 0 || x2 > vW || y2 > vH) {
+                return { valid: false, reason: 'Wajah terpotong di tepi kamera. Posisikan tepat di tengah oval.' };
+            }
+
+            // 3. Validasi titik biometrik esensial (2 mata, hidung, bibir):
+            if (face.landmarks && face.landmarks.length >= 4) {
+                const rightEye = face.landmarks[0]; // [x, y]
+                const leftEye  = face.landmarks[1]; // [x, y]
+                const nose     = face.landmarks[2]; // [x, y]
+                const mouth    = face.landmarks[3]; // [x, y]
+
+                // A. Pastikan semua titik (2 mata, hidung, bibir) berada di dalam frame
+                const keyPoints = [rightEye, leftEye, nose, mouth];
+                for (let i = 0; i < keyPoints.length; i++) {
+                    const pt = keyPoints[i];
+                    if (pt[0] < vW * 0.04 || pt[0] > vW * 0.96 || pt[1] < vH * 0.04 || pt[1] > vH * 0.96) {
+                        return { valid: false, reason: 'Pastikan 2 mata, hidung, dan bibir terlihat penuh di kamera.' };
+                    }
+                }
+
+                // B. Pastikan kedua mata terlihat terpisah (bukan setengah muka atau profil samping)
+                const eyeDist = Math.hypot(leftEye[0] - rightEye[0], leftEye[1] - rightEye[1]);
+                if (eyeDist < fW * 0.16) {
+                    return { valid: false, reason: 'Posisikan kedua mata terlihat jelas (jangan miring/setengah wajah).' };
+                }
+
+                // C. Pastikan struktur vertikal wajah lengkap (Mata di atas, hidung di tengah, bibir di bawah)
+                const avgEyeY = (rightEye[1] + leftEye[1]) / 2;
+                if (nose[1] <= avgEyeY) {
+                    return { valid: false, reason: 'Posisikan mata dan hidung terlihat jelas.' };
+                }
+                if (mouth[1] <= nose[1]) {
+                    return { valid: false, reason: 'Bibir/mulut tidak terlihat. Posisikan seluruh wajah di dalam frame.' };
+                }
+
+                // D. Jarak vertikal mata ke mulut minimal 18% tinggi wajah (mencegah hanya dahi/rambut)
+                const eyeToMouthDist = mouth[1] - avgEyeY;
+                if (eyeToMouthDist < fH * 0.18) {
+                    return { valid: false, reason: 'Full wajah (dahi sampai dagu) harus terlihat di dalam kamera.' };
+                }
+            }
+
+            return { valid: true, reason: 'Wajah Lengkap Terverifikasi' };
+        }
+
         async function runFaceDetectionLoop() {
             if (!isFaceDetectionRunning) return;
             const video = document.getElementById('selfieVideo');
@@ -1715,15 +1781,16 @@ render_header("Profil & Data Diri", "user_profile");
             } else {
                 const face = faces[0];
                 const vW = video.videoWidth || 640;
-                const fW = face.width || (face.bottomRight[0] - face.topLeft[0]);
-                const fRatio = fW / vW;
+                const vH = video.videoHeight || 480;
 
-                if (fRatio < 0.10) {
+                const check = validateFullFaceCriteria(face, vW, vH);
+
+                if (!check.valid) {
                     consecutiveValidFaceFrames = 0;
                     lastFaceValid = false;
                     if (oval) oval.className = 'face-guide-oval warning';
                     if (dot) dot.className = 'face-status-dot warning';
-                    if (txt) txt.textContent = 'Wajah terlalu jauh. Dekatkan ke kamera.';
+                    if (txt) txt.textContent = check.reason;
                     if (btnSnap) {
                         btnSnap.style.opacity = '0.4';
                         btnSnap.style.pointerEvents = 'none';
@@ -1734,29 +1801,9 @@ render_header("Profil & Data Diri", "user_profile");
                         aiBox.style.color = '#b45309';
                         aiBadge.style.background = '#fef3c7';
                         aiBadge.style.color = '#92400e';
-                        aiBadge.textContent = 'TERLALU JAUH';
-                        aiTitle.textContent = 'Dekatkan Wajah';
-                        aiSub.textContent = 'Posisikan di dalam oval panduan';
-                    }
-                } else if (fRatio > 0.98) {
-                    consecutiveValidFaceFrames = 0;
-                    lastFaceValid = false;
-                    if (oval) oval.className = 'face-guide-oval warning';
-                    if (dot) dot.className = 'face-status-dot warning';
-                    if (txt) txt.textContent = 'Wajah terlalu dekat. Mundurkan sedikit.';
-                    if (btnSnap) {
-                        btnSnap.style.opacity = '0.4';
-                        btnSnap.style.pointerEvents = 'none';
-                    }
-                    if (aiBox) {
-                        aiBox.style.background = '#fffbeb';
-                        aiBox.style.borderColor = '#fde68a';
-                        aiBox.style.color = '#b45309';
-                        aiBadge.style.background = '#fef3c7';
-                        aiBadge.style.color = '#92400e';
-                        aiBadge.textContent = 'TERLALU DEKAT';
-                        aiTitle.textContent = 'Mundurkan Sedikit';
-                        aiSub.textContent = 'Pastikan seluruh wajah terlihat';
+                        aiBadge.textContent = 'BELUM LENGKAP';
+                        aiTitle.textContent = 'Posisikan Full Wajah';
+                        aiSub.textContent = check.reason;
                     }
                 } else {
                     consecutiveValidFaceFrames++;
@@ -1764,7 +1811,7 @@ render_header("Profil & Data Diri", "user_profile");
                         lastFaceValid = true;
                         if (oval) oval.className = 'face-guide-oval valid';
                         if (dot) dot.className = 'face-status-dot valid';
-                        if (txt) txt.textContent = 'Wajah Terdeteksi Sempurna! Siap Absen';
+                        if (txt) txt.textContent = 'Wajah Lengkap Terverifikasi! (2 Mata, Hidung, Bibir Masuk)';
                         if (btnSnap) {
                             btnSnap.style.opacity = '1';
                             btnSnap.style.pointerEvents = 'auto';
@@ -1776,8 +1823,8 @@ render_header("Profil & Data Diri", "user_profile");
                             aiBadge.style.background = '#dcfce7';
                             aiBadge.style.color = '#166534';
                             aiBadge.textContent = 'VALID';
-                            aiTitle.textContent = 'Wajah Asli Terverifikasi';
-                            aiSub.textContent = 'Full face terdeteksi sempurna';
+                            aiTitle.textContent = 'Wajah Lengkap Terverifikasi';
+                            aiSub.textContent = '2 mata, hidung & bibir terdeteksi sempurna';
                         }
                     }
                 }
@@ -1789,12 +1836,10 @@ render_header("Profil & Data Diri", "user_profile");
         }
 
         async function verifyFaceOnCanvas(canvas) {
-            const faces = await detectFacesOnSource(canvas, 2.5);
+            const faces = await detectFacesOnSource(canvas, 3.5);
             if (faces && faces.length === 1) {
-                return true;
-            }
-            if (lastFaceValid && faces && faces.length > 0) {
-                return true;
+                const check = validateFullFaceCriteria(faces[0], canvas.width, canvas.height);
+                return check.valid;
             }
             return false;
         }
@@ -2041,9 +2086,12 @@ render_header("Profil & Data Diri", "user_profile");
 
         async function detectFaceMultiOrientation(canvas) {
             // 1. Uji posisi standar (0 derajat)
-            let faces = await detectFacesOnSource(canvas, 2.0);
-            if (faces && faces.length > 0) {
-                return { valid: true, faces: faces, angle: 0 };
+            let faces = await detectFacesOnSource(canvas, 3.5);
+            if (faces && faces.length === 1) {
+                const check = validateFullFaceCriteria(faces[0], canvas.width, canvas.height);
+                if (check.valid) {
+                    return { valid: true, faces: faces, angle: 0 };
+                }
             }
 
             // 2. Uji rotasi 90, 270, dan 180 derajat (mengatasi foto HP miring/portrait)
@@ -2064,14 +2112,17 @@ render_header("Profil & Data Diri", "user_profile");
                 rotCtx.rotate((angle * Math.PI) / 180);
                 rotCtx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
 
-                faces = await detectFacesOnSource(rotCanvas, 2.0);
-                if (faces && faces.length > 0) {
-                    // Update canvas asli dengan hasil rotasi yang tegak lurus
-                    canvas.width = rotCanvas.width;
-                    canvas.height = rotCanvas.height;
-                    const mainCtx = canvas.getContext('2d');
-                    mainCtx.drawImage(rotCanvas, 0, 0);
-                    return { valid: true, faces: faces, angle: angle };
+                faces = await detectFacesOnSource(rotCanvas, 3.5);
+                if (faces && faces.length === 1) {
+                    const check = validateFullFaceCriteria(faces[0], rotCanvas.width, rotCanvas.height);
+                    if (check.valid) {
+                        // Update canvas asli dengan hasil rotasi yang tegak lurus
+                        canvas.width = rotCanvas.width;
+                        canvas.height = rotCanvas.height;
+                        const mainCtx = canvas.getContext('2d');
+                        mainCtx.drawImage(rotCanvas, 0, 0);
+                        return { valid: true, faces: faces, angle: angle };
+                    }
                 }
             }
 
