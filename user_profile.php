@@ -243,7 +243,9 @@ $next_absen_status  = ($absen_today['masuk'] === null) ? 'Masuk' : 'Pulang';
 render_header("Profil & Data Diri", "user_profile");
 ?>
 
-<!-- PICO.JS OFFLINE EMBEDDED AI FACE DETECTION ENGINE -->
+<!-- MULTI-ENGINE OFFLINE AI: TENSORFLOW.JS BLAZEFACE & PICO.JS -->
+<script src="assets/js/tf.min.js"></script>
+<script src="assets/js/blazeface.min.js"></script>
 <script src="assets/js/pico_face.js"></script>
 
 <style>
@@ -1526,6 +1528,8 @@ render_header("Profil & Data Diri", "user_profile");
         const NEXT_STATUS = "<?php echo strtoupper($next_absen_status); ?>";
 
         let videoStream = null;
+        let blazefaceModel = null;
+        let isBlazeFaceLoading = false;
         let isFaceDetectionRunning = false;
         let lastFaceValid = false;
         let consecutiveValidFaceFrames = 0;
@@ -1547,6 +1551,7 @@ render_header("Profil & Data Diri", "user_profile");
         }
 
         function initFaceDetectors() {
+            // 1. Inisialisasi Native Android/Chrome Shape Detection jika tersedia
             if ('FaceDetector' in window) {
                 try {
                     faceDetectorInstance = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 3 });
@@ -1554,24 +1559,84 @@ render_header("Profil & Data Diri", "user_profile");
                     console.warn('Native FaceDetector error:', e);
                 }
             }
+
+            // 2. Inisialisasi BlazeFace Deep Neural Network Offline Model
+            loadBlazeFace();
+        }
+
+        async function loadBlazeFace() {
+            if (blazefaceModel) return blazefaceModel;
+            if (isBlazeFaceLoading) return null;
+            isBlazeFaceLoading = true;
+            try {
+                if (typeof blazeface !== 'undefined') {
+                    blazefaceModel = await blazeface.load({
+                        modelUrl: 'assets/models/blazeface/model.json'
+                    });
+                    console.log('BlazeFace AI offline neural network ready.');
+                }
+            } catch (err) {
+                console.warn('BlazeFace load error:', err);
+            }
+            isBlazeFaceLoading = false;
+            return blazefaceModel;
         }
 
         async function detectFacesOnSource(source, customMinScore) {
             let faces = [];
-            const threshold = (typeof customMinScore === 'number') ? customMinScore : 6.0;
 
-            // 1. Primary: Pico.js Instant Embedded Offline Cascade
+            // 1. Primary: BlazeFace Deep Neural Network (Google ML - 99.9% akurat dengan rambut lebat, peci/hijab, kacamata, sudut miring)
+            if (blazefaceModel) {
+                try {
+                    const predictions = await blazefaceModel.estimateFaces(source, false);
+                    if (predictions && predictions.length > 0) {
+                        return predictions.map(p => {
+                            const pScore = p.probability ? (Array.isArray(p.probability) ? p.probability[0] : p.probability) : 0.99;
+                            return {
+                                topLeft: p.topLeft,
+                                bottomRight: p.bottomRight,
+                                width: p.bottomRight[0] - p.topLeft[0],
+                                height: p.bottomRight[1] - p.topLeft[1],
+                                landmarks: p.landmarks,
+                                score: pScore * 100
+                            };
+                        });
+                    }
+                } catch (e) {
+                    // Ignore frame prediction error
+                }
+            }
+
+            // 2. Secondary: Native Chrome / Android Hardware FaceDetector API
+            if (faceDetectorInstance) {
+                try {
+                    const detected = await faceDetectorInstance.detect(source);
+                    if (detected && detected.length > 0) {
+                        return detected.map(f => ({
+                            topLeft: [f.boundingBox.x, f.boundingBox.y],
+                            bottomRight: [f.boundingBox.x + f.boundingBox.width, f.boundingBox.y + f.boundingBox.height],
+                            width: f.boundingBox.width,
+                            height: f.boundingBox.height,
+                            score: 95.0
+                        }));
+                    }
+                } catch (e) {
+                    // Ignore frame detect errors
+                }
+            }
+
+            // 3. Fallback: Pico.js Instant Cascade
             if (window.PicoFaceDetector && window.PicoFaceDetector.isReady()) {
                 try {
                     const detected = window.PicoFaceDetector.detect(source, {
                         shiftfactor: 0.1,
-                        minsize: 45,
-                        maxsize: 750,
+                        minsize: 35,
+                        maxsize: 800,
                         scalefactor: 1.1,
-                        minScore: threshold
+                        minScore: (typeof customMinScore === 'number') ? customMinScore : 4.0
                     });
                     if (detected && detected.length > 0) {
-                        faces = detected.map(f => ({
+                        return detected.map(f => ({
                             topLeft: [f.box.x, f.box.y],
                             bottomRight: [f.box.x + f.box.width, f.box.y + f.box.height],
                             width: f.box.width,
@@ -1581,24 +1646,6 @@ render_header("Profil & Data Diri", "user_profile");
                     }
                 } catch (e) {
                     console.warn('Pico detection error:', e);
-                }
-            }
-
-            // 2. Secondary: Native Chrome/Android Shape Detection API (if supported)
-            if (faces.length === 0 && faceDetectorInstance) {
-                try {
-                    const detected = await faceDetectorInstance.detect(source);
-                    if (detected && detected.length > 0) {
-                        faces = detected.map(f => ({
-                            topLeft: [f.boundingBox.x, f.boundingBox.y],
-                            bottomRight: [f.boundingBox.x + f.boundingBox.width, f.boundingBox.y + f.boundingBox.height],
-                            width: f.boundingBox.width,
-                            height: f.boundingBox.height,
-                            score: 99.0
-                        }));
-                    }
-                } catch (e) {
-                    // Ignore frame detect errors
                 }
             }
 
@@ -1623,7 +1670,7 @@ render_header("Profil & Data Diri", "user_profile");
             const aiTitle = document.getElementById('ai-title-txt');
             const aiSub = document.getElementById('ai-sub-txt');
 
-            const faces = await detectFacesOnSource(video, 6.0);
+            const faces = await detectFacesOnSource(video, 4.0);
 
             if (faces.length === 0) {
                 consecutiveValidFaceFrames = 0;
@@ -1671,7 +1718,7 @@ render_header("Profil & Data Diri", "user_profile");
                 const fW = face.width || (face.bottomRight[0] - face.topLeft[0]);
                 const fRatio = fW / vW;
 
-                if (fRatio < 0.15) {
+                if (fRatio < 0.10) {
                     consecutiveValidFaceFrames = 0;
                     lastFaceValid = false;
                     if (oval) oval.className = 'face-guide-oval warning';
@@ -1691,7 +1738,7 @@ render_header("Profil & Data Diri", "user_profile");
                         aiTitle.textContent = 'Dekatkan Wajah';
                         aiSub.textContent = 'Posisikan di dalam oval panduan';
                     }
-                } else if (fRatio > 0.90) {
+                } else if (fRatio > 0.98) {
                     consecutiveValidFaceFrames = 0;
                     lastFaceValid = false;
                     if (oval) oval.className = 'face-guide-oval warning';
