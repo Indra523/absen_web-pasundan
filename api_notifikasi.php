@@ -63,10 +63,11 @@ if ($can_manage_izin) {
     $types  = "i";
 }
 
-// PROSES POST: MARK AS READ
+// PROSES POST: MARK AS READ & DELETE
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
+    // TANDAI SEMUA DIBACA
     if ($action === 'mark_all_read') {
         $sql_mark = "UPDATE notifications SET is_read = 1 {$where_clause} AND is_read = 0";
         $stmt_m = $conn->prepare($sql_mark);
@@ -78,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // TANDAI SATU DIBACA
     if ($action === 'mark_read') {
         $notif_id = (int)($_POST['id'] ?? 0);
         if ($notif_id > 0) {
@@ -87,6 +89,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['status' => 'success', 'message' => 'Notifikasi ditandai dibaca']);
             exit;
         }
+    }
+
+    // HAPUS SATU NOTIFIKASI
+    if ($action === 'delete') {
+        $notif_id = (int)($_POST['id'] ?? 0);
+        if ($notif_id > 0) {
+            $sql_del = "DELETE FROM notifications {$where_clause} AND notifications.id = ?";
+            $del_params = array_merge($params, [$notif_id]);
+            $del_types  = $types . "i";
+            $stmt_del   = $conn->prepare($sql_del);
+            $stmt_del->bind_param($del_types, ...$del_params);
+            $stmt_del->execute();
+            echo json_encode(['status' => 'success', 'message' => 'Notifikasi berhasil dihapus']);
+            exit;
+        }
+    }
+
+    // HAPUS SEMUA NOTIFIKASI
+    if ($action === 'delete_all') {
+        $sql_del_all = "DELETE FROM notifications {$where_clause}";
+        $stmt_da = $conn->prepare($sql_del_all);
+        if (!empty($params)) {
+            $stmt_da->bind_param($types, ...$params);
+        }
+        $stmt_da->execute();
+        echo json_encode(['status' => 'success', 'message' => 'Semua notifikasi berhasil dihapus']);
+        exit;
     }
 }
 
