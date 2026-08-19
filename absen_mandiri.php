@@ -526,7 +526,7 @@ render_header("Absen Mandiri", "absen_mandiri");
     background: rgba(15, 23, 42, 0.7);
     backdrop-filter: blur(5px);
     z-index: 99999;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 20px;
@@ -1036,6 +1036,9 @@ function openMandiriNoticeModal() {
 function closeMandiriNoticeModal() {
     const modal = document.getElementById('mandiriNoticeModal');
     if (modal) modal.style.display = 'none';
+    try {
+        sessionStorage.setItem('absen_mandiri_notice_seen', '1');
+    } catch (e) {}
 }
 
 if (navigator.mediaDevices === undefined) {
@@ -1852,6 +1855,31 @@ function checkSubmitStatus() {
 
 document.addEventListener('DOMContentLoaded', function() {
     initFaceDetectors();
+
+    // Cek apakah baru saja submit absen atau merefresh halaman
+    const isPostSubmit = <?php echo ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($pesan_sukses) || !empty($pesan_error)) ? 'true' : 'false'; ?>;
+    let hasSeenNotice = false;
+    try {
+        hasSeenNotice = (sessionStorage.getItem('absen_mandiri_notice_seen') === '1');
+    } catch (e) {}
+
+    // Popup HANYA muncul saat pertama kali masuk ke menu Absen Mandiri (bukan saat refresh atau setelah submit absen)
+    if (!isPostSubmit && !hasSeenNotice) {
+        setTimeout(openMandiriNoticeModal, 150);
+    }
+});
+
+// Bila user mengklik menu/link lain di navbar/sidebar, hapus flag agar jika masuk kembali ke menu Absen Mandiri pop-up muncul lagi
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (link && link.href) {
+        try {
+            const targetUrl = new URL(link.href, window.location.origin);
+            if (!targetUrl.pathname.endsWith('absen_mandiri.php')) {
+                sessionStorage.removeItem('absen_mandiri_notice_seen');
+            }
+        } catch (err) {}
+    }
 });
 </script>
 
