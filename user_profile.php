@@ -1394,6 +1394,36 @@ render_header("Profil & Data Diri", "user_profile");
                     </div>
                 </div>
 
+                <!-- KARTU IDENTITAS BIOMETRIK MASTER -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:12px 16px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <?php if (!empty($detail['foto']) && file_exists(__DIR__ . '/' . $detail['foto'])): ?>
+                            <img src="<?php echo h($detail['foto']); ?>?v=<?php echo time(); ?>" style="width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                        <?php else: ?>
+                            <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;">
+                                <?php echo strtoupper(mb_substr($detail['nama'], 0, 1)); ?>
+                            </div>
+                        <?php endif; ?>
+                        <div>
+                            <div style="font-size:13px; font-weight:800; color:#0f172a;"><?php echo h($detail['nama']); ?></div>
+                            <div style="font-size:11px; color:#64748b;">PIN: <code><?php echo h($pin); ?></code> &nbsp;|&nbsp; <?php echo h($detail['departemen'] ?: 'Umum'); ?></div>
+                        </div>
+                    </div>
+                    <div>
+                        <?php if (!empty($detail['foto']) && file_exists(__DIR__ . '/' . $detail['foto'])): ?>
+                            <span style="font-size:11px; font-weight:700; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:4px 10px; border-radius:99px; display:inline-flex; align-items:center; gap:5px;">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                Foto Profil Terdaftar
+                            </span>
+                        <?php else: ?>
+                            <span style="font-size:11px; font-weight:700; background:#fffbeb; color:#92400e; border:1px solid #fde68a; padding:4px 10px; border-radius:99px; display:inline-flex; align-items:center; gap:5px;">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                Belum Ada Foto Master
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <!-- FORM ABSEN SELFIE -->
                 <form method="POST" action="user_profile.php" id="form-selfie-absen">
                     <?php echo csrf_field(); ?>
