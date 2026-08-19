@@ -1355,6 +1355,23 @@ render_header("Profil & Data Diri", "user_profile");
             </div>
 
             <div style="padding:18px 20px;">
+                <!-- NOTIFIKASI HTTPS UNTUK KAMERA LIVE WEBRTC -->
+                <div id="https-banner-notice" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:10px 14px; margin-bottom:14px; align-items:center; justify-content:space-between; gap:10px; font-size:12px; color:#1e40af; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span>Gunakan <strong>HTTPS</strong> untuk mengaktifkan <strong>Kamera Live AI + Panduan Oval</strong> di browser HP.</span>
+                    </div>
+                    <a href="https://<?php echo $_SERVER['HTTP_HOST'] ?? '172.16.0.61'; ?>/user_profile.php" style="background:#2563eb; color:#fff; font-weight:700; text-decoration:none; padding:5px 12px; border-radius:8px; white-space:nowrap; font-size:11px;">Buka Versi HTTPS</a>
+                </div>
+                <script>
+                if (window.location.protocol === 'http:') {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var banner = document.getElementById('https-banner-notice');
+                        if (banner) banner.style.display = 'flex';
+                    });
+                }
+                </script>
+
                 <!-- BADGE INDIKATOR WI-FI, GPS, & AI WAJAH -->
                 <div class="selfie-indicators-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:18px;">
                     <!-- STATUS WI-FI -->
@@ -1895,6 +1912,12 @@ render_header("Profil & Data Diri", "user_profile");
                     btnOpen.style.opacity = '1';
                     btnOpen.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> <span>Buka Kamera &amp; Deteksi Lokasi</span>';
                 }
+                if (window.location.protocol === 'http:') {
+                    if (confirm('Untuk mengaktifkan Kamera Live In-Browser dengan Panduan Oval Biometrik AI, browser HP mewajibkan koneksi HTTPS yang aman.\n\nKlik OK untuk beralih ke versi HTTPS sekarang? (Pilih Cancel jika ingin memakai kamera HP biasa)')) {
+                        window.location.href = 'https://' + window.location.host + window.location.pathname + window.location.search;
+                        return;
+                    }
+                }
                 if (fileInput) {
                     fileInput.click();
                 } else {
@@ -1925,6 +1948,12 @@ render_header("Profil & Data Diri", "user_profile");
                     btnOpen.style.pointerEvents = 'auto';
                     btnOpen.style.opacity = '1';
                     btnOpen.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> <span>Buka Kamera &amp; Deteksi Lokasi</span>';
+                }
+                if (window.location.protocol === 'http:') {
+                    if (confirm('Kamera Live WebRTC diblokir oleh browser HP pada HTTP biasa.\n\nBuka versi HTTPS (https://' + window.location.host + ') untuk mengaktifkan Kamera Live Oval AI?')) {
+                        window.location.href = 'https://' + window.location.host + window.location.pathname + window.location.search;
+                        return;
+                    }
                 }
                 if (fileInput) {
                     fileInput.click();
@@ -1963,6 +1992,45 @@ render_header("Profil & Data Diri", "user_profile");
             retakeSelfiePhoto();
         }
 
+        async function detectFaceMultiOrientation(canvas) {
+            // 1. Uji posisi standar (0 derajat)
+            let faces = await detectFacesOnSource(canvas, 2.0);
+            if (faces && faces.length > 0) {
+                return { valid: true, faces: faces, angle: 0 };
+            }
+
+            // 2. Uji rotasi 90, 270, dan 180 derajat (mengatasi foto HP miring/portrait)
+            const angles = [90, 270, 180];
+            for (let i = 0; i < angles.length; i++) {
+                const angle = angles[i];
+                const rotCanvas = document.createElement('canvas');
+                const rotCtx = rotCanvas.getContext('2d');
+                if (angle === 90 || angle === 270) {
+                    rotCanvas.width = canvas.height;
+                    rotCanvas.height = canvas.width;
+                } else {
+                    rotCanvas.width = canvas.width;
+                    rotCanvas.height = canvas.height;
+                }
+
+                rotCtx.translate(rotCanvas.width / 2, rotCanvas.height / 2);
+                rotCtx.rotate((angle * Math.PI) / 180);
+                rotCtx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+
+                faces = await detectFacesOnSource(rotCanvas, 2.0);
+                if (faces && faces.length > 0) {
+                    // Update canvas asli dengan hasil rotasi yang tegak lurus
+                    canvas.width = rotCanvas.width;
+                    canvas.height = rotCanvas.height;
+                    const mainCtx = canvas.getContext('2d');
+                    mainCtx.drawImage(rotCanvas, 0, 0);
+                    return { valid: true, faces: faces, angle: angle };
+                }
+            }
+
+            return { valid: false, faces: [] };
+        }
+
         async function handleNativeCameraFile(input) {
             if (input.files && input.files[0]) {
                 showScanningOverlay('Memeriksa Foto...', 'AI sedang membaca biometrik wajah...');
@@ -1991,13 +2059,13 @@ render_header("Profil & Data Diri", "user_profile");
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, w, h);
 
-                        // Validasi Wajah pada Foto Upload
+                        // Inisialisasi Detektor & Validasi Wajah Multi-Orientasi
                         initFaceDetectors();
-                        const isFaceValid = await verifyFaceOnCanvas(canvas);
+                        const result = await detectFaceMultiOrientation(canvas);
                         hideScanningOverlay();
 
-                        if (!isFaceValid) {
-                            showRejectModal('Wajah tidak terdeteksi dalam foto yang dipilih. Harap pilih/ambil foto selfie wajah asli Anda.');
+                        if (!result.valid) {
+                            showRejectModal('Wajah tidak terdeteksi dalam foto yang diambil. Harap posisikan kamera tepat di depan wajah Anda.');
                             input.value = '';
                             return;
                         }
@@ -2029,7 +2097,7 @@ render_header("Profil & Data Diri", "user_profile");
                             aiBadge.style.color = '#166534';
                             aiBadge.textContent = 'VALID';
                             aiTitle.textContent = 'Wajah Terverifikasi';
-                            aiSub.textContent = 'Foto selfie wajah valid';
+                            aiSub.textContent = 'Foto selfie biometrik valid';
                         }
 
                         checkSubmitStatus();
