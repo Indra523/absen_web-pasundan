@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // PORTAL MANDIRI - DATA DIRI & PROFIL PEGAWAI
-// Redesain Modern, Aesthetic, & Eye-Pleasing UI/UX
+// Redesain Modern, Aesthetic + Pin Point Lokasi Rumah
 // ============================================================
 
 require_once __DIR__ . '/layout.php';
@@ -25,13 +25,17 @@ if (empty($pin) || is_superadmin() || is_rnd() || is_admin()) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_profil_mandiri') {
     csrf_verify();
 
-    $target_pin    = trim($_POST['target_pin'] ?? $pin);
-    $no_hp         = trim($_POST['no_hp'] ?? '');
-    $tempat_lahir  = trim($_POST['tempat_lahir'] ?? '');
-    $tanggal_lahir = trim($_POST['tanggal_lahir'] ?? '');
-    $alamat        = trim($_POST['alamat'] ?? '');
-    $tgl_l_val     = !empty($tanggal_lahir) ? $tanggal_lahir : null;
-    $foto_path     = null;
+    $target_pin     = trim($_POST['target_pin'] ?? $pin);
+    $no_hp          = trim($_POST['no_hp'] ?? '');
+    $tempat_lahir   = trim($_POST['tempat_lahir'] ?? '');
+    $tanggal_lahir  = trim($_POST['tanggal_lahir'] ?? '');
+    $alamat         = trim($_POST['alamat'] ?? '');
+    $lat_rumah      = (!empty($_POST['latitude_rumah']) && is_numeric($_POST['latitude_rumah'])) ? (float)$_POST['latitude_rumah'] : null;
+    $lng_rumah      = (!empty($_POST['longitude_rumah']) && is_numeric($_POST['longitude_rumah'])) ? (float)$_POST['longitude_rumah'] : null;
+    $catatan_alamat = trim($_POST['catatan_alamat'] ?? '');
+
+    $tgl_l_val      = !empty($tanggal_lahir) ? $tanggal_lahir : null;
+    $foto_path      = null;
 
     if (isset($_FILES['foto_profil']) && $_FILES['foto_profil']['error'] === UPLOAD_ERR_OK) {
         $file_tmp  = $_FILES['foto_profil']['tmp_name'];
@@ -58,15 +62,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if (empty($pesan_error)) {
         if ($foto_path !== null) {
-            $stmt_upd = $conn->prepare("UPDATE master_karyawan SET no_hp=?, tempat_lahir=?, tanggal_lahir=?, alamat=?, foto=? WHERE pin=?");
-            $stmt_upd->bind_param("ssssss", $no_hp, $tempat_lahir, $tgl_l_val, $alamat, $foto_path, $target_pin);
+            $stmt_upd = $conn->prepare("UPDATE master_karyawan SET no_hp=?, tempat_lahir=?, tanggal_lahir=?, alamat=?, latitude_rumah=?, longitude_rumah=?, catatan_alamat=?, foto=? WHERE pin=?");
+            $stmt_upd->bind_param("ssssdddss", $no_hp, $tempat_lahir, $tgl_l_val, $alamat, $lat_rumah, $lng_rumah, $catatan_alamat, $foto_path, $target_pin);
         } else {
-            $stmt_upd = $conn->prepare("UPDATE master_karyawan SET no_hp=?, tempat_lahir=?, tanggal_lahir=?, alamat=? WHERE pin=?");
-            $stmt_upd->bind_param("sssss", $no_hp, $tempat_lahir, $tgl_l_val, $alamat, $target_pin);
+            $stmt_upd = $conn->prepare("UPDATE master_karyawan SET no_hp=?, tempat_lahir=?, tanggal_lahir=?, alamat=?, latitude_rumah=?, longitude_rumah=?, catatan_alamat=? WHERE pin=?");
+            $stmt_upd->bind_param("ssssddds", $no_hp, $tempat_lahir, $tgl_l_val, $alamat, $lat_rumah, $lng_rumah, $catatan_alamat, $target_pin);
         }
         if ($stmt_upd->execute()) {
-            $pesan_sukses = "Data profil Anda berhasil diperbarui.";
-            log_audit("UPDATE_PROFIL_MANDIRI", "Update foto & data diri PIN {$target_pin}");
+            $pesan_sukses = "Data profil dan pin point lokasi rumah berhasil disimpan.";
+            log_audit("UPDATE_PROFIL_MANDIRI", "Update foto, data diri & koordinat rumah PIN {$target_pin}");
         } else {
             $pesan_error = "Gagal menyimpan perubahan: " . $conn->error;
         }
@@ -129,27 +133,27 @@ if (!empty($detail['tanggal_lahir'])) {
 
 $nama_hari_map = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu'];
 
+// Default titik tengah peta Bandung jika belum ada koordinat rumah
+$default_map_lat = !empty($detail['latitude_rumah']) ? (float)$detail['latitude_rumah'] : -6.90652863;
+$default_map_lng = !empty($detail['longitude_rumah']) ? (float)$detail['longitude_rumah'] : 107.57195250;
+$has_home_coords = (!empty($detail['latitude_rumah']) && !empty($detail['longitude_rumah']));
+
 render_header("Profil & Data Diri", "user_profile");
 ?>
+
+<!-- LEAFLET MAPS CSS & JS (OFFLINE/CDN COMPATIBLE) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <style>
 /* ============================================================ */
 /* AESTHETIC & MODERN USER PROFILE THEME                         */
 /* ============================================================ */
-:root {
-    --p-card-bg: #ffffff;
-    --p-card-border: #e2e8f0;
-    --p-text-main: #0f172a;
-    --p-text-muted: #64748b;
-    --p-accent-blue: #2563eb;
-    --p-accent-glow: rgba(37, 99, 235, 0.15);
-}
-
 .profile-container {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    max-width: 1100px;
+    max-width: 1120px;
     margin: 0 auto 40px auto;
     width: 100%;
 }
@@ -397,7 +401,7 @@ render_header("Profil & Data Diri", "user_profile");
     gap: 22px;
 }
 
-@media (max-width: 880px) {
+@media (max-width: 920px) {
     .profile-grid-layout {
         grid-template-columns: 1fr;
     }
@@ -479,6 +483,74 @@ render_header("Profil & Data Diri", "user_profile");
     color: #0f172a;
     text-align: right;
     word-break: break-word;
+}
+
+/* PIN POINT HOME CARD */
+.home-location-card {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 14px;
+}
+
+.home-location-card.empty {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+}
+
+.btn-gmaps-route {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: #ffffff !important;
+    font-size: 12.5px;
+    font-weight: 800;
+    text-decoration: none;
+    padding: 9px 16px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-gmaps-route:hover {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+}
+
+.btn-gmaps-view {
+    background: #ffffff;
+    color: #1e293b !important;
+    border: 1px solid #cbd5e1;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 9px 14px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.btn-gmaps-view:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+/* MAP PICKER IN FORM */
+.map-picker-stage {
+    position: relative;
+    width: 100%;
+    height: 230px;
+    border-radius: 14px;
+    border: 1.5px solid #cbd5e1;
+    overflow: hidden;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    z-index: 1;
 }
 
 /* JADWAL MENGAJAR BADGES */
@@ -874,13 +946,53 @@ render_header("Profil & Data Diri", "user_profile");
 
                         <div class="info-row-item">
                             <div class="info-row-label">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                                 <span>Alamat Domisili</span>
                             </div>
                             <div class="info-row-val" style="font-size:12.5px; line-height:1.4; color:#334155;">
                                 <?php echo h($detail['alamat'] ?: '-'); ?>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- CARD PIN POINT LOKASI RUMAH & NAVIGASI (UNTUK JENGUK SAKIT / KUNJUNGAN STAFF) -->
+                    <div class="home-location-card <?php echo !$has_home_coords ? 'empty' : ''; ?>">
+                        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px;">
+                            <div style="font-size:12.5px; font-weight:800; color:<?php echo $has_home_coords ? '#166534' : '#92400e'; ?>; display:flex; align-items:center; gap:7px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                <span>Titik Koordinat / Pin Point Rumah</span>
+                            </div>
+                            <?php if ($has_home_coords): ?>
+                                <span style="background:#dcfce7; color:#15803d; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px; border:1px solid #86efac;">
+                                    TERVERIFIKASI
+                                </span>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if ($has_home_coords): ?>
+                            <div style="font-size:11.5px; font-family:monospace; font-weight:700; color:#15803d; margin-bottom:6px;">
+                                Koordinat: <code><?php echo number_format($detail['latitude_rumah'], 6) . ', ' . number_format($detail['longitude_rumah'], 6); ?></code>
+                            </div>
+                            <?php if (!empty($detail['catatan_alamat'])): ?>
+                                <div style="font-size:12px; color:#334155; margin-bottom:12px; background:rgba(255,255,255,0.7); padding:6px 10px; border-radius:8px; border:1px solid #bbf7d0;">
+                                    <strong>Patokan:</strong> <?php echo h($detail['catatan_alamat']); ?>
+                                </div>
+                            <?php endif; ?>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                                <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo $detail['latitude_rumah'] . ',' . $detail['longitude_rumah']; ?>" target="_blank" class="btn-gmaps-route" title="Buka Petunjuk Arah Langsung di Google Maps">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                                    <span>Buka Rute di Google Maps</span>
+                                </a>
+                                <a href="https://www.google.com/maps?q=<?php echo $detail['latitude_rumah'] . ',' . $detail['longitude_rumah']; ?>" target="_blank" class="btn-gmaps-view" title="Lihat Titik Peta Google Maps">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                                    <span>Lihat Peta</span>
+                                </a>
+                            </div>
+                        <?php else: ?>
+                            <div style="font-size:12px; color:#92400e; line-height:1.5;">
+                                Titik koordinat GPS rumah belum ditentukan. Silakan tentukan titik rumah Anda pada formulir di samping agar memudahkan staff berkunjung/menjenguk saat dibutuhkan.
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- HARI MENGAJAR JIKA GURU -->
@@ -907,12 +1019,12 @@ render_header("Profil & Data Diri", "user_profile");
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN: FORM EDIT PROFIL MANDIRI -->
+            <!-- RIGHT COLUMN: FORM EDIT PROFIL MANDIRI + PIN POINT MAP PICKER -->
             <div class="modern-card">
                 <div class="card-header-gradient">
                     <div class="card-title-text">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        <span>Perbarui Data Diri Mandiri</span>
+                        <span>Perbarui Data &amp; Lokasi Rumah</span>
                     </div>
                 </div>
 
@@ -982,10 +1094,58 @@ render_header("Profil & Data Diri", "user_profile");
                         <div class="form-input-group">
                             <label for="alamat" class="form-label-custom">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                <span>Alamat Domisili</span>
+                                <span>Alamat Domisili Lengkap</span>
                             </label>
                             <div class="input-box-wrapper">
-                                <textarea id="alamat" name="alamat" rows="3" style="resize:vertical; line-height:1.5;" placeholder="Jl. ... No. ... RT/RW ... Kel. ... Kec. ... Kota/Kab. ..."><?php echo h($detail['alamat'] ?? ''); ?></textarea>
+                                <textarea id="alamat" name="alamat" rows="2" style="resize:vertical; line-height:1.5;" placeholder="Jl. ... No. ... RT/RW ... Kel. ... Kec. ... Kota/Kab. ..."><?php echo h($detail['alamat'] ?? ''); ?></textarea>
+                            </div>
+                        </div>
+
+                        <div style="height:1px; background:#e2e8f0; margin:20px 0;"></div>
+
+                        <!-- SECTION PIN POINT PETA RUMAH -->
+                        <div style="margin-bottom:18px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
+                                <label class="form-label-custom" style="margin-bottom:0;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <span>Pin Point Lokasi Rumah (Peta Interaktif)</span>
+                                </label>
+                                <button type="button" onclick="getCurrentHomeGPS()" id="btnGetHomeGps" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:11.5px; font-weight:800; padding:5px 12px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                                    <span>Ambil Lokasi Saya Sekarang (GPS HP)</span>
+                                </button>
+                            </div>
+
+                            <div style="font-size:11.5px; color:#64748b; margin-bottom:10px; line-height:1.4;">
+                                Klik atau geser pin merah di peta tepat di lokasi rumah Anda untuk memudahkan staff menjenguk jika Anda sakit.
+                            </div>
+
+                            <!-- LEAFLET MAP CONTAINER -->
+                            <div class="map-picker-stage" id="homeMapPicker"></div>
+
+                            <!-- KOORDINAT INPUTS -->
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                                <div class="form-input-group" style="margin-bottom:10px;">
+                                    <label class="form-label-custom" style="font-size:11px;">Latitude</label>
+                                    <div class="input-box-wrapper">
+                                        <input type="text" id="input_latitude_rumah" name="latitude_rumah" value="<?php echo !empty($detail['latitude_rumah']) ? h($detail['latitude_rumah']) : ''; ?>" placeholder="-6.xxxxxx" readonly style="background:#f8fafc; font-family:monospace; font-size:12.5px;">
+                                    </div>
+                                </div>
+                                <div class="form-input-group" style="margin-bottom:10px;">
+                                    <label class="form-label-custom" style="font-size:11px;">Longitude</label>
+                                    <div class="input-box-wrapper">
+                                        <input type="text" id="input_longitude_rumah" name="longitude_rumah" value="<?php echo !empty($detail['longitude_rumah']) ? h($detail['longitude_rumah']) : ''; ?>" placeholder="107.xxxxxx" readonly style="background:#f8fafc; font-family:monospace; font-size:12.5px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-input-group" style="margin-bottom:0;">
+                                <label for="catatan_alamat" class="form-label-custom" style="font-size:11px;">
+                                    <span>Patokan / Petunjuk Lokasi Rumah</span>
+                                </label>
+                                <div class="input-box-wrapper">
+                                    <input type="text" id="catatan_alamat" name="catatan_alamat" value="<?php echo h($detail['catatan_alamat'] ?? ''); ?>" placeholder="Contoh: Pagar hitam no. 15, depan Masjid Al-Ikhlas, masuk gang pos ronda">
+                                </div>
                             </div>
                         </div>
 
@@ -997,7 +1157,7 @@ render_header("Profil & Data Diri", "user_profile");
                             </button>
                             <button type="submit" class="btn-save-custom">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                                <span>Simpan Perubahan</span>
+                                <span>Simpan Profil &amp; Lokasi</span>
                             </button>
                         </div>
                     </form>
@@ -1011,6 +1171,97 @@ render_header("Profil & Data Diri", "user_profile");
 </div>
 
 <script>
+let homeMap = null;
+let homeMarker = null;
+
+const initialLat = <?php echo $default_map_lat; ?>;
+const initialLng = <?php echo $default_map_lng; ?>;
+const hasInitialCoords = <?php echo $has_home_coords ? 'true' : 'false'; ?>;
+
+function initHomeMapPicker() {
+    const mapEl = document.getElementById('homeMapPicker');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    homeMap = L.map('homeMapPicker').setView([initialLat, initialLng], hasInitialCoords ? 16 : 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(homeMap);
+
+    // Marker
+    homeMarker = L.marker([initialLat, initialLng], {
+        draggable: true,
+        title: 'Geser ke lokasi rumah Anda'
+    }).addTo(homeMap);
+
+    homeMarker.bindPopup("<b>Lokasi Rumah Anda</b><br>Geser pin merah tepat di atap rumah Anda.").openPopup();
+
+    // Event ketika pin digeser
+    homeMarker.on('dragend', function(e) {
+        const pos = homeMarker.getLatLng();
+        updateCoordInputs(pos.lat, pos.lng);
+    });
+
+    // Event ketika peta diklik
+    homeMap.on('click', function(e) {
+        homeMarker.setLatLng(e.latlng);
+        updateCoordInputs(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Fix map sizing on render
+    setTimeout(() => {
+        homeMap.invalidateSize();
+    }, 300);
+}
+
+function updateCoordInputs(lat, lng) {
+    document.getElementById('input_latitude_rumah').value = lat.toFixed(7);
+    document.getElementById('input_longitude_rumah').value = lng.toFixed(7);
+}
+
+function getCurrentHomeGPS() {
+    const btn = document.getElementById('btnGetHomeGps');
+    if (!navigator.geolocation) {
+        alert('Browser tidak mendukung Geolocation GPS.');
+        return;
+    }
+
+    if (btn) {
+        btn.innerHTML = '<span class="btn-spinner" style="display:inline-block; width:12px; height:12px; border:2px solid #2563eb; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></span> <span>Membaca GPS Satelit...</span>';
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const accuracy = Math.round(pos.coords.accuracy || 0);
+
+            updateCoordInputs(lat, lng);
+
+            if (homeMap && homeMarker) {
+                homeMap.setView([lat, lng], 17);
+                homeMarker.setLatLng([lat, lng]);
+                homeMarker.bindPopup("<b>Lokasi GPS Terkunci!</b><br>Akurasi: &plusmn;" + accuracy + " meter").openPopup();
+            }
+
+            if (btn) {
+                btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span style="color:#16a34a;">Lokasi Terkunci (&plusmn;' + accuracy + 'm)</span>';
+                setTimeout(() => {
+                    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg> <span>Ambil Lokasi Saya Sekarang (GPS HP)</span>';
+                }, 3500);
+            }
+        },
+        function(err) {
+            if (btn) {
+                btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg> <span>Ambil Lokasi Saya Sekarang (GPS HP)</span>';
+            }
+            alert('Gagal mengambil koordinat GPS: ' + err.message + '. Silakan klik langsung pada peta untuk menentukan titik rumah.');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
 function previewSelectedImage(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -1036,6 +1287,10 @@ function copyPIN(pin) {
         }, 1200);
     });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    initHomeMapPicker();
+});
 </script>
 
 <?php render_footer(); ?>

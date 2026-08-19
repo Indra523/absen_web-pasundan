@@ -529,7 +529,12 @@ render_header("Kelola Guru & Karyawan", "input_karyawan");
                                     <td style='text-align:left; font-size:12.5px; color:#475569; font-weight:600;'>" . ($dept_attr ?: '-') . "</td>
                                     <td>{$badge_tipe}</td>
                                     <td>
-                                        <div style='display:flex; gap:6px; justify-content:center;'>
+                                        <div style='display:flex; gap:5px; justify-content:center; flex-wrap:wrap;'>
+                                            <a class='btn-action-icon' style='background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;' 
+                                               href='user_profile.php?pin=" . urlencode($row['pin']) . "' title='Lihat Profil & Titik Peta Rumah' target='_blank'>
+                                                <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/></svg>
+                                                <span>Peta/Profil</span>
+                                            </a>
                                             <a class='btn-action-icon' style='background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;' 
                                                href='riwayat_karyawan.php?pin=" . urlencode($row['pin']) . "' title='Lihat Riwayat Presensi'>
                                                 <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>

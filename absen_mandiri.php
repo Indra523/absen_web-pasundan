@@ -1388,6 +1388,8 @@ function calcHaversine(lat1, lon1, lat2, lon2) {
     return Math.round(R * c);
 }
 
+let gpsWatchId = null;
+
 function applyGPSPosition(position) {
     const box = document.getElementById('gps-status-box');
     const badge = document.getElementById('gps-badge-tag');
@@ -1396,6 +1398,7 @@ function applyGPSPosition(position) {
 
     const lat = position.coords.latitude;
     const lng = position.coords.longitude;
+    const accuracy = Math.round(position.coords.accuracy || 0);
 
     document.getElementById('input_latitude').value = lat;
     document.getElementById('input_longitude').value = lng;
@@ -1408,18 +1411,18 @@ function applyGPSPosition(position) {
         box.style.color = '#15803d';
         badge.style.background = '#dcfce7';
         badge.style.color = '#166534';
-        badge.textContent = 'VALID';
-        title.textContent = 'GPS Valid (' + dist + 'm)';
-        sub.textContent = 'Di dalam radius ' + MAX_RADIUS + 'm sekolah';
+        badge.textContent = 'AKURAT (±' + accuracy + 'm)';
+        title.textContent = 'GPS Valid (' + dist + 'm dari sekolah)';
+        sub.textContent = 'Akurasi satelit ±' + accuracy + 'm &bull; Radius maks: ' + MAX_RADIUS + 'm';
     } else {
         box.style.background = '#fff1f2';
         box.style.borderColor = '#fca5a5';
         box.style.color = '#991b1b';
         badge.style.background = '#fee2e2';
         badge.style.color = '#991b1b';
-        badge.textContent = 'DITOLAK';
-        title.textContent = 'Luar Radius (' + dist + 'm)';
-        sub.textContent = 'Batas radius maks ' + MAX_RADIUS + 'm';
+        badge.textContent = 'DITOLAK (' + dist + 'm)';
+        title.textContent = 'Di Luar Radius Sekolah (' + dist + 'm)';
+        sub.textContent = 'Akurasi satelit ±' + accuracy + 'm &bull; Batas radius: ' + MAX_RADIUS + 'm';
     }
     checkSubmitStatus();
 }
@@ -1455,22 +1458,22 @@ function handleGPSError(error, isSecondAttempt) {
 
     if (error.code === 1) {
         title.textContent = 'Izin Lokasi Ditolak';
-        sub.textContent = 'Aktifkan izin GPS di browser';
+        sub.textContent = 'Aktifkan izin GPS di pengaturan browser';
     } else if (!isSecondAttempt) {
-        title.textContent = 'Cari Jaringan GPS...';
-        sub.textContent = 'Mencoba koordinat alternatif...';
+        title.textContent = 'Mengunci Satelit GPS...';
+        sub.textContent = 'Mengambil sinyal GPS alternatif...';
         navigator.geolocation.getCurrentPosition(
             position => applyGPSPosition(position),
             err2 => handleGPSError(err2, true),
-            { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
         return;
     } else if (error.code === 3) {
         title.textContent = 'GPS Timeout';
-        sub.textContent = 'Pastikan GPS HP aktif';
+        sub.textContent = 'Pastikan GPS HP menyala di luar/dekat jendela';
     } else {
-        title.textContent = 'GPS Tidak Ditemukan';
-        sub.textContent = 'Pastikan GPS aktif';
+        title.textContent = 'GPS Tidak Terbaca';
+        sub.textContent = 'Pastikan GPS perangkat aktif';
     }
     checkSubmitStatus();
 }
@@ -1489,13 +1492,20 @@ function startGPSDetection() {
         return;
     }
 
-    title.textContent = 'Mengukur GPS...';
-    sub.textContent = 'Mohon izinkan akses lokasi';
+    title.textContent = 'Mengunci Posisi Satelit...';
+    sub.textContent = 'Mengukur jarak ke sekolah secara presisi';
 
-    navigator.geolocation.getCurrentPosition(
+    // Bersihkan listener watchPosition sebelumnya jika ada
+    if (gpsWatchId !== null) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+    }
+
+    // Gunakan watchPosition untuk akurasi satelit bertahap yang semakin presisi
+    gpsWatchId = navigator.geolocation.watchPosition(
         position => applyGPSPosition(position),
         error => handleGPSError(error, false),
-        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
 }
 
