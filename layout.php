@@ -388,6 +388,7 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         /* NOTIFICATION BELL & DROPDOWN */
         .notif-dropdown-container {
             position: relative;
+            display: inline-block;
         }
         .notif-btn {
             width: 40px; height: 40px;
@@ -402,6 +403,7 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             transition: all 0.2s;
         }
         .notif-btn:hover { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+        .notif-btn:active { transform: scale(0.96); }
         .notif-badge {
             position: absolute;
             top: -4px; right: -4px;
@@ -416,19 +418,32 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         }
         .notif-dropdown-menu {
             position: absolute;
-            top: calc(100% + 8px);
+            top: calc(100% + 10px);
             right: 0;
             left: auto;
-            width: 360px;
-            max-width: min(360px, calc(100vw - 32px));
+            width: 350px;
+            max-width: calc(100vw - 32px);
             background: #fff;
             border: 1px solid #cbd5e1;
             border-radius: 16px;
             box-shadow: 0 12px 35px rgba(15,23,42,0.18);
             z-index: 10000;
             display: none;
-            overflow: hidden;
+            overflow: visible;
             animation: dropdownFade 0.2s ease;
+        }
+        .notif-dropdown-menu::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            right: 14px;
+            width: 10px;
+            height: 10px;
+            background: #f8fafc;
+            border-left: 1px solid #cbd5e1;
+            border-top: 1px solid #cbd5e1;
+            transform: rotate(45deg);
+            z-index: 1;
         }
         @keyframes dropdownFade { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
         
@@ -436,9 +451,12 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             padding: 12px 16px;
             background: #f8fafc;
             border-bottom: 1px solid #e2e8f0;
+            border-radius: 15px 15px 0 0;
             font-size: 12.5px; font-weight: 700; color: #0f172a;
             display: flex; align-items: center; justify-content: space-between;
             gap: 8px;
+            position: relative;
+            z-index: 2;
         }
         .notif-header-actions {
             display: flex;
@@ -468,7 +486,7 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             background: #fee2e2;
         }
 
-        .notif-list { max-height: 350px; overflow-y: auto; }
+        .notif-list { max-height: 350px; overflow-y: auto; position: relative; z-index: 2; background: #fff; border-radius: 0 0 15px 15px; }
         .notif-item {
             padding: 12px 16px;
             border-bottom: 1px solid #f1f5f9;
@@ -550,18 +568,37 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             .card-title { font-size: 14px; }
             .card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
             
-            /* FIX POPUP NOTIFIKASI DI LAYAR HP (MODAL MELAYANG BEBAS OVERFLOW) */
-            .notif-dropdown-menu {
-                position: fixed !important;
-                top: 66px !important;
-                left: 12px !important;
-                right: 12px !important;
-                width: auto !important;
-                max-width: 440px !important;
-                margin: 0 auto !important;
+            /* POPUP NOTIFIKASI TEPAT DI BAWAH ICON PADA MOBILE */
+            .page-header .notif-dropdown-menu {
+                position: absolute !important;
+                top: calc(100% + 10px) !important;
+                left: 0 !important;
+                right: auto !important;
+                width: 330px !important;
+                max-width: calc(100vw - 28px) !important;
                 border-radius: 16px !important;
-                box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3) !important;
+                box-shadow: 0 14px 35px rgba(15, 23, 42, 0.22) !important;
                 z-index: 10005 !important;
+            }
+            .page-header .notif-dropdown-menu::before {
+                left: 14px !important;
+                right: auto !important;
+            }
+
+            .topbar-mobile .notif-dropdown-menu {
+                position: absolute !important;
+                top: calc(100% + 10px) !important;
+                right: 0 !important;
+                left: auto !important;
+                width: 320px !important;
+                max-width: calc(100vw - 24px) !important;
+                border-radius: 16px !important;
+                box-shadow: 0 14px 35px rgba(15, 23, 42, 0.22) !important;
+                z-index: 10005 !important;
+            }
+            .topbar-mobile .notif-dropdown-menu::before {
+                right: 12px !important;
+                left: auto !important;
             }
         }
 
@@ -589,11 +626,28 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
         </div>
         <div class="topbar-title">Monitoring Absensi</div>
         <?php if (can_access_page('notifikasi')): ?>
-        <div style="margin-left:auto;">
-            <button type="button" class="topbar-mobile-notif-btn" onclick="toggleNotifDropdown(event)" title="Notifikasi Real-time" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); width:36px; height:36px; border-radius:9px; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;">
+        <div class="notif-dropdown-container" style="margin-left:auto;">
+            <button type="button" class="topbar-mobile-notif-btn" onclick="toggleNotifDropdown(event, 'topbar')" title="Notifikasi Real-time" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); width:36px; height:36px; border-radius:9px; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;">
                 <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                 <span class="notif-badge" id="notifBadgeMobile" style="display:none; position:absolute; top:-3px; right:-3px; min-width:16px; height:16px; font-size:9.5px; padding:0 3px; border:2px solid #0f172a;">0</span>
             </button>
+            <!-- DROPDOWN MENU TOPBAR -->
+            <div class="notif-dropdown-menu" id="notifMenuMobile">
+                <div class="notif-header">
+                    <div style="display:flex; align-items:center; gap:6px; font-weight:800; font-size:13px; color:#0f172a;">
+                        <svg width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        <span>Notifikasi</span>
+                    </div>
+                    <div class="notif-header-actions">
+                        <button type="button" class="notif-act-btn notif-act-read" onclick="markAllNotifRead(event)">Tandai Dibaca</button>
+                        <span style="color:#cbd5e1; font-size:11px;">|</span>
+                        <button type="button" class="notif-act-btn notif-act-del" onclick="deleteAllNotif(event)">Hapus Semua</button>
+                    </div>
+                </div>
+                <div class="notif-list" id="notifListMobile">
+                    <div style="padding:20px; text-align:center; color:#94a3b8; font-size:12px;">Memuat notifikasi...</div>
+                </div>
+            </div>
         </div>
         <?php endif; ?>
     </div>
@@ -915,6 +969,7 @@ function fetchNotif() {
                 const badge = document.getElementById('notifBadge');
                 const badgeMobile = document.getElementById('notifBadgeMobile');
                 const list = document.getElementById('notifList');
+                const listMobile = document.getElementById('notifListMobile');
                 
                 const updateBadge = (el) => {
                     if (el) {
@@ -937,10 +992,11 @@ function fetchNotif() {
                 }
                 lastUnreadCount = data.unread_count;
 
-                // Render list
-                if (list) {
+                // Render items
+                const renderItems = (targetList) => {
+                    if (!targetList) return;
                     if (data.items.length === 0) {
-                        list.innerHTML = '<div style="padding:28px 16px; text-align:center; color:#94a3b8; font-size:12.5px;"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="margin:0 auto 6px auto; display:block; opacity:0.6;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>Tidak ada notifikasi</div>';
+                        targetList.innerHTML = '<div style="padding:28px 16px; text-align:center; color:#94a3b8; font-size:12.5px;"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="margin:0 auto 6px auto; display:block; opacity:0.6;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>Tidak ada notifikasi</div>';
                     } else {
                         let html = '';
                         data.items.forEach(item => {
@@ -958,20 +1014,34 @@ function fetchNotif() {
                                 </div>
                             `;
                         });
-                        list.innerHTML = html;
+                        targetList.innerHTML = html;
                     }
-                }
+                };
+
+                renderItems(list);
+                renderItems(listMobile);
             }
         })
         .catch(err => console.error('Notif error:', err));
 }
 
-function toggleNotifDropdown(event) {
+function toggleNotifDropdown(event, type) {
     if (event) event.stopPropagation();
-    const menu = document.getElementById('notifMenu');
-    if (menu) {
-        const isHidden = (menu.style.display === 'none' || menu.style.display === '');
-        menu.style.display = isHidden ? 'block' : 'none';
+    const menuHeader = document.getElementById('notifMenu');
+    const menuMobile = document.getElementById('notifMenuMobile');
+    
+    if (type === 'topbar') {
+        if (menuHeader) menuHeader.style.display = 'none';
+        if (menuMobile) {
+            const isHidden = (menuMobile.style.display === 'none' || menuMobile.style.display === '');
+            menuMobile.style.display = isHidden ? 'block' : 'none';
+        }
+    } else {
+        if (menuMobile) menuMobile.style.display = 'none';
+        if (menuHeader) {
+            const isHidden = (menuHeader.style.display === 'none' || menuHeader.style.display === '');
+            menuHeader.style.display = isHidden ? 'block' : 'none';
+        }
     }
 }
 
@@ -992,11 +1062,11 @@ function markNotifRead(id) {
 
 function deleteSingleNotif(event, id) {
     if (event) event.stopPropagation();
-    const itemEl = document.getElementById('notif-item-' + id);
-    if (itemEl) {
-        itemEl.style.opacity = '0.3';
-        itemEl.style.pointerEvents = 'none';
-    }
+    const itemElements = document.querySelectorAll('#notif-item-' + id);
+    itemElements.forEach(el => {
+        el.style.opacity = '0.3';
+        el.style.pointerEvents = 'none';
+    });
     const formData = new FormData();
     formData.append('action', 'delete');
     formData.append('id', id);
@@ -1006,10 +1076,10 @@ function deleteSingleNotif(event, id) {
             fetchNotif();
         })
         .catch(() => {
-            if (itemEl) {
-                itemEl.style.opacity = '1';
-                itemEl.style.pointerEvents = 'auto';
-            }
+            itemElements.forEach(el => {
+                el.style.opacity = '1';
+                el.style.pointerEvents = 'auto';
+            });
         });
 }
 
@@ -1049,10 +1119,11 @@ function showToastNotif(title, msg) {
 
 document.addEventListener('click', function(e) {
     const container = e.target.closest('.notif-dropdown-container');
-    const mobileBtn = e.target.closest('.topbar-mobile-notif-btn');
-    if (!container && !mobileBtn) {
-        const menu = document.getElementById('notifMenu');
-        if (menu) menu.style.display = 'none';
+    if (!container) {
+        const menuHeader = document.getElementById('notifMenu');
+        const menuMobile = document.getElementById('notifMenuMobile');
+        if (menuHeader) menuHeader.style.display = 'none';
+        if (menuMobile) menuMobile.style.display = 'none';
     }
 });
 
