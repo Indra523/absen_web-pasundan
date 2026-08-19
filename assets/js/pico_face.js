@@ -209,7 +209,6 @@ pico.instantiate_detection_memory = function(size)
         bytes[i] = binaryStr.charCodeAt(i);
     }
     var classifyRegion = pico.unpack_cascade(bytes);
-    var memory = pico.instantiate_detection_memory(5);
 
     function rgba_to_grayscale(rgba, nrows, ncols) {
         var gray = new Uint8Array(nrows * ncols);
@@ -225,12 +224,11 @@ pico.instantiate_detection_memory = function(size)
         isReady: function() { return typeof classifyRegion === "function"; },
         detect: function(sourceCanvasOrVideo, options) {
             options = options || {};
-            var minsize = options.minsize || 50;
+            var minsize = options.minsize || 45;
             var maxsize = options.maxsize || 800;
             var shiftfactor = options.shiftfactor || 0.1;
             var scalefactor = options.scalefactor || 1.1;
-            var minScore = (typeof options.minScore === "number") ? options.minScore : 3.5;
-            var useMemory = (options.useMemory !== false && sourceCanvasOrVideo.videoWidth);
+            var minScore = (typeof options.minScore === "number") ? options.minScore : 6.0;
 
             var w, h;
             var tempCanvas = document.createElement("canvas");
@@ -273,16 +271,18 @@ pico.instantiate_detection_memory = function(size)
             };
 
             var rawDetections = pico.run_cascade(image, classifyRegion, params);
-            if (useMemory && typeof memory === "function") {
-                rawDetections = memory(rawDetections);
-            }
-            rawDetections = pico.cluster_detections(rawDetections, 0.2);
+            var rawClusters = pico.cluster_detections(rawDetections, 0.2);
+
+            // Sort clusters by score descending
+            rawClusters.sort(function(a, b) { return b[3] - a[3]; });
 
             var validFaces = [];
-            for (var i = 0; i < rawDetections.length; ++i) {
-                var d = rawDetections[i];
+            for (var i = 0; i < rawClusters.length; ++i) {
+                var d = rawClusters[i];
                 var score = d[3];
-                if (score >= minScore) {
+                // Primary face needs minScore (>= 6.0). Secondary faces need score >= 15.0 to avoid background noise
+                var threshold = (i === 0) ? minScore : Math.max(minScore * 2.0, 15.0);
+                if (score >= threshold) {
                     var r = d[0] / scale;
                     var c = d[1] / scale;
                     var s = d[2] / scale;

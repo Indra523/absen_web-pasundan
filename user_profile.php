@@ -1558,7 +1558,7 @@ render_header("Profil & Data Diri", "user_profile");
 
         async function detectFacesOnSource(source, customMinScore) {
             let faces = [];
-            const threshold = (typeof customMinScore === 'number') ? customMinScore : 3.0;
+            const threshold = (typeof customMinScore === 'number') ? customMinScore : 6.0;
 
             // 1. Primary: Pico.js Instant Embedded Offline Cascade
             if (window.PicoFaceDetector && window.PicoFaceDetector.isReady()) {
@@ -1623,7 +1623,7 @@ render_header("Profil & Data Diri", "user_profile");
             const aiTitle = document.getElementById('ai-title-txt');
             const aiSub = document.getElementById('ai-sub-txt');
 
-            const faces = await detectFacesOnSource(video, 3.0);
+            const faces = await detectFacesOnSource(video, 6.0);
 
             if (faces.length === 0) {
                 consecutiveValidFaceFrames = 0;
