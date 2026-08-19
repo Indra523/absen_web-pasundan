@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $notif_link   = "kelola_izin.php";
                 $applicant_uid = (int)($_SESSION['user_id'] ?? 0);
 
-                $stmt_n = $conn->prepare("INSERT INTO notifications (user_id, target_role, title, message, type, link) VALUES (?, 'all', ?, ?, 'perizinan', ?)");
+                $stmt_n = $conn->prepare("INSERT INTO notifications (user_id, target_role, title, message, type, link) VALUES (?, 'kelola_izin', ?, ?, 'perizinan', ?)");
                 if ($stmt_n) {
                     $stmt_n->bind_param("isss", $applicant_uid, $notif_title, $notif_msg, $notif_link);
                     $stmt_n->execute();

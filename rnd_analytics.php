@@ -16,40 +16,51 @@ $conn = getDB();
 $pesan_sukses = '';
 $pesan_error  = '';
 
-// --- 1. PROSES SIMPAN PENGATURAN JAM KERJA (SUPERADMIN ONLY) ---
+// --- 1. PROSES SIMPAN PENGATURAN JAM KERJA & ABSEN SELFIE (SUPERADMIN ONLY) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     csrf_verify();
     
     if (!is_superadmin()) {
-        $pesan_error = "⛔ <b>Akses Ditolak:</b> Anda berada dalam mode Read-Only (RnD). Pengubahan konfigurasi hanya dapat dilakukan oleh Superadmin.";
+        $pesan_error = "<b>Akses Ditolak:</b> Anda berada dalam mode Read-Only (RnD). Pengubahan konfigurasi hanya dapat dilakukan oleh Superadmin.";
     } else {
-        $jam_masuk     = trim($_POST['jam_masuk'] ?? '07:00');
-        $jam_toleransi = trim($_POST['jam_toleransi'] ?? '07:15');
-        $jam_pulang    = trim($_POST['jam_pulang'] ?? '15:00');
+        $jam_masuk            = trim($_POST['jam_masuk'] ?? '07:00');
+        $jam_toleransi        = trim($_POST['jam_toleransi'] ?? '07:15');
+        $jam_pulang           = trim($_POST['jam_pulang'] ?? '15:00');
+        $allowed_wifi_subnets = trim($_POST['allowed_wifi_subnets'] ?? '172.16., 192.168., 127.0.0.1, ::1');
+        $school_latitude      = trim($_POST['school_latitude'] ?? '-6.91750000');
+        $school_longitude     = trim($_POST['school_longitude'] ?? '107.61910000');
+        $gps_radius_meters    = (int)($_POST['gps_radius_meters'] ?? 100);
 
-        // Validasi format jam HH:MM
-        if (preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $jam_masuk) &&
-            preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $jam_toleransi) &&
-            preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $jam_pulang)) {
+        $stmt = $conn->prepare("INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
+        
+        $sets = [
+            'jam_masuk'            => $jam_masuk,
+            'jam_toleransi'        => $jam_toleransi,
+            'jam_pulang'           => $jam_pulang,
+            'allowed_wifi_subnets' => $allowed_wifi_subnets,
+            'school_latitude'      => $school_latitude,
+            'school_longitude'     => $school_longitude,
+            'gps_radius_meters'    => (string)$gps_radius_meters
+        ];
 
-            $stmt = $conn->prepare("INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
-            
-            $k1 = 'jam_masuk';     $stmt->bind_param("ss", $k1, $jam_masuk);     $stmt->execute();
-            $k2 = 'jam_toleransi'; $stmt->bind_param("ss", $k2, $jam_toleransi); $stmt->execute();
-            $k3 = 'jam_pulang';    $stmt->bind_param("ss", $k3, $jam_pulang);    $stmt->execute();
-
-            $pesan_sukses = "✅ <b>Berhasil!</b> Konfigurasi toleransi jam kerja telah diperbarui oleh Superadmin.";
-        } else {
-            $pesan_error = "Format jam tidak valid. Harap gunakan format HH:MM (contoh: 07:15).";
+        foreach ($sets as $k => $v) {
+            $stmt->bind_param("ss", $k, $v);
+            $stmt->execute();
         }
+
+        $pesan_sukses = "<b>Berhasil!</b> Konfigurasi jam kerja, segmen IP Wi-Fi, dan Geolocation GPS sekolah telah diperbarui.";
     }
 }
 
 // --- 2. AMBIL APP SETTINGS DARI DATABASE ---
-$settings      = get_app_settings();
-$jam_masuk     = $settings['jam_masuk'] ?? '07:00';
-$jam_toleransi = $settings['jam_toleransi'] ?? '07:15';
-$jam_pulang    = $settings['jam_pulang'] ?? '15:00';
+$settings             = get_app_settings();
+$jam_masuk            = $settings['jam_masuk'] ?? '07:00';
+$jam_toleransi        = $settings['jam_toleransi'] ?? '07:15';
+$jam_pulang           = $settings['jam_pulang'] ?? '15:00';
+$allowed_wifi_subnets = $settings['allowed_wifi_subnets'] ?? '172.16., 192.168., 127.0.0.1, ::1';
+$school_latitude      = $settings['school_latitude'] ?? '-6.91750000';
+$school_longitude     = $settings['school_longitude'] ?? '107.61910000';
+$gps_radius_meters    = $settings['gps_radius_meters'] ?? '100';
 
 $today_date    = date('Y-m-d');
 $today_label   = date('d F Y');
@@ -100,7 +111,7 @@ foreach ($master as $pin => $emp) {
         if ($time_absen_ts <= $toleransi_timestamp) {
             $status_code = 'tepat';
             $status_label = 'Tepat Waktu';
-            $status_badge = "<span class='badge' style='background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;'>🟢 Tepat Waktu</span>";
+            $status_badge = "<span class='badge' style='background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;'>Tepat Waktu</span>";
             $selisih_text = "Hadir jam {$jam_absen_str}";
             $tepat_waktu++;
             $dept_stats[$dept]['tepat']++;
@@ -108,7 +119,7 @@ foreach ($master as $pin => $emp) {
             $status_code = 'terlambat';
             $diff_minutes = ceil(($time_absen_ts - $toleransi_timestamp) / 60);
             $status_label = "Terlambat {$diff_minutes} M";
-            $status_badge = "<span class='badge' style='background:#ffedd5; color:#c2410c; border:1px solid #fed7aa;'>⚠️ Terlambat {$diff_minutes} m</span>";
+            $status_badge = "<span class='badge' style='background:#ffedd5; color:#c2410c; border:1px solid #fed7aa;'>Terlambat {$diff_minutes} m</span>";
             $selisih_text = "Lewat {$diff_minutes} menit dari batas {$jam_toleransi}";
             $terlambat++;
             $dept_stats[$dept]['terlambat']++;
@@ -116,7 +127,7 @@ foreach ($master as $pin => $emp) {
     } else {
         $status_code = 'belum';
         $status_label = 'Belum Absen';
-        $status_badge = "<span class='badge' style='background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;'>🔴 Belum Absen</span>";
+        $status_badge = "<span class='badge' style='background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;'>Belum Absen</span>";
         $selisih_text = "Belum ada record absen masuk hari ini";
         $waktu_absen = '-';
         $jam_absen_str = '-';
@@ -234,7 +245,6 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 <!-- BANNER HAK AKSES ROLE -->
 <?php if (is_rnd()): ?>
     <div class="role-notice-banner">
-        <span style="font-size:24px;">🔬</span>
         <div>
             <div style="font-weight:800; color:#1e40af; font-size:14px;">Mode Riset & Analisis (RnD — Read Only)</div>
             <div style="font-size:12.5px; color:#3b82f6; margin-top:2px;">
@@ -244,7 +254,6 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
     </div>
 <?php else: ?>
     <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border:1px solid #e9d5ff; border-radius:14px; padding:16px 20px; margin-bottom:24px; display:flex; align-items:center; gap:14px;">
-        <span style="font-size:24px;">👑</span>
         <div>
             <div style="font-weight:800; color:#6b21a8; font-size:14px;">Kontrol Penuh Superadmin & Modul Analytics</div>
             <div style="font-size:12.5px; color:#7c3aed; margin-top:2px;">
@@ -258,11 +267,11 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 <div class="card" style="margin-bottom: 24px;">
     <div class="card-header">
         <div class="card-title">
-            <span>⚙️ Pengaturan Toleransi Jam Kerja System</span>
+            <span>Pengaturan Toleransi Jam Kerja System</span>
             <?php if (is_rnd()): ?>
-                <span class="badge" style="background:#f3e8ff; color:#6b21a8; border:1px solid #e9d5ff; font-size:11px;">🔒 Read-Only (RnD)</span>
+                <span class="badge" style="background:#f3e8ff; color:#6b21a8; border:1px solid #e9d5ff; font-size:11px;">Read-Only (RnD)</span>
             <?php else: ?>
-                <span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-size:11px;">✏️ Superadmin Editable</span>
+                <span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-size:11px;">Superadmin Editable</span>
             <?php endif; ?>
         </div>
     </div>
@@ -273,28 +282,57 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px;">
             <div>
-                <label for="jam_masuk">🕒 Jam Masuk Standar</label>
+                <label for="jam_masuk">Jam Masuk Standar</label>
                 <input type="time" id="jam_masuk" name="jam_masuk" value="<?php echo h($jam_masuk); ?>" <?php echo is_rnd() ? 'disabled' : ''; ?> required>
                 <div style="font-size:11px; color:#64748b; margin-top:-12px;">Waktu awal presensi dianggap tepat waktu</div>
             </div>
 
             <div>
-                <label for="jam_toleransi">⚠️ Batas Toleransi Terlambat</label>
+                <label for="jam_toleransi">Batas Toleransi Terlambat</label>
                 <input type="time" id="jam_toleransi" name="jam_toleransi" value="<?php echo h($jam_toleransi); ?>" <?php echo is_rnd() ? 'disabled' : ''; ?> required>
                 <div style="font-size:11px; color:#64748b; margin-top:-12px;">Absen sesudah jam ini dicatat Terlambat</div>
             </div>
 
             <div>
-                <label for="jam_pulang">🌆 Jam Pulang Standar</label>
+                <label for="jam_pulang">Jam Pulang Standar</label>
                 <input type="time" id="jam_pulang" name="jam_pulang" value="<?php echo h($jam_pulang); ?>" <?php echo is_rnd() ? 'disabled' : ''; ?> required>
                 <div style="font-size:11px; color:#64748b; margin-top:-12px;">Acuan batas jam pulang karyawan</div>
             </div>
         </div>
 
+        <div style="height:1px; background:#e2e8f0; margin:20px 0 16px 0;"></div>
+        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:12px;">Pengaturan Absen Selfie, Wi-Fi Sekolah &amp; Geolocation GPS</div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px;">
+            <div style="grid-column: span 2;">
+                <label for="allowed_wifi_subnets">Segmen IP Wi-Fi Lokal Sekolah (Pisahkan Koma)</label>
+                <input type="text" id="allowed_wifi_subnets" name="allowed_wifi_subnets" value="<?php echo h($allowed_wifi_subnets); ?>" placeholder="Contoh: 172.16., 192.168.1., 127.0.0.1" <?php echo is_rnd() ? 'disabled' : ''; ?> required style="width:100%; box-sizing:border-box;">
+                <div style="font-size:11px; color:#64748b; margin-top:4px;">* Awalan IP yang diizinkan untuk absen selfie (misal: <code>172.16.</code> untuk semua IP <code>172.16.x.x</code>)</div>
+            </div>
+
+            <div>
+                <label for="school_latitude">Latitude Koordinat Sekolah</label>
+                <input type="text" id="school_latitude" name="school_latitude" value="<?php echo h($school_latitude); ?>" placeholder="-6.91750000" <?php echo is_rnd() ? 'disabled' : ''; ?> required style="width:100%; box-sizing:border-box;">
+                <div style="font-size:11px; color:#64748b; margin-top:4px;">Titik Latitude GPS Sekolah</div>
+            </div>
+
+            <div>
+                <label for="school_longitude">Longitude Koordinat Sekolah</label>
+                <input type="text" id="school_longitude" name="school_longitude" value="<?php echo h($school_longitude); ?>" placeholder="107.61910000" <?php echo is_rnd() ? 'disabled' : ''; ?> required style="width:100%; box-sizing:border-box;">
+                <div style="font-size:11px; color:#64748b; margin-top:4px;">Titik Longitude GPS Sekolah</div>
+            </div>
+
+            <div>
+                <label for="gps_radius_meters">Radius Toleransi GPS (Meter)</label>
+                <input type="number" id="gps_radius_meters" name="gps_radius_meters" value="<?php echo h($gps_radius_meters); ?>" placeholder="100" min="10" max="5000" <?php echo is_rnd() ? 'disabled' : ''; ?> required style="width:100%; box-sizing:border-box;">
+                <div style="font-size:11px; color:#64748b; margin-top:4px;">Jarak maksimal dari sekolah (Meter)</div>
+            </div>
+        </div>
+
         <?php if (is_superadmin()): ?>
-            <div style="margin-top: 14px; text-align: right;">
-                <button type="submit" class="btn btn-primary">
-                    💾 Simpan Konfigurasi Jam Kerja
+            <div style="margin-top: 20px; text-align: right;">
+                <button type="submit" class="btn btn-primary" style="padding:10px 20px; font-weight:700;">
+                    Simpan Semua Konfigurasi Presensi
                 </button>
             </div>
         <?php endif; ?>
@@ -303,14 +341,13 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 
 <!-- 2. WIDGET EXECUTIVE ANALYTICS (HARI INI) -->
 <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-    <h3 style="font-size:17px; font-weight:800; color:#0f172a;">📊 Executive Analytics Absensi Hari Ini</h3>
-    <span style="font-size:13px; color:#64748b; font-weight:600;">📅 <?php echo $today_label; ?></span>
+    <h3 style="font-size:17px; font-weight:800; color:#0f172a;">Executive Analytics Absensi Hari Ini</h3>
+    <span style="font-size:13px; color:#64748b; font-weight:600;"><?php echo $today_label; ?></span>
 </div>
 
 <div class="analytics-grid">
     <!-- Card Total -->
     <div class="stat-box">
-        <div class="corner-icon">👥</div>
         <div class="title">Total Terdaftar</div>
         <div class="value"><?php echo $total_karyawan; ?></div>
         <div class="subtitle">Guru & Karyawan Aktif</div>
@@ -318,7 +355,6 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 
     <!-- Card Tepat Waktu -->
     <div class="stat-box" style="border-left: 4px solid #10b981;">
-        <div class="corner-icon">🟢</div>
         <div class="title" style="color:#047857;">Tepat Waktu</div>
         <div class="value" style="color:#047857;"><?php echo $tepat_waktu; ?></div>
         <div class="subtitle"><?php echo $persen_tepat; ?>% dari total karyawan</div>
@@ -329,7 +365,6 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 
     <!-- Card Terlambat -->
     <div class="stat-box" style="border-left: 4px solid #f97316;">
-        <div class="corner-icon">⚠️</div>
         <div class="title" style="color:#c2410c;">Hadir Terlambat</div>
         <div class="value" style="color:#c2410c;"><?php echo $terlambat; ?></div>
         <div class="subtitle"><?php echo $persen_terlambat; ?>% dari total karyawan</div>
@@ -340,7 +375,6 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 
     <!-- Card Belum Absen -->
     <div class="stat-box" style="border-left: 4px solid #ef4444;">
-        <div class="corner-icon">🔴</div>
         <div class="title" style="color:#b91c1c;">Belum Absen Masuk</div>
         <div class="value" style="color:#b91c1c;"><?php echo $belum_absen; ?></div>
         <div class="subtitle"><?php echo $persen_belum; ?>% dari total karyawan</div>
@@ -353,7 +387,7 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 <!-- 3. DEPARTEMEN BREAKDOWN -->
 <div class="card" style="margin-bottom: 24px;">
     <div class="card-header">
-        <div class="card-title">🏢 Analisis Ketepatan Waktu per Departemen / Divisi</div>
+        <div class="card-title">Analisis Ketepatan Waktu per Departemen / Divisi</div>
     </div>
     
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
@@ -376,9 +410,9 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
                 </div>
 
                 <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#475569; font-weight:600;">
-                    <span style="color:#047857;">🟢 Tepat: <?php echo $d_data['tepat']; ?></span>
-                    <span style="color:#c2410c;">⚠️ Terlambat: <?php echo $d_data['terlambat']; ?></span>
-                    <span style="color:#b91c1c;">🔴 Belum: <?php echo $d_data['belum']; ?></span>
+                    <span style="color:#047857;">Tepat: <?php echo $d_data['tepat']; ?></span>
+                    <span style="color:#c2410c;">Terlambat: <?php echo $d_data['terlambat']; ?></span>
+                    <span style="color:#b91c1c;">Belum: <?php echo $d_data['belum']; ?></span>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -388,15 +422,15 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
 <!-- 4. TABEL DETAIL ANALISIS KETERLAMBATAN REAL-TIME -->
 <div class="card">
     <div class="card-header" style="flex-wrap:wrap; gap:12px;">
-        <div class="card-title">📋 Tabel Detail Presensi & Analisis Keterlambatan Real-Time</div>
+        <div class="card-title">Tabel Detail Presensi & Analisis Keterlambatan Real-Time</div>
         
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            <input type="text" id="search-table" placeholder="🔍 Cari nama / PIN / dept..." style="width:220px; margin-bottom:0; padding:8px 12px; font-size:13px;" onkeyup="filterTable()">
+            <input type="text" id="search-table" placeholder="Cari nama / PIN / dept..." style="width:220px; margin-bottom:0; padding:8px 12px; font-size:13px;" onkeyup="filterTable()">
             <select id="filter-status" style="width:160px; margin-bottom:0; padding:8px 12px; font-size:13px;" onchange="filterTable()">
                 <option value="semua">Semua Status</option>
-                <option value="tepat">🟢 Tepat Waktu</option>
-                <option value="terlambat">⚠️ Terlambat</option>
-                <option value="belum">🔴 Belum Absen</option>
+                <option value="tepat">Tepat Waktu</option>
+                <option value="terlambat">Terlambat</option>
+                <option value="belum">Belum Absen</option>
             </select>
         </div>
     </div>

@@ -92,19 +92,25 @@ if ($result->num_rows > 0) {
             $badge_class = "badge-pulang";
         }
 
-        $tipe_teks = "Unknown";
-        if ($row['tipe_verifikasi'] == '1') $tipe_teks = "Sidik Jari 👆";
-        elseif ($row['tipe_verifikasi'] == '15') $tipe_teks = "Wajah 👤";
-        elseif ($row['tipe_verifikasi'] == '0' || $row['tipe_verifikasi'] == '99') $tipe_teks = "Manual Admin ✏️";
+        $tipe_teks = "Lainnya";
+        if ($row['tipe_verifikasi'] === 'SELFIE' || !empty($row['foto_selfie'])) {
+            $tipe_teks = "Absen Mobile";
+        } elseif ($row['tipe_verifikasi'] == '1') {
+            $tipe_teks = "Sidik Jari";
+        } elseif ($row['tipe_verifikasi'] == '15') {
+            $tipe_teks = "Wajah";
+        } elseif ($row['tipe_verifikasi'] == '0' || $row['tipe_verifikasi'] == '99') {
+            $tipe_teks = "Manual Admin";
+        }
 
         // Cek Badge Jadwal Guru
         $badge_jadwal = "";
         $is_guru = ($row['tipe'] ?? '') === 'guru';
         if ($is_guru) {
             if ($row['total_jadwal_guru'] == 0) {
-                $badge_jadwal = "<span class='badge' style='background:#fef3c7; color:#92400e; border:1px solid #fde68a;' title='Jadwal ngajar belum diatur superadmin'>❓ Belum Ada Jadwal</span>";
+                $badge_jadwal = "<span class='badge' style='background:#fef3c7; color:#92400e; border:1px solid #fde68a;' title='Jadwal ngajar belum diatur superadmin'>Belum Ada Jadwal</span>";
             } elseif (empty($row['jg_id'])) {
-                $badge_jadwal = "<span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;' title='Absen di luar hari jadwal ngajar'>⚠️ Di Luar Jadwal</span>";
+                $badge_jadwal = "<span class='badge' style='background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;' title='Absen di luar hari jadwal ngajar'>Di Luar Jadwal</span>";
             }
         }
 
@@ -116,7 +122,7 @@ if ($result->num_rows > 0) {
         if (!empty($row['nama'])) {
             $nama_escaped = h($row['nama']);
             $dept_escaped = h($row['departemen']);
-            $tipe_label   = $is_guru ? "👨‍🏫 Guru" : "👔 Karyawan";
+            $tipe_label   = $is_guru ? "Guru" : "Karyawan";
             $tipe_bg      = $is_guru ? "background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;" : "background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;";
             $tampil_nama = "<td style='padding:12px 16px; text-align:left; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'>
                                 <div style='display:flex; align-items:center; gap:8px; flex-wrap:wrap;'>
@@ -126,7 +132,7 @@ if ($result->num_rows > 0) {
                                 <div style='font-size:11px; color:#64748b; margin-top:2px;'>{$dept_escaped}</div>
                             </td>";
         } else {
-            $tampil_nama = "<td style='padding:12px 16px; text-align:left; color:#e11d48; font-weight:700; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'>⚠️ Belum Terdaftar di Master</td>";
+            $tampil_nama = "<td style='padding:12px 16px; text-align:left; color:#e11d48; font-weight:700; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'>Belum Terdaftar di Master</td>";
         }
 
         $td_aksi = "";
@@ -137,7 +143,7 @@ if ($result->num_rows > 0) {
                                 <input type='hidden' name='csrf_token' value='{$csrf_tok}'>
                                 <input type='hidden' name='action' value='hapus_log_absen'>
                                 <input type='hidden' name='id_log_hapus' value='{$row['id']}'>
-                                <button type='submit' style='background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; border-radius:8px; font-size:11px; font-weight:700; padding:5px 10px; cursor:pointer; transition:all .15s;' onmouseover=\"this.style.background='#ffe4e6'\" onmouseout=\"this.style.background='#fff1f2'\">🗑️ Hapus</button>
+                                <button type='submit' style='background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; border-radius:8px; font-size:11px; font-weight:700; padding:5px 10px; cursor:pointer; transition:all .15s;' onmouseover=\"this.style.background='#ffe4e6'\" onmouseout=\"this.style.background='#fff1f2'\">Hapus</button>
                             </form>
                         </td>";
         }
@@ -149,9 +155,33 @@ if ($result->num_rows > 0) {
 
         // Verif Badge Style
         $verif_style = "background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;";
-        if ($row['tipe_verifikasi'] == '1') $verif_style = "background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;";
-        elseif ($row['tipe_verifikasi'] == '15') $verif_style = "background:#f3e8ff; color:#7e22ce; border:1px solid #e9d5ff;";
-        elseif ($row['tipe_verifikasi'] == '0' || $row['tipe_verifikasi'] == '99') $verif_style = "background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;";
+        if ($row['tipe_verifikasi'] === 'SELFIE' || !empty($row['foto_selfie'])) {
+            $verif_style = "background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;";
+        } elseif ($row['tipe_verifikasi'] == '1') {
+            $verif_style = "background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;";
+        } elseif ($row['tipe_verifikasi'] == '15') {
+            $verif_style = "background:#f3e8ff; color:#7e22ce; border:1px solid #e9d5ff;";
+        } elseif ($row['tipe_verifikasi'] == '0' || $row['tipe_verifikasi'] == '99') {
+            $verif_style = "background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;";
+        }
+
+        // Tampilkan Foto Selfie (jika ada)
+        $foto_selfie_html = "";
+        if (!empty($row['foto_selfie']) && file_exists(__DIR__ . '/' . $row['foto_selfie'])) {
+            $selfie_url = h($row['foto_selfie']);
+            $gps_url = (!empty($row['latitude']) && !empty($row['longitude'])) 
+                ? "https://maps.google.com/?q={$row['latitude']},{$row['longitude']}" 
+                : "#";
+            
+            $foto_selfie_html = "<div style='margin-top:4px; display:flex; flex-direction:column; align-items:center;'>
+                <a href='{$selfie_url}' target='_blank' title='Klik untuk melihat foto selfie lengkap'>
+                    <img src='{$selfie_url}' style='width:38px; height:38px; border-radius:8px; object-fit:cover; border:1.5px solid #2563eb; box-shadow:0 2px 6px rgba(37,99,235,0.2); transition:transform .15s;' onmouseover=\"this.style.transform='scale(1.1)'\" onmouseout=\"this.style.transform='scale(1)'\">
+                </a>";
+            if (!empty($row['latitude'])) {
+                $foto_selfie_html .= "<a href='{$gps_url}' target='_blank' style='font-size:9.5px; color:#2563eb; font-weight:700; text-decoration:none; margin-top:2px;'>Maps GPS</a>";
+            }
+            $foto_selfie_html .= "</div>";
+        }
 
         $row_bg = ($no % 2 === 0) ? '#ffffff' : '#f8fafc';
         echo "<tr style='background:{$row_bg}; transition:background .15s;' onmouseover=\"this.style.background='#eff6ff'\" onmouseout=\"this.style.background='{$row_bg}'\">
@@ -163,6 +193,7 @@ if ($result->num_rows > 0) {
                 <td style='padding:10px 14px; text-align:center; border-bottom:1px solid #f1f5f9; border-right:1px solid #f1f5f9;'>
                     <div style='display:flex; flex-direction:column; align-items:center; gap:4px;'>
                         <span style='{$verif_style} padding:4px 12px; border-radius:20px; font-weight:700; font-size:11px; display:inline-block;'>" . h($tipe_teks) . "</span>
+                        {$foto_selfie_html}
                         {$badge_jadwal}
                     </div>
                 </td>

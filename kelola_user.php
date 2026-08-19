@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($action === 'tambah') {
         $username_baru = trim($_POST['username_baru'] ?? '');
         $password_baru = $_POST['password_baru'] ?? '';
-        $role_baru     = $_POST['role_baru'] ?? 'admin';
+        $role_baru     = $_POST['role_baru'] ?? 'user';
         $kode_khusus   = trim($_POST['kode_verifikasi_khusus'] ?? '');
 
         if ($kode_khusus !== MASTER_SECURITY_CODE) {
@@ -158,59 +158,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ---- 4. UPDATE USER ----
-    elseif ($action === 'update') {
+    // ---- 4. UPDATE USER & PERUBAHAN ROLE ----
+    elseif ($action === 'update' || $action === 'update_role') {
         $id_target        = (int)($_POST['id_target'] ?? 0);
         $username_update  = trim($_POST['username_update'] ?? '');
         $password_update  = $_POST['password_update'] ?? '';
-        $role_update      = $_POST['role_update'] ?? '';
+        $role_update      = trim($_POST['role_update'] ?? '');
 
         if ($id_target <= 0 || empty($username_update)) {
-            $pesan_error = 'Data tidak valid untuk diperbarui.';
+            $pesan_error = 'Data user tidak valid untuk diperbarui.';
         } elseif (!in_array($role_update, ['superadmin', 'admin', 'rnd', 'tatausaha', 'staff', 'user'])) {
-            $pesan_error = 'Role tidak valid.';
+            $pesan_error = 'Role hak akses tidak valid.';
         } else {
-            $cek = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-            $cek->bind_param("si", $username_update, $id_target);
-            $cek->execute();
-            $cek->store_result();
+            $stmt_cur = $conn->prepare("SELECT username, role FROM users WHERE id = ?");
+            $stmt_cur->bind_param("i", $id_target);
+            $stmt_cur->execute();
+            $user_cur = $stmt_cur->get_result()->fetch_assoc();
 
-            if ($cek->num_rows > 0) {
-                $pesan_error = "Username <b>" . h($username_update) . "</b> sudah digunakan oleh user lain.";
+            if (!$user_cur) {
+                $pesan_error = 'User tidak ditemukan.';
             } else {
-                $pin_update = in_array($role_update, ['user', 'tatausaha', 'staff']) ? trim($_POST['pin_update'] ?? '') : null;
-                if (empty($pin_update)) $pin_update = null;
-
-                if (!empty($password_update)) {
-                    if (strlen($password_update) < 6) {
-                        $pesan_error = 'Password baru minimal 6 karakter.';
-                    } else {
-                        $hash = password_hash($password_update, PASSWORD_BCRYPT);
-                        $stmt = $conn->prepare("UPDATE users SET username=?, password=?, role=?, pin=? WHERE id=?");
-                        $stmt->bind_param("ssssi", $username_update, $hash, $role_update, $pin_update, $id_target);
-                        if ($stmt->execute()) {
-                            if ($id_target == ($_SESSION['user_id'] ?? 0)) {
-                                $_SESSION['username'] = $username_update;
-                                $_SESSION['pin'] = $pin_update;
-                            }
-                            $pesan_sukses = "✅ User <b>" . h($username_update) . "</b> berhasil diperbarui.";
-                            log_audit("UPDATE_USER", "Update user ID {$id_target} ({$username_update})");
-                        } else {
-                            $pesan_error = "Gagal memperbarui user: " . $conn->error;
-                        }
+                // Cek jika mencoba mengubah superadmin terakhir ke role lain
+                if ($user_cur['role'] === 'superadmin' && $role_update !== 'superadmin') {
+                    $res_sa = $conn->query("SELECT COUNT(*) as total FROM users WHERE role = 'superadmin'");
+                    $cnt_sa = $res_sa ? (int)($res_sa->fetch_assoc()['total'] ?? 0) : 0;
+                    if ($cnt_sa <= 1) {
+                        $pesan_error = '⛔ <b>Akses Ditolak:</b> Tidak dapat mengubah role Superadmin terakhir! Minimal harus ada 1 Superadmin aktif.';
                     }
-                } else {
-                    $stmt = $conn->prepare("UPDATE users SET username=?, role=?, pin=? WHERE id=?");
-                    $stmt->bind_param("sssi", $username_update, $role_update, $pin_update, $id_target);
-                    if ($stmt->execute()) {
-                        if ($id_target == ($_SESSION['user_id'] ?? 0)) {
-                            $_SESSION['username'] = $username_update;
-                            $_SESSION['pin'] = $pin_update;
-                        }
-                        $pesan_sukses = "✅ Username dan role user berhasil diperbarui. Password tidak diubah.";
-                        log_audit("UPDATE_USER", "Update user ID {$id_target} ({$username_update})");
+                }
+
+                if (empty($pesan_error)) {
+                    $cek = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+                    $cek->bind_param("si", $username_update, $id_target);
+                    $cek->execute();
+                    $cek->store_result();
+
+                    if ($cek->num_rows > 0) {
+                        $pesan_error = "Username <b>" . h($username_update) . "</b> sudah digunakan oleh user lain.";
                     } else {
-                        $pesan_error = "Gagal memperbarui user: " . $conn->error;
+                        $pin_update = in_array($role_update, ['user', 'tatausaha', 'staff']) ? trim($_POST['pin_update'] ?? '') : null;
+                        if (empty($pin_update)) $pin_update = null;
+
+                        if (!empty($password_update)) {
+                            if (strlen($password_update) < 6) {
+                                $pesan_error = 'Password baru minimal 6 karakter.';
+                            } else {
+                                $hash = password_hash($password_update, PASSWORD_BCRYPT);
+                                $stmt = $conn->prepare("UPDATE users SET username=?, password=?, role=?, pin=? WHERE id=?");
+                                $stmt->bind_param("ssssi", $username_update, $hash, $role_update, $pin_update, $id_target);
+                                if ($stmt->execute()) {
+                                    if ($id_target == ($_SESSION['user_id'] ?? 0)) {
+                                        $_SESSION['username'] = $username_update;
+                                        $_SESSION['role']     = $role_update;
+                                        $_SESSION['pin']      = $pin_update;
+                                    }
+                                    $pesan_sukses = "✅ Data user <b>" . h($username_update) . "</b> berhasil diperbarui (Role: <b>" . strtoupper($role_update) . "</b>).";
+                                    log_audit("UPDATE_USER_ROLE", "Ubah user ID {$id_target} ({$username_update}) dari role {$user_cur['role']} menjadi {$role_update}");
+                                } else {
+                                    $pesan_error = "Gagal memperbarui user: " . $conn->error;
+                                }
+                            }
+                        } else {
+                            $stmt = $conn->prepare("UPDATE users SET username=?, role=?, pin=? WHERE id=?");
+                            $stmt->bind_param("sssi", $username_update, $role_update, $pin_update, $id_target);
+                            if ($stmt->execute()) {
+                                if ($id_target == ($_SESSION['user_id'] ?? 0)) {
+                                    $_SESSION['username'] = $username_update;
+                                    $_SESSION['role']     = $role_update;
+                                    $_SESSION['pin']      = $pin_update;
+                                }
+                                $pesan_sukses = "✅ Role & data user <b>" . h($username_update) . "</b> berhasil diubah menjadi <b>" . strtoupper($role_update) . "</b>.";
+                                log_audit("UPDATE_USER_ROLE", "Ubah user ID {$id_target} ({$username_update}) dari role {$user_cur['role']} menjadi {$role_update}");
+                            } else {
+                                $pesan_error = "Gagal memperbarui user: " . $conn->error;
+                            }
+                        }
                     }
                 }
             }
@@ -522,6 +544,11 @@ render_header("Manajemen User", "users");
                             <td style="font-size:12px; color:#64748b;"><?php echo format_last_active($u['last_active']); ?></td>
                             <td>
                                 <div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">
+                                    <!-- TOMBOL EDIT ROLE & AKUN USER -->
+                                    <button type="button" class="action-btn-sm" style="background:#f5f3ff; color:#6d28d9; border-color:#ddd6fe;" onclick="openEditModal(<?php echo $u['id']; ?>, '<?php echo h($u['username']); ?>', '<?php echo h($u['role']); ?>', '<?php echo h($u['pin'] ?? ''); ?>')" title="Ubah Role & Hak Akses User">
+                                        ✏️ Edit Role
+                                    </button>
+
                                     <!-- TOMBOL RESET PASSWORD -->
                                     <button type="button" class="action-btn-sm" style="background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;" onclick="openResetModal(<?php echo $u['id']; ?>, '<?php echo h($u['username']); ?>', '<?php echo h($u['pin']); ?>')" title="Reset Password User">
                                         🔑 Reset Pass
@@ -560,6 +587,55 @@ render_header("Manajemen User", "users");
                 <?php echo render_smart_pagination($page, $total_pages, ['q' => $search, 'role' => $filter_role]); ?>
             </div>
         <?php endif; ?>
+    </div>
+</div>
+
+<!-- MODAL EDIT ROLE & DATA USER -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:16px; font-weight:700; color:#0f172a;" id="editModalTitle">✏️ Edit Role &amp; Hak Akses User</h3>
+            <button type="button" onclick="closeEditModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">&times;</button>
+        </div>
+
+        <form method="POST" action="kelola_user.php">
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="action" value="update_role">
+            <input type="hidden" name="id_target" id="edit_id_target">
+
+            <div style="margin-bottom:14px;">
+                <label for="edit_username" style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">Username</label>
+                <input type="text" id="edit_username" name="username_update" class="form-control" required style="width:100%; box-sizing:border-box;">
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label for="edit_role" style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">Role / Hak Akses Baru</label>
+                <select id="edit_role" name="role_update" class="form-control" style="width:100%; box-sizing:border-box;" onchange="togglePinField('edit')">
+                    <option value="admin">Operator Admin</option>
+                    <option value="tatausaha">Tata Usaha</option>
+                    <option value="staff">Staff</option>
+                    <option value="user">User Karyawan (Self Service)</option>
+                    <option value="rnd">RnD Researcher</option>
+                    <option value="superadmin">Superadmin</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom:14px; display:none;" id="field_pin_edit">
+                <label for="edit_pin" style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">PIN Karyawan (Sambungkan Akun)</label>
+                <input type="text" id="edit_pin" name="pin_update" class="form-control" placeholder="Masukkan PIN Karyawan (cth: 88)" style="width:100%; box-sizing:border-box;">
+                <div style="font-size:11px; color:#64748b; margin-top:4px;">* Sambungkan PIN karyawan agar diketahui pemegang role ini.</div>
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <label for="edit_password" style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; display:block; margin-bottom:6px;">Password Baru (Opsional)</label>
+                <input type="password" id="edit_password" name="password_update" class="form-control" placeholder="Kosongkan jika tidak ingin merubah password" style="width:100%; box-sizing:border-box;">
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+                <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" onclick="closeEditModal()">Batal</button>
+                <button type="submit" class="btn btn-primary" style="padding:8px 16px; font-weight:700; background:#6d28d9;">Simpan Perubahan Role</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -605,6 +681,20 @@ function togglePinField(prefix) {
             pinField.style.display = 'none';
         }
     }
+}
+
+function openEditModal(id, username, role, pin) {
+    document.getElementById('edit_id_target').value = id;
+    document.getElementById('edit_username').value = username;
+    document.getElementById('edit_role').value = role;
+    document.getElementById('edit_pin').value = pin || '';
+    document.getElementById('edit_password').value = '';
+    togglePinField('edit');
+    document.getElementById('editModal').classList.add('active');
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.remove('active');
 }
 
 function openResetModal(id, username, pin) {

@@ -103,83 +103,83 @@ render_header("Riwayat Presensi Saya", "user_riwayat");
 </style>
 
 <?php if (empty($pin) || !$detail_user): ?>
-    <div class="card" style="text-align:center; padding:40px 20px;">
-        <div style="font-size:48px; margin-bottom:12px;">⚠️</div>
-        <h3 style="font-size:20px; font-weight:800; color:#0f172a; margin-bottom:8px;">Akun Belum Terhubung dengan Data Karyawan</h3>
-        <p style="color:#64748b; font-size:14px; max-width:500px; margin:0 auto;">
-            Anda belum terhubung ke PIN Karyawan. Silakan hubungi Administrator untuk menghubungkan akun Anda.
+    <div class="card" style="text-align:center; padding:40px 20px; border-radius:16px;">
+        <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin-bottom:8px;">Akun Belum Terhubung dengan Data Karyawan</h3>
+        <p style="color:#64748b; font-size:13.5px; max-width:500px; margin:0 auto; line-height:1.6;">
+            Akun Anda belum terhubung ke PIN Karyawan. Silakan hubungi Administrator untuk menghubungkan akun Anda.
         </p>
     </div>
 <?php else: ?>
 
 <!-- RINGKASAN CARDS STATISTIK SAYA -->
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:20px;">
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:20px;">
     <!-- IDENTITAS -->
-    <div class="card" style="margin-bottom:0; padding:16px 20px; background:linear-gradient(135deg, #1e293b, #0f172a); color:#fff;">
-        <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase;">Pegawai / Guru</div>
-        <div style="font-size:16px; font-weight:800; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo h($detail_user['nama']); ?></div>
-        <div style="font-size:12px; color:#cbd5e1; margin-top:2px;">PIN: <code><?php echo h($pin); ?></code> (<?php echo h($detail_user['departemen'] ?: '-'); ?>)</div>
+    <div style="background:linear-gradient(135deg, #0f172a, #1e293b); border-radius:16px; padding:18px 20px; color:#fff; box-shadow:0 4px 16px rgba(15,23,42,.15);">
+        <div style="font-size:11px; color:#94a3b8; font-weight:800; text-transform:uppercase; letter-spacing:1px;">PEGAWAI / GURU</div>
+        <div style="font-size:16px; font-weight:800; margin-top:3px; color:#38bdf8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo h($detail_user['nama']); ?></div>
+        <div style="font-size:11.5px; color:#cbd5e1; margin-top:2px;">PIN: <code style="font-weight:700; color:#fff;"><?php echo h($pin); ?></code> &bull; <?php echo h($detail_user['departemen'] ?: '-'); ?></div>
     </div>
 
     <!-- TOTAL LOG -->
-    <div class="card" style="margin-bottom:0; padding:16px 20px;">
-        <div style="font-size:12px; color:#64748b; font-weight:600;">Total Record Absen</div>
-        <div style="font-size:24px; font-weight:800; color:#0f172a; margin-top:2px;"><?php echo $total_records; ?> <span style="font-size:12px; font-weight:500; color:#64748b;">Log</span></div>
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 2px 10px rgba(15,23,42,0.03);">
+        <div style="font-size:11px; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:1px;">TOTAL LOG PRESENSI</div>
+        <div style="font-size:24px; font-weight:900; color:#0f172a; margin-top:3px;"><?php echo $total_records; ?> <span style="font-size:12px; font-weight:600; color:#64748b;">Record</span></div>
     </div>
 
     <!-- HADIR MASUK -->
-    <div class="card" style="margin-bottom:0; padding:16px 20px;">
-        <div style="font-size:12px; color:#64748b; font-weight:600;">Absen Masuk</div>
-        <div style="font-size:24px; font-weight:800; color:#15803d; margin-top:2px;"><?php echo $total_masuk; ?> <span style="font-size:12px; font-weight:500; color:#64748b;">Kali</span></div>
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 2px 10px rgba(15,23,42,0.03);">
+        <div style="font-size:11px; color:#15803d; font-weight:800; text-transform:uppercase; letter-spacing:1px;">ABSEN MASUK</div>
+        <div style="font-size:24px; font-weight:900; color:#15803d; margin-top:3px;"><?php echo $total_masuk; ?> <span style="font-size:12px; font-weight:600; color:#166534;">Kali</span></div>
     </div>
 
     <!-- ABSEN PULANG -->
-    <div class="card" style="margin-bottom:0; padding:16px 20px;">
-        <div style="font-size:12px; color:#64748b; font-weight:600;">Absen Pulang</div>
-        <div style="font-size:24px; font-weight:800; color:#be123c; margin-top:2px;"><?php echo $total_pulang; ?> <span style="font-size:12px; font-weight:500; color:#64748b;">Kali</span></div>
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 2px 10px rgba(15,23,42,0.03);">
+        <div style="font-size:11px; color:#be123c; font-weight:800; text-transform:uppercase; letter-spacing:1px;">ABSEN PULANG</div>
+        <div style="font-size:24px; font-weight:900; color:#be123c; margin-top:3px;"><?php echo $total_pulang; ?> <span style="font-size:12px; font-weight:600; color:#991b1b;">Kali</span></div>
     </div>
 </div>
 
 <!-- BAR FILTER & CETAK PDF -->
-<div class="filter-bar">
-    <form method="GET" action="user_riwayat.php" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:0;">
-        <div style="display:flex; align-items:center; gap:8px;">
-            <label style="margin-bottom:0; font-size:12.5px; white-space:nowrap;">📅 Dari:</label>
-            <input type="date" name="tgl_mulai" value="<?php echo h($tgl_mulai); ?>" style="margin-bottom:0; width:150px; padding:7px 10px; font-size:13px;">
+<div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:14px 18px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 2px 10px rgba(15,23,42,0.03);">
+    <form method="GET" action="user_riwayat.php" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0;">
+        <div style="display:flex; align-items:center; gap:6px;">
+            <label style="margin-bottom:0; font-size:12px; font-weight:700; color:#475569; text-transform:uppercase;">Dari:</label>
+            <input type="date" name="tgl_mulai" value="<?php echo h($tgl_mulai); ?>" style="margin-bottom:0; width:140px; padding:7px 10px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:8px; outline:none;">
         </div>
 
-        <div style="display:flex; align-items:center; gap:8px;">
-            <label style="margin-bottom:0; font-size:12.5px; white-space:nowrap;">Sampai:</label>
-            <input type="date" name="tgl_selesai" value="<?php echo h($tgl_selesai); ?>" style="margin-bottom:0; width:150px; padding:7px 10px; font-size:13px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+            <label style="margin-bottom:0; font-size:12px; font-weight:700; color:#475569; text-transform:uppercase;">Sampai:</label>
+            <input type="date" name="tgl_selesai" value="<?php echo h($tgl_selesai); ?>" style="margin-bottom:0; width:140px; padding:7px 10px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:8px; outline:none;">
         </div>
 
-        <button type="submit" class="btn btn-primary" style="padding:7px 16px; font-size:13px; min-height:36px;">
-            🔍 Filter Tanggal
+        <button type="submit" style="background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:700; border:none; padding:7px 16px; font-size:12.5px; border-radius:8px; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,0.25);">
+            Filter Tanggal
         </button>
     </form>
 
-    <?php if (can_access_rnd()): ?>
-    <a href="<?php echo 'export_pdf_riwayat.php?' . http_build_query(['pin' => $pin, 'tgl_dari' => $tgl_mulai, 'tgl_sampai' => $tgl_selesai, 'auto_print' => 1]); ?>" target="_blank" class="btn" style="background:#ef4444; color:#fff; font-size:13px; padding:7px 14px; min-height:36px; text-decoration:none;">
-        📄 Export PDF Riwayat
+    <?php if (can_access_page('export_pdf')): ?>
+    <a href="<?php echo 'export_pdf_riwayat.php?' . http_build_query(['pin' => $pin, 'tgl_dari' => $tgl_mulai, 'tgl_sampai' => $tgl_selesai, 'auto_print' => 1]); ?>" target="_blank" style="background:#ef4444; color:#fff; font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(239,68,68,0.25);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Export PDF Riwayat</span>
     </a>
     <?php endif; ?>
 </div>
 
 <!-- TABEL RIWAYAT PRESENSI SAYA -->
-<div class="card">
-    <div class="card-title" style="margin-bottom:18px;">
-        📜 Detail Riwayat Kehadiran Presensi
+<div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(15,23,42,.06);">
+    <div style="background:#ffffff; border-bottom:1px solid #e2e8f0; padding:16px 20px;">
+        <div style="font-size:15px; font-weight:800; color:#0f172a;">Detail Riwayat Presensi</div>
     </div>
 
-    <div class="table-responsive">
-        <table>
-            <thead>
+    <div class="table-responsive" style="max-height:650px; overflow:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px; min-width:600px;">
+            <thead style="position:sticky; top:0; z-index:10; background:#f8fafc; border-bottom:2px solid #e2e8f0;">
                 <tr>
-                    <th style="width:45px;">NO</th>
-                    <th style="text-align:left;">HARI & TANGGAL</th>
-                    <th>JAM ABSEN (WIB)</th>
-                    <th>STATUS PRESENSI</th>
-                    <th>METODE VERIFIKASI</th>
+                    <th style="width:45px; background:#f8fafc; color:#475569; padding:11px 8px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">NO</th>
+                    <th style="background:#f8fafc; color:#475569; padding:11px 16px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:left; border-right:1px solid #e2e8f0;">HARI &amp; TANGGAL</th>
+                    <th style="background:#f8fafc; color:#475569; padding:11px 14px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">JAM PRESENSI</th>
+                    <th style="background:#f8fafc; color:#475569; padding:11px 14px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center; border-right:1px solid #e2e8f0;">STATUS</th>
+                    <th style="background:#f8fafc; color:#475569; padding:11px 14px; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; text-align:center;">METODE VERIFIKASI</th>
                 </tr>
             </thead>
             <tbody>
@@ -195,27 +195,37 @@ render_header("Riwayat Presensi Saya", "user_riwayat");
                         $st_badge = $l['status'] == 0 ? 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;' : 'background:#fee2e2; color:#be123c; border:1px solid #fca5a5;';
                         
                         $ver_text = 'Sidik Jari';
-                        if ($l['tipe_verifikasi'] == '15') $ver_text = 'Scan Wajah';
-                        elseif ($l['tipe_verifikasi'] == '99') $ver_text = 'Manual Admin';
+                        if ($l['tipe_verifikasi'] === 'SELFIE' || !empty($l['foto_selfie'])) {
+                            $ver_text = 'Selfie Web';
+                        } elseif ($l['tipe_verifikasi'] == '15') {
+                            $ver_text = 'Scan Wajah';
+                        } elseif ($l['tipe_verifikasi'] == '99') {
+                            $ver_text = 'Manual Admin';
+                        }
+
+                        if (!empty($l['foto_selfie']) && file_exists(__DIR__ . '/' . $l['foto_selfie'])) {
+                            $selfie_url = h($l['foto_selfie']);
+                            $ver_text .= "<div style='margin-top:4px;'><a href='{$selfie_url}' target='_blank' title='Lihat Foto Selfie'><img src='{$selfie_url}' style='width:32px; height:32px; border-radius:6px; object-fit:cover; border:1.5px solid #bfdbfe;'></a></div>";
+                        }
                 ?>
                     <tr>
-                        <td><b><?php echo $no++; ?></b></td>
-                        <td style="text-align:left; font-weight:700; color:#0f172a;">
+                        <td style="text-align:center; border-bottom:1px solid #f1f5f9; padding:10px 8px;"><b><?php echo $no++; ?></b></td>
+                        <td style="text-align:left; font-weight:700; color:#0f172a; border-bottom:1px solid #f1f5f9; padding:10px 16px;">
                             <?php echo $hari; ?>, <?php echo $tgl_f; ?>
                         </td>
-                        <td>
-                            <code style="font-size:13px; font-weight:bold; color:#1e293b;"><?php echo $jam_f; ?></code>
+                        <td style="text-align:center; border-bottom:1px solid #f1f5f9; padding:10px 14px;">
+                            <code style="font-size:13px; font-weight:800; color:#0f172a; background:#f1f5f9; padding:3px 8px; border-radius:6px;"><?php echo $jam_f; ?></code>
                         </td>
-                        <td>
-                            <span class="badge" style="<?php echo $st_badge; ?> font-weight:700;"><?php echo $st_text; ?></span>
+                        <td style="text-align:center; border-bottom:1px solid #f1f5f9; padding:10px 14px;">
+                            <span class="badge" style="<?php echo $st_badge; ?> font-weight:800; font-size:11.5px;"><?php echo $st_text; ?></span>
                         </td>
-                        <td style="font-size:12.5px; color:#475569;">
+                        <td style="text-align:center; font-size:12.5px; color:#475569; border-bottom:1px solid #f1f5f9; padding:10px 14px;">
                             <?php echo $ver_text; ?>
                         </td>
                     </tr>
                 <?php endforeach; else: ?>
                     <tr>
-                        <td colspan="5" style="padding:35px; color:#94a3b8;">Belum ada log presensi pada rentang tanggal ini.</td>
+                        <td colspan="5" style="padding:40px; color:#94a3b8; text-align:center;">Belum ada log presensi pada rentang tanggal ini.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
@@ -224,8 +234,8 @@ render_header("Riwayat Presensi Saya", "user_riwayat");
 
     <!-- NAVIGASI PAGINASI -->
     <?php if ($total_pages > 1): ?>
-        <div class="pagination-container">
-            <span style="font-size:12.5px; color:#64748b;">Menampilkan <b><?php echo count($logs); ?></b> dari <b><?php echo $total_records; ?></b> record</span>
+        <div class="pagination-container" style="padding:14px 20px;">
+            <span style="font-size:12px; color:#64748b; font-weight:600;">Menampilkan <b><?php echo count($logs); ?></b> dari <b><?php echo $total_records; ?></b> log</span>
             
             <div style="display:flex; gap:4px;">
                 <?php $url_p = "tgl_mulai=" . urlencode($tgl_mulai) . "&tgl_selesai=" . urlencode($tgl_selesai); ?>

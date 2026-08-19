@@ -6,7 +6,10 @@
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/auth.php';
-require_role(['superadmin', 'rnd']);
+if (!can_access_page('export_pdf') && !is_superadmin()) {
+    header("Location: index.php?error=access_denied");
+    exit;
+}
 
 $pin        = trim($_GET['pin'] ?? '');
 $tgl_dari   = trim($_GET['tgl_dari'] ?? date('Y-m-01'));
@@ -110,7 +113,7 @@ log_audit("EXPORT_PDF_RIWAYAT", "Export PDF Riwayat Individual PIN {$pin} ({$emp
     <!-- BIODATA KARYAWAN -->
     <div class="profile-box">
         <div class="profile-col">
-            <b>PIN / NIP:</b> <?php echo h($emp['pin']); ?><br>
+            <b>PIN:</b> <?php echo h($emp['pin']); ?><br>
             <b>Nama Lengkap:</b> <?php echo h($emp['nama']); ?>
         </div>
         <div class="profile-col">
@@ -161,7 +164,7 @@ log_audit("EXPORT_PDF_RIWAYAT", "Export PDF Riwayat Individual PIN {$pin} ({$emp
         <div class="ttd-col">
             <p>Mengetahui,<br><b>Kepala SMK Pasundan 2 Bandung</b></p>
             <br><br><br>
-            <p><b><u>Drs. H. HETDI NUGRAHA, M.M.</u></b><br>NIP. 19680512 199403 1 004</p>
+            <p><b><u>Umar Khatob, S.Pd, M.Si.</u></b><br>NIP.</p>
         </div>
         <div class="ttd-col">
             <p>Bandung, <?php echo date('d F Y'); ?><br><b>Yang Bersangkutan,</b></p>

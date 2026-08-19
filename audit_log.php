@@ -27,11 +27,35 @@ $where = ["DATE(audit_logs.created_at) BETWEEN ? AND ?"];
 $params = [$tgl_dari, $tgl_sampai];
 $types  = 'ss';
 
+function parse_user_agent($ua_string) {
+    if (empty($ua_string) || $ua_string === '-') return 'Belum Tercatat (Log Lama)';
+    
+    $os = 'Perangkat';
+    if (preg_match('/windows nt 10/i', $ua_string)) $os = 'Windows 10/11';
+    elseif (preg_match('/windows nt 6\.3/i', $ua_string)) $os = 'Windows 8.1';
+    elseif (preg_match('/windows nt 6\.1/i', $ua_string)) $os = 'Windows 7';
+    elseif (preg_match('/windows/i', $ua_string)) $os = 'Windows';
+    elseif (preg_match('/android/i', $ua_string)) $os = 'Android';
+    elseif (preg_match('/iphone|ipad|ipod/i', $ua_string)) $os = 'iOS';
+    elseif (preg_match('/macintosh|mac os x/i', $ua_string)) $os = 'macOS';
+    elseif (preg_match('/linux/i', $ua_string)) $os = 'Linux';
+
+    $browser = 'Browser';
+    if (preg_match('/edg/i', $ua_string)) $browser = 'Edge';
+    elseif (preg_match('/opr|opera/i', $ua_string)) $browser = 'Opera';
+    elseif (preg_match('/vivaldi/i', $ua_string)) $browser = 'Vivaldi';
+    elseif (preg_match('/chrome/i', $ua_string)) $browser = 'Chrome';
+    elseif (preg_match('/firefox/i', $ua_string)) $browser = 'Firefox';
+    elseif (preg_match('/safari/i', $ua_string)) $browser = 'Safari';
+
+    return "{$browser} ({$os})";
+}
+
 if (!empty($search)) {
-    $where[] = "(audit_logs.username LIKE ? OR audit_logs.details LIKE ? OR audit_logs.ip_address LIKE ?)";
+    $where[] = "(audit_logs.username LIKE ? OR audit_logs.details LIKE ? OR audit_logs.ip_address LIKE ? OR audit_logs.user_agent LIKE ?)";
     $s_term = "%{$search}%";
-    $params[] = $s_term; $params[] = $s_term; $params[] = $s_term;
-    $types .= 'sss';
+    $params[] = $s_term; $params[] = $s_term; $params[] = $s_term; $params[] = $s_term;
+    $types .= 'ssss';
 }
 
 if (!empty($filter_user)) {
@@ -168,6 +192,7 @@ render_header("Audit Log System", "audit_log");
                     <th>Jenis Aksi</th>
                     <th style="text-align:left;">Detail Aktivitas</th>
                     <th>IP Address</th>
+                    <th>Perangkat / Browser</th>
                 </tr>
             </thead>
             <tbody>
@@ -184,6 +209,8 @@ render_header("Audit Log System", "audit_log");
                         } elseif (str_contains($l['action'], 'INPUT') || str_contains($l['action'], 'SIMPAN')) {
                             $action_badge = "background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;";
                         }
+                        $ua_raw  = $l['user_agent'] ?? '-';
+                        $ua_info = parse_user_agent($ua_raw);
                 ?>
                     <tr>
                         <td><b><?php echo $no++; ?></b></td>
@@ -201,10 +228,21 @@ render_header("Audit Log System", "audit_log");
                             <?php echo h($l['details'] ?: '-'); ?>
                         </td>
                         <td><code><?php echo h($l['ip_address'] ?: '-'); ?></code></td>
+                        <td>
+                            <?php if (empty($ua_raw) || $ua_raw === '-'): ?>
+                                <span class="badge" style="background:#f1f5f9; color:#94a3b8; border:1px dashed #cbd5e1; font-size:11px;" title="Log ini dicatat sebelum fitur User Agent ditambahkan">
+                                    🕒 Log Lama
+                                </span>
+                            <?php else: ?>
+                                <span class="badge" style="background:#f8fafc; color:#334155; border:1px solid #cbd5e1; font-size:11px;" title="<?php echo h($ua_raw); ?>">
+                                    🖥️ <?php echo h($ua_info); ?>
+                                </span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; else: ?>
                     <tr>
-                        <td colspan="7" style="padding:30px; color:#94a3b8;">Belum ada log aktivitas yang sesuai dengan filter.</td>
+                        <td colspan="8" style="padding:30px; color:#94a3b8;">Belum ada log aktivitas yang sesuai dengan filter.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

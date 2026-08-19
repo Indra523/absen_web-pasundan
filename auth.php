@@ -74,18 +74,7 @@ function get_user_pin() {
     return $_SESSION['pin'] ?? null;
 }
 
-// Function helper untuk mencatat log aktivitas admin (Audit Log)
-function log_audit($action, $details = '') {
-    $conn = getDB();
-    $user_id  = $_SESSION['user_id'] ?? null;
-    $username = $_SESSION['username'] ?? 'System/Guest';
-    $role     = $_SESSION['role'] ?? 'guest';
-    $ip       = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 
-    $stmt = $conn->prepare("INSERT INTO audit_logs (user_id, username, role, action, details, ip_address) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("isssss", $user_id, $username, $role, $action, $details, $ip);
-    $stmt->execute();
-}
 
 // ============================================================
 // DYNAMIC ROLE PERMISSIONS (DB-based RBAC)

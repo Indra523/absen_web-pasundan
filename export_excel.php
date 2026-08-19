@@ -151,9 +151,11 @@ header("Expires: 0");
                         $status_class = "status-pulang";
                     }
 
-                    $tipe_teks = "Unknown";
-                    if ($row['tipe_verifikasi'] == '1') $tipe_teks = "Sidik Jari";
+                    $tipe_teks = "Lainnya";
+                    if ($row['tipe_verifikasi'] === 'SELFIE' || !empty($row['foto_selfie'])) $tipe_teks = "Absen Mobile";
+                    elseif ($row['tipe_verifikasi'] == '1') $tipe_teks = "Sidik Jari";
                     elseif ($row['tipe_verifikasi'] == '15') $tipe_teks = "Wajah";
+                    elseif ($row['tipe_verifikasi'] == '0' || $row['tipe_verifikasi'] == '99') $tipe_teks = "Manual Admin";
 
                     $nama = !empty($row['nama']) ? $row['nama'] : 'Belum Terdaftar';
                     $dept = !empty($row['departemen']) ? $row['departemen'] : '-';

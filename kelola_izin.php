@@ -59,19 +59,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if (is_tatausaha() && ($emp_data['tipe'] ?? '') !== 'karyawan') {
                     $pesan_error = "⛔ <b>Akses Ditolak:</b> Role Tata Usaha hanya diizinkan mencatat perizinan untuk kategori <b>Karyawan</b>.";
                 } else {
-                    $nama_emp = $emp_data['nama'];
-                    $approved_by = ($_SESSION['username'] ?? 'Admin') . ' (' . strtoupper($_SESSION['role'] ?? 'ADMIN') . ')';
+                    $nama_emp           = $emp_data['nama'];
+                    $status_persetujuan = 'disetujui';
+                    $approved_by        = ($_SESSION['username'] ?? 'Admin') . ' (' . strtoupper($_SESSION['role'] ?? 'ADMIN') . ')';
 
-                    $stmt = $conn->prepare("INSERT INTO perizinan (pin, tanggal, tgl_selesai, tipe_izin, keterangan, status_persetujuan, approved_by, created_by) VALUES (?, ?, ?, ?, ?, 'disetujui', ?, ?) ON DUPLICATE KEY UPDATE tgl_selesai = VALUES(tgl_selesai), tipe_izin = VALUES(tipe_izin), keterangan = VALUES(keterangan), status_persetujuan = 'disetujui', approved_by = VALUES(approved_by), created_by = VALUES(created_by)");
-                    $stmt->bind_param("ssssssss", $pin, $tgl_mulai, $tgl_selesai, $tipe_izin, $keterangan, $approved_by, $created_by);
+                    $stmt = $conn->prepare("INSERT INTO perizinan (pin, tanggal, tgl_selesai, tipe_izin, keterangan, status_persetujuan, approved_by, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE tgl_selesai = VALUES(tgl_selesai), tipe_izin = VALUES(tipe_izin), keterangan = VALUES(keterangan), status_persetujuan = VALUES(status_persetujuan), approved_by = VALUES(approved_by), created_by = VALUES(created_by)");
+                    $stmt->bind_param("ssssssss", $pin, $tgl_mulai, $tgl_selesai, $tipe_izin, $keterangan, $status_persetujuan, $approved_by, $created_by);
 
                     if ($stmt->execute()) {
                         $dur_txt = ($diff_days > 1) 
                             ? "{$diff_days} Hari (" . date('d/m/Y', $start_ts) . " s.d " . date('d/m/Y', $end_ts) . ")" 
                             : date('d/m/Y', $start_ts);
 
-                        $pesan_sukses = "Data <b>" . strtoupper($tipe_izin) . "</b> untuk <b>" . h($nama_emp) . "</b> (PIN: " . h($pin) . ") periode <b>" . $dur_txt . "</b> berhasil disimpan.";
-                        log_audit("INPUT_PERIZINAN", "Simpan " . strtoupper($tipe_izin) . " PIN {$pin} ({$nama_emp}) periode {$tgl_mulai} s.d {$tgl_selesai}");
+                        $pesan_sukses = "Data <b>" . strtoupper($tipe_izin) . "</b> untuk <b>" . h($nama_emp) . "</b> (PIN: " . h($pin) . ") periode <b>" . $dur_txt . "</b> berhasil disimpan dan <b>langsung disetujui</b> oleh <b>" . h($approved_by) . "</b>.";
+                        log_audit("INPUT_PERIZINAN", "Simpan & Setujui " . strtoupper($tipe_izin) . " PIN {$pin} ({$nama_emp}) periode {$tgl_mulai} s.d {$tgl_selesai} oleh {$approved_by}");
                     } else {
                         $pesan_error = "Gagal menyimpan perizinan: " . $conn->error;
                     }
@@ -383,6 +384,12 @@ render_header("Kelola Cuti, Izin & Sakit", "kelola_izin");
         <form method="POST" action="kelola_izin.php" id="form-izin" style="padding:20px;">
             <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="simpan_izin">
+
+            <!-- INFO PERSETUJUAN OTOMATIS -->
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:10px; font-size:12px; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:14px; flex-shrink:0;">✅</span>
+                <span style="line-height:1.4;"><b>Persetujuan Langsung:</b> Data perizinan yang dimasukkan via panel ini akan langsung berstatus <b>DISETUJUI</b> oleh <b><?php echo h(($_SESSION['username'] ?? 'Admin') . ' (' . strtoupper($_SESSION['role'] ?? 'ADMIN') . ')'); ?></b>.</span>
+            </div>
 
             <!-- SEARCHABLE AUTOCOMPLETE DROPDOWN KARYAWAN -->
             <div style="margin-bottom:14px;">

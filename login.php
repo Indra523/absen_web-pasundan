@@ -32,15 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 session_regenerate_id(true);
                 $_SESSION['user_id']  = $user['id'];
                 $_SESSION['username'] = $user['username'];
-                $_SESSION['role']     = $user['role'] ?? 'admin';
+                $_SESSION['role']     = !empty($user['role']) ? $user['role'] : 'user';
                 $_SESSION['pin']      = $user['pin'] ?? null;
 
-                // Audit Log Login
-                $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-                $stmt_log = $conn->prepare("INSERT INTO audit_logs (user_id, username, role, action, details, ip_address) VALUES (?, ?, ?, 'LOGIN', ?, ?)");
-                $log_det = "Login berhasil ke sistem";
-                $stmt_log->bind_param("issss", $user['id'], $user['username'], $user['role'], $log_det, $ip);
-                $stmt_log->execute();
+                // Audit Log Login (termasuk pencatatan User Agent / Browser)
+                log_audit('LOGIN', 'Login berhasil ke sistem');
 
                 header("Location: index.php");
                 exit;

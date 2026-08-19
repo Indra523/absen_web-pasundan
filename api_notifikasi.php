@@ -20,22 +20,60 @@ if (!can_access_page('notifikasi')) {
     exit;
 }
 
-$conn = getDB();
-$role = $_SESSION['role'] ?? 'admin';
+$conn    = getDB();
+$role    = $_SESSION['role'] ?? 'user';
 $user_id = (int)$_SESSION['user_id'];
+$can_manage_izin = can_access_page('kelola_izin');
+
+// Konstruksi WHERE clause sesuai hak akses & role:
+// 1. Role Pengelola (can_access_page('kelola_izin') = true):
+//    - Menerima notifikasi pengajuan perizinan baru dari user (target_role IN ('kelola_izin','admin','all') atau type = 'perizinan')
+//    - Menerima notifikasi personal milik dirinya sendiri (user_id = $user_id)
+//    - Khusus Tata Usaha: Hanya menerima notifikasi pengajuan dari Karyawan (bukan Guru)
+// 2. Role User Biasa (can_access_page('kelola_izin') = false):
+//    - HANYA menerima notifikasi personal milik dirinya sendiri (user_id = $user_id AND (target_role = 'user' OR type = 'status_change'))
+//    - Tidak akan melihat notifikasi pengajuan perizinan user lain
+
+$where_clause = "WHERE 1=1";
+$params = [];
+$types  = "";
+
+if ($can_manage_izin) {
+    if ($role === 'tatausaha') {
+        $where_clause .= " AND (
+            (notifications.user_id = ? AND (notifications.target_role = 'user' OR notifications.type = 'status_change')) 
+            OR 
+            ((notifications.type = 'perizinan' OR notifications.target_role IN ('admin', 'kelola_izin', 'all')) 
+             AND (notifications.user_id IS NULL OR NOT EXISTS (SELECT 1 FROM users u JOIN master_karyawan mk ON u.pin = mk.pin WHERE u.id = notifications.user_id AND mk.tipe = 'guru')))
+        )";
+        $params = [$user_id];
+        $types  = "i";
+    } else {
+        $where_clause .= " AND (
+            (notifications.user_id = ? AND (notifications.target_role = 'user' OR notifications.type = 'status_change')) 
+            OR 
+            (notifications.type = 'perizinan' OR notifications.target_role IN ('admin', 'kelola_izin', 'all'))
+        )";
+        $params = [$user_id];
+        $types  = "i";
+    }
+} else {
+    $where_clause .= " AND notifications.user_id = ? AND (notifications.target_role = 'user' OR notifications.type = 'status_change')";
+    $params = [$user_id];
+    $types  = "i";
+}
 
 // PROSES POST: MARK AS READ
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'mark_all_read') {
-        if ($role === 'superadmin') {
-            $conn->query("UPDATE notifications SET is_read = 1 WHERE is_read = 0");
-        } else {
-            $stmt = $conn->prepare("UPDATE notifications SET is_read = 1 WHERE is_read = 0 AND (target_role = ? OR target_role = 'all' OR user_id = ?)");
-            $stmt->bind_param("si", $role, $user_id);
-            $stmt->execute();
+        $sql_mark = "UPDATE notifications SET is_read = 1 {$where_clause} AND is_read = 0";
+        $stmt_m = $conn->prepare($sql_mark);
+        if (!empty($params)) {
+            $stmt_m->bind_param($types, ...$params);
         }
+        $stmt_m->execute();
         echo json_encode(['status' => 'success', 'message' => 'Semua notifikasi ditandai dibaca']);
         exit;
     }
@@ -50,22 +88,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     }
-}
-
-// PROSES GET: FETCH UNREAD COUNT & LIST
-$where_clause = "WHERE 1=1";
-$params = [];
-$types = "";
-
-if ($role !== 'superadmin') {
-    $where_clause .= " AND (notifications.target_role = ? OR notifications.target_role = 'all' OR notifications.user_id = ?)";
-    $params = [$role, $user_id];
-    $types = "si";
-}
-
-// KHUSUS ROLE TATAUSAHA: Hanya terima notifikasi pengajuan dari Karyawan (bukan Guru)
-if ($role === 'tatausaha') {
-    $where_clause .= " AND (notifications.user_id IS NULL OR NOT EXISTS (SELECT 1 FROM users u JOIN master_karyawan mk ON u.pin = mk.pin WHERE u.id = notifications.user_id AND mk.tipe = 'guru'))";
 }
 
 // Hitung Unread

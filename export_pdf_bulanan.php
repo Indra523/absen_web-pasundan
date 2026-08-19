@@ -222,24 +222,27 @@ log_audit("EXPORT_PDF_BULANAN", "Export PDF Laporan Bulanan {$str_bulan} {$tahun
         </tbody>
     </table>
 
-    <!-- KETERANGAN KODE & BLOK TANDA TANGAN -->
+    <!-- KETERANGAN KODE -->
     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div style="font-size:9.5pt; line-height:1.6; font-family:'Arial', sans-serif;">
             <b>Keterangan Kode:</b><br>
             • <b>H</b> = Hadir &nbsp;&nbsp; • <b>C</b> = Cuti &nbsp;&nbsp; • <b>I</b> = Izin &nbsp;&nbsp; • <b>S</b> = Sakit &nbsp;&nbsp; • <b>L</b> = Libur &nbsp;&nbsp; • <b>A</b> = Alpa / Belum Absen
         </div>
-
-        <div class="ttd-box">
-            <div class="ttd-col">
-                <p style="margin:0; line-height:1.4;">Mengetahui,<br><b>Kepala SMK Pasundan 2 Bandung</b></p>
-                <div style="height:50px;"></div>
-                <p style="margin:0; line-height:1.4;"><b><u>Umar Khatob, S.Pd, M.Si.</u></b><br>NIP. -</p>
-            </div>
-            <div class="ttd-col" style="margin-left:50px;">
-                <p style="margin:0; line-height:1.4;">Bandung, <?php echo date('d') . ' ' . $str_bulan . ' ' . $tahun; ?><br><b>Teknisi Jaringan</b></p>
-                <div style="height:50px;"></div>
-                <p style="margin:0; line-height:1.4;"><b><u>Indra Setia Budi</u></b><br>Administrator System</p>
-            </div>
+    </div>
+    <br>
+    <br>
+    <br>
+    <!-- BLOK TANDA TANGAN -->
+    <div class="ttd-box">
+        <div class="ttd-col">
+            <p style="margin:0; line-height:1.4;">Mengetahui,<br><b>Kepala SMK Pasundan 2 Bandung</b></p>
+            <div style="height:50px;"></div>
+            <p style="margin:0; line-height:1.4;"><b><u>Umar Khatob, S.Pd, M.Si.</u></b><br>NIP. -</p>
+        </div>
+        <div class="ttd-col" style="margin-left:50px;">
+            <p style="margin:0; line-height:1.4;">Bandung, <?php echo date('d') . ' ' . $str_bulan . ' ' . $tahun; ?><br><b>Administrator System</b></p>
+            <div style="height:50px;"></div>
+            <p style="margin:0; line-height:1.4;"><b><u>Indra Setia Budi</u></b><br></p>
         </div>
     </div>
 </div>
