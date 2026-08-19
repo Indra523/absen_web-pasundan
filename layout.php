@@ -662,6 +662,15 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             <?php if (is_user_role()): ?>
             <div class="menu-label">Portal Mandiri</div>
 
+            <?php if (can_access_page('absen_mandiri') || can_access_page('user_profile')): ?>
+            <a href="absen_mandiri.php" class="nav-item <?php echo $active_menu === 'absen_mandiri' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </span>
+                <span>Absen Mandiri</span>
+            </a>
+            <?php endif; ?>
+
             <?php if (can_access_page('user_profile')): ?>
             <a href="user_profile.php" class="nav-item <?php echo $active_menu === 'user_profile' ? 'active' : ''; ?>" onclick="closeSidebar()">
                 <span class="icon-svg">
@@ -698,8 +707,17 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
 
             <?php else: ?>
 
-            <?php if (!is_superadmin() && (can_access_page('user_profile') || can_access_page('user_izin') || can_access_page('user_riwayat'))): ?>
+            <?php if (!is_superadmin() && (can_access_page('absen_mandiri') || can_access_page('user_profile') || can_access_page('user_izin') || can_access_page('user_riwayat'))): ?>
             <div class="menu-label">Portal Mandiri Saya</div>
+
+            <?php if (can_access_page('absen_mandiri') || can_access_page('user_profile')): ?>
+            <a href="absen_mandiri.php" class="nav-item <?php echo $active_menu === 'absen_mandiri' ? 'active' : ''; ?>" onclick="closeSidebar()">
+                <span class="icon-svg">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </span>
+                <span>Absen Mandiri</span>
+            </a>
+            <?php endif; ?>
 
             <?php if (can_access_page('user_profile')): ?>
             <a href="user_profile.php" class="nav-item <?php echo $active_menu === 'user_profile' ? 'active' : ''; ?>" onclick="closeSidebar()">

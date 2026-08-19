@@ -28,6 +28,7 @@ $pages_config = [
     // --- PENGATURAN ---
     'jadwal_guru'    => ['label' => 'Kelola Jadwal Guru', 'cat' => 'Pengaturan', 'desc' => 'Atur hari mengajar per guru untuk kalkulasi kehadiran', 'roles' => ['admin','rnd','tatausaha','staff']],
     // --- PORTAL USER ---
+    'absen_mandiri'  => ['label' => 'Portal: Absen Mandiri', 'cat' => 'Portal Mandiri (User)', 'desc' => 'Absen selfie mandiri via kamera HP/Web, GPS & Wi-Fi', 'roles' => ['admin','rnd','tatausaha','staff','user']],
     'user_profile'   => ['label' => 'Portal: Profil & Data Diri', 'cat' => 'Portal Mandiri (User)', 'desc' => 'Edit foto profil, no HP, TTL, dan alamat mandiri', 'roles' => ['admin','rnd','tatausaha','staff','user']],
     'user_izin'      => ['label' => 'Portal: Pengajuan Cuti/Izin/Sakit', 'cat' => 'Portal Mandiri (User)', 'desc' => 'Submit pengajuan cuti, izin, dan sakit secara mandiri', 'roles' => ['admin','rnd','tatausaha','staff','user']],
     'user_riwayat'   => ['label' => 'Portal: Riwayat Presensi Saya', 'cat' => 'Portal Mandiri (User)', 'desc' => 'Lihat riwayat absen dan ringkasan kehadiran pribadi', 'roles' => ['admin','rnd','tatausaha','staff','user']],
