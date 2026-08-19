@@ -332,6 +332,168 @@ render_header("Profil & Data Diri", "user_profile");
     box-shadow: 0 0 8px #f97316;
 }
 
+/* MODAL ANIMASI FOTO DITOLAK */
+.reject-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10050;
+    padding: 16px;
+    animation: fadeInOverlay 0.25s ease-out;
+}
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.reject-modal-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 24px;
+    padding: 28px 22px 22px 22px;
+    text-align: center;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.45);
+    border: 1.5px solid rgba(239, 68, 68, 0.3);
+    position: relative;
+    animation: shakePopup 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes shakePopup {
+    0% { transform: scale(0.85) translateY(20px); opacity: 0; }
+    40% { transform: scale(1.02) translateX(-6px); opacity: 1; }
+    60% { transform: scale(0.99) translateX(5px); }
+    80% { transform: scale(1.01) translateX(-3px); }
+    100% { transform: scale(1) translateX(0); opacity: 1; }
+}
+
+.reject-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 14px auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reject-icon-circle {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: #fee2e2;
+    border: 3px solid #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.35);
+    animation: pulseRedRing 1.8s infinite;
+}
+
+@keyframes pulseRedRing {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+    70% { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.reject-svg-cross {
+    width: 38px;
+    height: 38px;
+}
+
+.reject-svg-cross path {
+    stroke: #dc2626;
+    stroke-width: 4.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: drawCrossLine 0.4s 0.15s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.reject-svg-cross path:nth-child(2) {
+    animation-delay: 0.3s;
+}
+
+@keyframes drawCrossLine {
+    100% { stroke-dashoffset: 0; }
+}
+
+.reject-modal-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #991b1b;
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
+}
+
+.reject-modal-reason {
+    font-size: 13px;
+    font-weight: 600;
+    color: #7f1d1d;
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    padding: 9px 12px;
+    border-radius: 12px;
+    margin: 10px 0 16px 0;
+    line-height: 1.45;
+}
+
+.reject-tips-list {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px 14px;
+    text-align: left;
+    margin-bottom: 18px;
+}
+
+.reject-tip-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11.5px;
+    color: #334155;
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+.reject-tip-item:last-child { margin-bottom: 0; }
+.reject-tip-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.btn-reject-retry {
+    width: 100%;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 13.5px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+.btn-reject-retry:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(239, 68, 68, 0.45);
+}
+.btn-reject-retry:active {
+    transform: scale(0.98);
+}
+
 /* HERO BANNER CARD */
 .hero-card {
     position: relative;
@@ -1217,6 +1379,46 @@ render_header("Profil & Data Diri", "user_profile");
             </div>
         </div>
 
+        <!-- MODAL ANIMASI FOTO DITOLAK (REJECTION POPUP DENGAN TANDA SILANG X ANIMASI) -->
+        <div class="reject-modal-overlay" id="rejectModalOverlay" onclick="closeRejectModal(event)">
+            <div class="reject-modal-card" onclick="event.stopPropagation()">
+                <!-- ANIMATED X ICON -->
+                <div class="reject-icon-wrapper">
+                    <div class="reject-icon-circle">
+                        <svg class="reject-svg-cross" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18"></path>
+                            <path d="M6 6l12 12"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="reject-modal-title">Foto Selfie Ditolak!</div>
+                <div class="reject-modal-reason" id="rejectModalReason">
+                    Wajah tidak terdeteksi di dalam frame kamera.
+                </div>
+
+                <div class="reject-tips-list">
+                    <div class="reject-tip-item">
+                        <span class="reject-tip-icon">🎯</span>
+                        <span><strong>Posisikan Wajah:</strong> Arahkan seluruh wajah tepat di dalam bingkai oval hingga berwarna hijau.</span>
+                    </div>
+                    <div class="reject-tip-item">
+                        <span class="reject-tip-icon">💡</span>
+                        <span><strong>Pencahayaan:</strong> Pastikan ruangan cukup terang dan wajah tidak tertutup masker/benda.</span>
+                    </div>
+                    <div class="reject-tip-item">
+                        <span class="reject-tip-icon">👤</span>
+                        <span><strong>Foto Mandiri:</strong> Hanya boleh 1 orang dalam foto (dilarang foto bersama).</span>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-reject-retry" onclick="closeRejectModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2.5 2v6h6"/><path d="M2.5 13a9 9 0 1 0 3-7.7L2.5 8"/></svg>
+                    <span>Coba Ambil Foto Ulang</span>
+                </button>
+            </div>
+        </div>
+
         <script>
         const SCHOOL_LAT = <?php echo $school_lat; ?>;
         const SCHOOL_LNG = <?php echo $school_lng; ?>;
@@ -1599,6 +1801,35 @@ render_header("Profil & Data Diri", "user_profile");
             }
         }
 
+        function showRejectModal(reason) {
+            const overlay = document.getElementById('rejectModalOverlay');
+            const reasonEl = document.getElementById('rejectModalReason');
+            if (reasonEl) {
+                reasonEl.textContent = reason || 'Wajah tidak terdeteksi di dalam frame kamera.';
+            }
+            if (overlay) {
+                overlay.style.display = 'flex';
+                // Trigger animation reset
+                const paths = overlay.querySelectorAll('.reject-svg-cross path');
+                paths.forEach(p => {
+                    p.style.animation = 'none';
+                    p.offsetHeight; // force reflow
+                    p.style.animation = '';
+                });
+            }
+        }
+
+        function closeRejectModal(e) {
+            if (e && e.target && e.target.closest && e.target.closest('.reject-modal-card') && e.target.tagName !== 'BUTTON') {
+                return;
+            }
+            const overlay = document.getElementById('rejectModalOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+            retakeSelfiePhoto();
+        }
+
         async function handleNativeCameraFile(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
@@ -1630,7 +1861,7 @@ render_header("Profil & Data Diri", "user_profile");
                         await loadFaceModel();
                         const isFaceValid = await verifyFaceOnCanvas(canvas);
                         if (!isFaceValid) {
-                            alert('Foto Ditolak: Wajah tidak terdeteksi dalam gambar yang dipilih. Harap ambil foto selfie wajah asli.');
+                            showRejectModal('Wajah tidak terdeteksi dalam foto yang dipilih. Harap pilih/ambil foto selfie wajah asli Anda.');
                             input.value = '';
                             return;
                         }
@@ -1675,7 +1906,7 @@ render_header("Profil & Data Diri", "user_profile");
 
         async function takeSelfieSnap() {
             if (!lastFaceValid) {
-                alert('Gagal mengambil foto: Wajah belum terdeteksi sempurna di dalam lingkaran oval.');
+                showRejectModal('Wajah belum terdeteksi sempurna di dalam lingkaran oval. Arahkan wajah ke tengah hingga garis oval berwarna hijau.');
                 return;
             }
 
@@ -1698,7 +1929,7 @@ render_header("Profil & Data Diri", "user_profile");
             // Re-verify snapshot
             const isValidSnapshot = await verifyFaceOnCanvas(canvas);
             if (!isValidSnapshot) {
-                alert('Foto Ditolak: Wajah tidak terdeteksi dalam jepretan foto. Silakan posisikan wajah Anda kembali di depan kamera.');
+                showRejectModal('Wajah tidak terdeteksi dalam jepretan foto. Silakan posisikan wajah Anda kembali di depan kamera.');
                 return;
             }
 
