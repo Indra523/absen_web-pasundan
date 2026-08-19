@@ -568,21 +568,9 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
             .card-title { font-size: 14px; }
             .card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
             
-            /* POPUP NOTIFIKASI TEPAT DI BAWAH ICON PADA MOBILE */
-            .page-header .notif-dropdown-menu {
-                position: absolute !important;
-                top: calc(100% + 10px) !important;
-                left: 0 !important;
-                right: auto !important;
-                width: 330px !important;
-                max-width: calc(100vw - 28px) !important;
-                border-radius: 16px !important;
-                box-shadow: 0 14px 35px rgba(15, 23, 42, 0.22) !important;
-                z-index: 10005 !important;
-            }
-            .page-header .notif-dropdown-menu::before {
-                left: 14px !important;
-                right: auto !important;
+            /* SEMBUNYIKAN ICON NOTIFIKASI DI PAGE HEADER PADA MOBILE (HANYA PAKAI YANG DI TOPBAR ATAS) */
+            .page-header .notif-dropdown-container {
+                display: none !important;
             }
 
             .topbar-mobile .notif-dropdown-menu {
@@ -590,10 +578,10 @@ function render_header($page_title = "Monitoring Absensi", $active_menu = "index
                 top: calc(100% + 10px) !important;
                 right: 0 !important;
                 left: auto !important;
-                width: 320px !important;
+                width: 330px !important;
                 max-width: calc(100vw - 24px) !important;
                 border-radius: 16px !important;
-                box-shadow: 0 14px 35px rgba(15, 23, 42, 0.22) !important;
+                box-shadow: 0 14px 35px rgba(15, 23, 42, 0.25) !important;
                 z-index: 10005 !important;
             }
             .topbar-mobile .notif-dropdown-menu::before {
