@@ -140,4 +140,12 @@ function invalidate_perm_cache() {
         unset($_SESSION['perm_cache_time_' . $r]);
     }
 }
+
+// Cek apakah user berhak mengakses fitur Buka Rute Google Maps ke rumah pegawai
+function can_access_route_maps() {
+    $role = $_SESSION['role'] ?? '';
+    if ($role === 'superadmin' || $role === 'admin') return true;
+    if ($role === 'user') return false; // Role user secara tegas tidak bisa buka rute
+    return can_access_page('akses_rute_maps');
+}
 ?>

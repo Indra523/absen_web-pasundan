@@ -25,6 +25,7 @@ $pages_config = [
     'rnd_analytics'  => ['label' => 'RnD Analytics', 'cat' => 'Fitur Riset & Audit', 'desc' => 'Analitik mendalam, tren, dan statistik kehadiran', 'roles' => ['admin','rnd','tatausaha','staff']],
     'audit_log'      => ['label' => 'Audit Log System', 'cat' => 'Fitur Riset & Audit', 'desc' => 'Rekaman semua aktivitas dan perubahan sistem', 'roles' => ['admin','rnd','tatausaha','staff']],
     'export_pdf'     => ['label' => 'Export PDF Official', 'cat' => 'Fitur Riset & Audit', 'desc' => 'Cetak laporan resmi berkop surat sekolah (PDF)', 'roles' => ['admin','rnd','tatausaha','staff']],
+    'akses_rute_maps'=> ['label' => 'Akses Rute Google Maps Rumah', 'cat' => 'Fitur Riset & Audit', 'desc' => 'Buka rute navigasi Google Maps ke rumah guru/karyawan saat sakit/kunjungan', 'roles' => ['admin','rnd','tatausaha','staff']],
     // --- PENGATURAN ---
     'jadwal_guru'    => ['label' => 'Kelola Jadwal Guru', 'cat' => 'Pengaturan', 'desc' => 'Atur hari mengajar per guru untuk kalkulasi kehadiran', 'roles' => ['admin','rnd','tatausaha','staff']],
     // --- PORTAL USER ---

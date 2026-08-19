@@ -979,10 +979,12 @@ render_header("Profil & Data Diri", "user_profile");
                                 </div>
                             <?php endif; ?>
                             <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                                <?php if (can_access_route_maps()): ?>
                                 <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo $detail['latitude_rumah'] . ',' . $detail['longitude_rumah']; ?>" target="_blank" class="btn-gmaps-route" title="Buka Petunjuk Arah Langsung di Google Maps">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                                     <span>Buka Rute di Google Maps</span>
                                 </a>
+                                <?php endif; ?>
                                 <a href="https://www.google.com/maps?q=<?php echo $detail['latitude_rumah'] . ',' . $detail['longitude_rumah']; ?>" target="_blank" class="btn-gmaps-view" title="Lihat Titik Peta Google Maps">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                                     <span>Lihat Peta</span>

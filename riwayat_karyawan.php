@@ -1046,12 +1046,12 @@ render_header("Riwayat Absensi Individual", "riwayat");
 
             <!-- ACTION BUTTONS IN HERO: DIRECT GMAPS NAVIGATION & WA -->
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <?php if ($has_home_coords): ?>
+                <?php if ($has_home_coords && can_access_route_maps()): ?>
                     <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo $detail_user['latitude_rumah'] . ',' . $detail_user['longitude_rumah']; ?>" target="_blank" class="btn-hero-route" title="Buka Rute Navigasi Google Maps untuk Menjenguk Pegawai">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                         <span>Rute ke Rumah (Google Maps)</span>
                     </a>
-                <?php else: ?>
+                <?php elseif (!$has_home_coords && can_access_route_maps()): ?>
                     <a href="user_profile.php?pin=<?php echo urlencode($pin_selected); ?>" target="_blank" class="btn-hero-wa" style="border-color:#fde68a; color:#fef08a;" title="Titik koordinat rumah belum diset">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                         <span>Set Titik Rumah</span>
@@ -1130,10 +1130,12 @@ render_header("Riwayat Absensi Individual", "riwayat");
                                 </div>
                             <?php endif; ?>
                             <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                                <?php if (can_access_route_maps()): ?>
                                 <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo $detail_profil['latitude_rumah'] . ',' . $detail_profil['longitude_rumah']; ?>" target="_blank" style="background:linear-gradient(135deg, #059669, #047857); color:#fff; font-size:12px; font-weight:800; text-decoration:none; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(5,150,105,0.25);">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                                     <span>Buka Rute di Google Maps</span>
                                 </a>
+                                <?php endif; ?>
                                 <a href="https://www.google.com/maps?q=<?php echo $detail_profil['latitude_rumah'] . ',' . $detail_profil['longitude_rumah']; ?>" target="_blank" style="background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-size:12px; font-weight:700; text-decoration:none; padding:8px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:5px;">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                                     <span>Lihat Peta</span>
