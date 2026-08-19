@@ -243,9 +243,8 @@ $next_absen_status  = ($absen_today['masuk'] === null) ? 'Masuk' : 'Pulang';
 render_header("Profil & Data Diri", "user_profile");
 ?>
 
-<!-- TENSORFLOW.JS & BLAZEFACE AI FACE DETECTION LIBRARY -->
-<script src="assets/js/tf.min.js"></script>
-<script src="assets/js/blazeface.min.js"></script>
+<!-- PICO.JS OFFLINE EMBEDDED AI FACE DETECTION ENGINE -->
+<script src="assets/js/pico_face.js"></script>
 
 <style>
 /* ===== REFINED USER PROFILE & MOBILE SELFIE ATTENDANCE ===== */
@@ -1394,36 +1393,6 @@ render_header("Profil & Data Diri", "user_profile");
                     </div>
                 </div>
 
-                <!-- KARTU IDENTITAS BIOMETRIK MASTER -->
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:12px 16px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <?php if (!empty($detail['foto']) && file_exists(__DIR__ . '/' . $detail['foto'])): ?>
-                            <img src="<?php echo h($detail['foto']); ?>?v=<?php echo time(); ?>" style="width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-                        <?php else: ?>
-                            <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;">
-                                <?php echo strtoupper(mb_substr($detail['nama'], 0, 1)); ?>
-                            </div>
-                        <?php endif; ?>
-                        <div>
-                            <div style="font-size:13px; font-weight:800; color:#0f172a;"><?php echo h($detail['nama']); ?></div>
-                            <div style="font-size:11px; color:#64748b;">PIN: <code><?php echo h($pin); ?></code> &nbsp;|&nbsp; <?php echo h($detail['departemen'] ?: 'Umum'); ?></div>
-                        </div>
-                    </div>
-                    <div>
-                        <?php if (!empty($detail['foto']) && file_exists(__DIR__ . '/' . $detail['foto'])): ?>
-                            <span style="font-size:11px; font-weight:700; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:4px 10px; border-radius:99px; display:inline-flex; align-items:center; gap:5px;">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                                Foto Profil Terdaftar
-                            </span>
-                        <?php else: ?>
-                            <span style="font-size:11px; font-weight:700; background:#fffbeb; color:#92400e; border:1px solid #fde68a; padding:4px 10px; border-radius:99px; display:inline-flex; align-items:center; gap:5px;">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                Belum Ada Foto Master
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
                 <!-- FORM ABSEN SELFIE -->
                 <form method="POST" action="user_profile.php" id="form-selfie-absen">
                     <?php echo csrf_field(); ?>
@@ -1540,10 +1509,9 @@ render_header("Profil & Data Diri", "user_profile");
         const NEXT_STATUS = "<?php echo strtoupper($next_absen_status); ?>";
 
         let videoStream = null;
-        let blazefaceModel = null;
-        let isFaceModelLoading = false;
         let isFaceDetectionRunning = false;
         let lastFaceValid = false;
+        let consecutiveValidFaceFrames = 0;
         let faceDetectorInstance = null;
 
         if (navigator.mediaDevices === undefined) {
@@ -1561,30 +1529,62 @@ render_header("Profil & Data Diri", "user_profile");
             }
         }
 
-        async function loadFaceModel() {
-            if (blazefaceModel) return blazefaceModel;
-            if (isFaceModelLoading) return null;
-            isFaceModelLoading = true;
-
-            // Inisialisasi Native Shape Detection API jika tersedia di browser
+        function initFaceDetectors() {
             if ('FaceDetector' in window) {
                 try {
-                    faceDetectorInstance = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 2 });
+                    faceDetectorInstance = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 3 });
                 } catch (e) {
                     console.warn('Native FaceDetector error:', e);
                 }
             }
+        }
 
-            // Inisialisasi BlazeFace AI Model
-            try {
-                if (typeof blazeface !== 'undefined') {
-                    blazefaceModel = await blazeface.load();
+        async function detectFacesOnSource(source) {
+            let faces = [];
+
+            // 1. Primary: Pico.js Instant Embedded Offline Cascade
+            if (window.PicoFaceDetector && window.PicoFaceDetector.isReady()) {
+                try {
+                    const detected = window.PicoFaceDetector.detect(source, {
+                        shiftfactor: 0.1,
+                        minsize: 60,
+                        maxsize: 700,
+                        scalefactor: 1.1,
+                        minScore: 18.0 // Strict confidence threshold
+                    });
+                    if (detected && detected.length > 0) {
+                        faces = detected.map(f => ({
+                            topLeft: [f.box.x, f.box.y],
+                            bottomRight: [f.box.x + f.box.width, f.box.y + f.box.height],
+                            width: f.box.width,
+                            height: f.box.height,
+                            score: f.score
+                        }));
+                    }
+                } catch (e) {
+                    console.warn('Pico detection error:', e);
                 }
-            } catch (err) {
-                console.warn('BlazeFace load error:', err);
             }
-            isFaceModelLoading = false;
-            return blazefaceModel;
+
+            // 2. Secondary: Native Chrome/Android Shape Detection API (if supported)
+            if (faces.length === 0 && faceDetectorInstance) {
+                try {
+                    const detected = await faceDetectorInstance.detect(source);
+                    if (detected && detected.length > 0) {
+                        faces = detected.map(f => ({
+                            topLeft: [f.boundingBox.x, f.boundingBox.y],
+                            bottomRight: [f.boundingBox.x + f.boundingBox.width, f.boundingBox.y + f.boundingBox.height],
+                            width: f.boundingBox.width,
+                            height: f.boundingBox.height,
+                            score: 99.0
+                        }));
+                    }
+                } catch (e) {
+                    // Ignore frame detect errors
+                }
+            }
+
+            return faces;
         }
 
         async function runFaceDetectionLoop() {
@@ -1605,24 +1605,10 @@ render_header("Profil & Data Diri", "user_profile");
             const aiTitle = document.getElementById('ai-title-txt');
             const aiSub = document.getElementById('ai-sub-txt');
 
-            let faces = [];
-
-            try {
-                if (faceDetectorInstance) {
-                    const detected = await faceDetectorInstance.detect(video);
-                    faces = detected.map(f => ({
-                        topLeft: [f.boundingBox.x, f.boundingBox.y],
-                        bottomRight: [f.boundingBox.x + f.boundingBox.width, f.boundingBox.y + f.boundingBox.height],
-                        probability: 0.99
-                    }));
-                } else if (blazefaceModel) {
-                    faces = await blazefaceModel.estimateFaces(video, false);
-                }
-            } catch (e) {
-                // Ignore loop frame errors
-            }
+            const faces = await detectFacesOnSource(video);
 
             if (faces.length === 0) {
+                consecutiveValidFaceFrames = 0;
                 lastFaceValid = false;
                 if (oval) oval.className = 'face-guide-oval invalid';
                 if (dot) dot.className = 'face-status-dot invalid';
@@ -1642,10 +1628,11 @@ render_header("Profil & Data Diri", "user_profile");
                     aiSub.textContent = 'Arahkan kamera ke wajah Anda';
                 }
             } else if (faces.length > 1) {
+                consecutiveValidFaceFrames = 0;
                 lastFaceValid = false;
                 if (oval) oval.className = 'face-guide-oval invalid';
                 if (dot) dot.className = 'face-status-dot invalid';
-                if (txt) txt.textContent = 'Terdeteksi lebih dari 1 orang! (Absen sendiri)';
+                if (txt) txt.textContent = 'Terdeteksi lebih dari 1 orang! (Absen mandiri)';
                 if (btnSnap) {
                     btnSnap.style.opacity = '0.4';
                     btnSnap.style.pointerEvents = 'none';
@@ -1663,10 +1650,11 @@ render_header("Profil & Data Diri", "user_profile");
             } else {
                 const face = faces[0];
                 const vW = video.videoWidth || 640;
-                const fW = face.bottomRight[0] - face.topLeft[0];
+                const fW = face.width || (face.bottomRight[0] - face.topLeft[0]);
                 const fRatio = fW / vW;
 
                 if (fRatio < 0.18) {
+                    consecutiveValidFaceFrames = 0;
                     lastFaceValid = false;
                     if (oval) oval.className = 'face-guide-oval warning';
                     if (dot) dot.className = 'face-status-dot warning';
@@ -1686,6 +1674,7 @@ render_header("Profil & Data Diri", "user_profile");
                         aiSub.textContent = 'Posisikan di dalam oval panduan';
                     }
                 } else if (fRatio > 0.88) {
+                    consecutiveValidFaceFrames = 0;
                     lastFaceValid = false;
                     if (oval) oval.className = 'face-guide-oval warning';
                     if (dot) dot.className = 'face-status-dot warning';
@@ -1705,47 +1694,39 @@ render_header("Profil & Data Diri", "user_profile");
                         aiSub.textContent = 'Pastikan seluruh wajah terlihat';
                     }
                 } else {
-                    // FULL FACE DETECTED & VALID!
-                    lastFaceValid = true;
-                    if (oval) oval.className = 'face-guide-oval valid';
-                    if (dot) dot.className = 'face-status-dot valid';
-                    if (txt) txt.textContent = 'Wajah Terdeteksi Sempurna! Siap Absen';
-                    if (btnSnap) {
-                        btnSnap.style.opacity = '1';
-                        btnSnap.style.pointerEvents = 'auto';
-                    }
-                    if (aiBox) {
-                        aiBox.style.background = '#f0fdf4';
-                        aiBox.style.borderColor = '#bbf7d0';
-                        aiBox.style.color = '#15803d';
-                        aiBadge.style.background = '#dcfce7';
-                        aiBadge.style.color = '#166534';
-                        aiBadge.textContent = 'VALID';
-                        aiTitle.textContent = 'Wajah Asli Terverifikasi';
-                        aiSub.textContent = 'Full face terdeteksi sempurna';
+                    consecutiveValidFaceFrames++;
+                    if (consecutiveValidFaceFrames >= 2) {
+                        lastFaceValid = true;
+                        if (oval) oval.className = 'face-guide-oval valid';
+                        if (dot) dot.className = 'face-status-dot valid';
+                        if (txt) txt.textContent = 'Wajah Terdeteksi Sempurna! Siap Absen';
+                        if (btnSnap) {
+                            btnSnap.style.opacity = '1';
+                            btnSnap.style.pointerEvents = 'auto';
+                        }
+                        if (aiBox) {
+                            aiBox.style.background = '#f0fdf4';
+                            aiBox.style.borderColor = '#bbf7d0';
+                            aiBox.style.color = '#15803d';
+                            aiBadge.style.background = '#dcfce7';
+                            aiBadge.style.color = '#166534';
+                            aiBadge.textContent = 'VALID';
+                            aiTitle.textContent = 'Wajah Asli Terverifikasi';
+                            aiSub.textContent = 'Full face terdeteksi sempurna';
+                        }
                     }
                 }
             }
 
             if (isFaceDetectionRunning) {
-                setTimeout(() => requestAnimationFrame(runFaceDetectionLoop), 120);
+                setTimeout(() => requestAnimationFrame(runFaceDetectionLoop), 100);
             }
         }
 
         async function verifyFaceOnCanvas(canvas) {
-            if (faceDetectorInstance) {
-                try {
-                    const detected = await faceDetectorInstance.detect(canvas);
-                    return (detected.length === 1);
-                } catch(e) {}
-            }
-            if (blazefaceModel) {
-                try {
-                    const detected = await blazefaceModel.estimateFaces(canvas, false);
-                    return (detected.length === 1);
-                } catch(e) {}
-            }
-            return true;
+            const faces = await detectFacesOnSource(canvas);
+            // STRICT: Exactly 1 face MUST be detected!
+            return (faces && faces.length === 1);
         }
 
         function calcHaversine(lat1, lon1, lat2, lon2) {
@@ -1927,8 +1908,8 @@ render_header("Profil & Data Diri", "user_profile");
                 if (btnOpen) btnOpen.style.display = 'none';
                 btnSnap.style.display = 'inline-flex';
 
-                // Load AI Face Model & Start Real-time Detection
-                await loadFaceModel();
+                // Init AI Face Detector & Start Real-time Detection
+                initFaceDetectors();
                 isFaceDetectionRunning = true;
                 runFaceDetectionLoop();
             } catch (err) {
@@ -2005,7 +1986,7 @@ render_header("Profil & Data Diri", "user_profile");
                         ctx.drawImage(img, 0, 0, w, h);
 
                         // Validasi Wajah pada Foto Upload
-                        await loadFaceModel();
+                        initFaceDetectors();
                         const isFaceValid = await verifyFaceOnCanvas(canvas);
                         hideScanningOverlay();
 
@@ -2125,6 +2106,13 @@ render_header("Profil & Data Diri", "user_profile");
 
             inputImg.value = '';
             preview.style.display = 'none';
+            lastFaceValid = false;
+            consecutiveValidFaceFrames = 0;
+
+            if (btnSnap) {
+                btnSnap.style.opacity = '0.4';
+                btnSnap.style.pointerEvents = 'none';
+            }
 
             if (videoStream === null) {
                 document.getElementById('cameraPlaceholder').style.display = 'block';
