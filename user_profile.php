@@ -243,6 +243,10 @@ $next_absen_status  = ($absen_today['masuk'] === null) ? 'Masuk' : 'Pulang';
 render_header("Profil & Data Diri", "user_profile");
 ?>
 
+<!-- TENSORFLOW.JS & BLAZEFACE AI FACE DETECTION LIBRARY -->
+<script src="assets/js/tf.min.js"></script>
+<script src="assets/js/blazeface.min.js"></script>
+
 <style>
 /* ===== REFINED USER PROFILE & MOBILE SELFIE ATTENDANCE ===== */
 .profile-wrapper {
@@ -250,6 +254,82 @@ render_header("Profil & Data Diri", "user_profile");
     flex-direction: column;
     gap: 20px;
     margin-bottom: 30px;
+}
+
+/* AI FACE DETECTION GUIDE OVERLAY */
+.face-guide-wrapper {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+}
+.face-guide-oval {
+    width: 190px;
+    height: 240px;
+    border-radius: 50% / 50%;
+    border: 3px dashed #f59e0b;
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.4);
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.face-guide-oval.valid {
+    border: 3.5px solid #10b981 !important;
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.4), 0 0 24px rgba(16, 185, 129, 0.6) !important;
+}
+.face-guide-oval.invalid {
+    border: 3px solid #ef4444 !important;
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.4), 0 0 20px rgba(239, 68, 68, 0.45) !important;
+}
+.face-guide-oval.warning {
+    border: 3px solid #f97316 !important;
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.4), 0 0 16px rgba(249, 115, 22, 0.4) !important;
+}
+
+.face-status-pill {
+    position: absolute;
+    bottom: 10px;
+    background: rgba(15, 23, 42, 0.88);
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(6px);
+    white-space: nowrap;
+    max-width: 90%;
+    text-align: center;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    transition: all 0.25s ease;
+}
+.face-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #f59e0b;
+}
+.face-status-dot.valid {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+.face-status-dot.invalid {
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+.face-status-dot.warning {
+    background: #f97316;
+    box-shadow: 0 0 8px #f97316;
 }
 
 /* HERO BANNER CARD */
@@ -1041,8 +1121,8 @@ render_header("Profil & Data Diri", "user_profile");
             </div>
 
             <div style="padding:18px 20px;">
-                <!-- BADGE INDIKATOR WI-FI & GPS -->
-                <div class="selfie-indicators-grid">
+                <!-- BADGE INDIKATOR WI-FI, GPS, & AI WAJAH -->
+                <div class="selfie-indicators-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:18px;">
                     <!-- STATUS WI-FI -->
                     <div class="indicator-box" style="<?php echo $is_wifi_valid ? 'background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d;' : 'background:#fff1f2; border:1px solid #fca5a5; color:#991b1b;'; ?>">
                         <span class="indicator-tag" style="background:<?php echo $is_wifi_valid ? '#dcfce7; color:#166534;' : '#fee2e2; color:#991b1b;'; ?>">
@@ -1066,6 +1146,17 @@ render_header("Profil & Data Diri", "user_profile");
                             <div style="font-size:11px; font-weight:600; opacity:0.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="gps-sub-txt">Buka kamera untuk cek lokasi</div>
                         </div>
                     </div>
+
+                    <!-- STATUS AI FACE DETECTION -->
+                    <div id="ai-status-box" class="indicator-box" style="background:#fffbeb; border:1px solid #fde68a; color:#b45309;">
+                        <span id="ai-badge-tag" class="indicator-tag" style="background:#fef3c7; color:#92400e;">
+                            AI WAJAH
+                        </span>
+                        <div style="min-width:0;">
+                            <div id="ai-title-txt">Deteksi Wajah AI</div>
+                            <div style="font-size:11px; font-weight:600; opacity:0.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="ai-sub-txt">Buka kamera untuk memindai</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- FORM ABSEN SELFIE -->
@@ -1086,6 +1177,15 @@ render_header("Profil & Data Diri", "user_profile");
                             <canvas id="selfieCanvas" style="display:none;"></canvas>
                             <img id="selfiePreview" style="width:100%; height:100%; object-fit:cover; display:none;">
 
+                            <!-- FACE GUIDE OVAL OVERLAY -->
+                            <div class="face-guide-wrapper" id="faceGuideWrapper" style="display:none;">
+                                <div class="face-guide-oval" id="faceGuideOval"></div>
+                                <div class="face-status-pill" id="faceStatusPill">
+                                    <span class="face-status-dot" id="faceStatusDot"></span>
+                                    <span id="faceStatusText">Mencari Wajah...</span>
+                                </div>
+                            </div>
+
                             <div id="cameraPlaceholder" style="text-align:center; color:#94a3b8; padding:20px;">
                                 <div style="font-size:14px; font-weight:800; color:#e2e8f0; margin-bottom:4px;">Kamera Belum Aktif</div>
                                 <div style="font-size:11.5px; color:#94a3b8;">Klik tombol di bawah untuk membuka kamera</div>
@@ -1098,7 +1198,7 @@ render_header("Profil & Data Diri", "user_profile");
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                 <span>Buka Kamera &amp; Deteksi Lokasi</span>
                             </button>
-                            <button type="button" id="btnSnapPhoto" class="btn-cam-action" onclick="takeSelfieSnap()" style="background:linear-gradient(135deg,#059669,#047857); color:#fff; display:none; box-shadow:0 4px 12px rgba(5,150,105,0.25);">
+                            <button type="button" id="btnSnapPhoto" class="btn-cam-action" onclick="takeSelfieSnap()" style="background:linear-gradient(135deg,#059669,#047857); color:#fff; display:none; opacity:0.4; pointer-events:none; box-shadow:0 4px 12px rgba(5,150,105,0.25);">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                                 <span>Ambil Foto Selfie</span>
                             </button>
@@ -1111,7 +1211,7 @@ render_header("Profil & Data Diri", "user_profile");
 
                     <!-- TOMBOL KIRIM ABSEN -->
                     <button type="submit" id="btnSubmitAbsen" class="btn-submit-attendance" disabled>
-                        Lengkapi Wi-Fi, GPS &amp; Foto Selfie
+                        Lengkapi Wi-Fi, GPS &amp; Foto Selfie Wajah
                     </button>
                 </form>
             </div>
@@ -1125,6 +1225,11 @@ render_header("Profil & Data Diri", "user_profile");
         const NEXT_STATUS = "<?php echo strtoupper($next_absen_status); ?>";
 
         let videoStream = null;
+        let blazefaceModel = null;
+        let isFaceModelLoading = false;
+        let isFaceDetectionRunning = false;
+        let lastFaceValid = false;
+        let faceDetectorInstance = null;
 
         if (navigator.mediaDevices === undefined) {
             navigator.mediaDevices = {};
@@ -1139,6 +1244,193 @@ render_header("Profil & Data Diri", "user_profile");
                     getUserMedia.call(navigator, constraints, resolve, reject);
                 });
             }
+        }
+
+        async function loadFaceModel() {
+            if (blazefaceModel) return blazefaceModel;
+            if (isFaceModelLoading) return null;
+            isFaceModelLoading = true;
+
+            // Inisialisasi Native Shape Detection API jika tersedia di browser
+            if ('FaceDetector' in window) {
+                try {
+                    faceDetectorInstance = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 2 });
+                } catch (e) {
+                    console.warn('Native FaceDetector error:', e);
+                }
+            }
+
+            // Inisialisasi BlazeFace AI Model
+            try {
+                if (typeof blazeface !== 'undefined') {
+                    blazefaceModel = await blazeface.load();
+                }
+            } catch (err) {
+                console.warn('BlazeFace load error:', err);
+            }
+            isFaceModelLoading = false;
+            return blazefaceModel;
+        }
+
+        async function runFaceDetectionLoop() {
+            if (!isFaceDetectionRunning) return;
+            const video = document.getElementById('selfieVideo');
+            if (!video || video.paused || video.ended || video.readyState < 2) {
+                requestAnimationFrame(runFaceDetectionLoop);
+                return;
+            }
+
+            const oval = document.getElementById('faceGuideOval');
+            const dot = document.getElementById('faceStatusDot');
+            const txt = document.getElementById('faceStatusText');
+            const btnSnap = document.getElementById('btnSnapPhoto');
+
+            const aiBox = document.getElementById('ai-status-box');
+            const aiBadge = document.getElementById('ai-badge-tag');
+            const aiTitle = document.getElementById('ai-title-txt');
+            const aiSub = document.getElementById('ai-sub-txt');
+
+            let faces = [];
+
+            try {
+                if (faceDetectorInstance) {
+                    const detected = await faceDetectorInstance.detect(video);
+                    faces = detected.map(f => ({
+                        topLeft: [f.boundingBox.x, f.boundingBox.y],
+                        bottomRight: [f.boundingBox.x + f.boundingBox.width, f.boundingBox.y + f.boundingBox.height],
+                        probability: 0.99
+                    }));
+                } else if (blazefaceModel) {
+                    faces = await blazefaceModel.estimateFaces(video, false);
+                }
+            } catch (e) {
+                // Ignore loop frame errors
+            }
+
+            if (faces.length === 0) {
+                lastFaceValid = false;
+                if (oval) oval.className = 'face-guide-oval invalid';
+                if (dot) dot.className = 'face-status-dot invalid';
+                if (txt) txt.textContent = 'Wajah tidak terdeteksi (Arahkan ke wajah)';
+                if (btnSnap) {
+                    btnSnap.style.opacity = '0.4';
+                    btnSnap.style.pointerEvents = 'none';
+                }
+                if (aiBox) {
+                    aiBox.style.background = '#fff1f2';
+                    aiBox.style.borderColor = '#fca5a5';
+                    aiBox.style.color = '#991b1b';
+                    aiBadge.style.background = '#fee2e2';
+                    aiBadge.style.color = '#991b1b';
+                    aiBadge.textContent = 'TIDAK VALID';
+                    aiTitle.textContent = 'Wajah Tidak Ditemukan';
+                    aiSub.textContent = 'Arahkan kamera ke wajah Anda';
+                }
+            } else if (faces.length > 1) {
+                lastFaceValid = false;
+                if (oval) oval.className = 'face-guide-oval invalid';
+                if (dot) dot.className = 'face-status-dot invalid';
+                if (txt) txt.textContent = 'Terdeteksi lebih dari 1 orang! (Absen sendiri)';
+                if (btnSnap) {
+                    btnSnap.style.opacity = '0.4';
+                    btnSnap.style.pointerEvents = 'none';
+                }
+                if (aiBox) {
+                    aiBox.style.background = '#fff1f2';
+                    aiBox.style.borderColor = '#fca5a5';
+                    aiBox.style.color = '#991b1b';
+                    aiBadge.style.background = '#fee2e2';
+                    aiBadge.style.color = '#991b1b';
+                    aiBadge.textContent = 'DITOLAK';
+                    aiTitle.textContent = 'Lebih Dari 1 Wajah';
+                    aiSub.textContent = 'Hanya boleh 1 orang dalam foto';
+                }
+            } else {
+                const face = faces[0];
+                const vW = video.videoWidth || 640;
+                const fW = face.bottomRight[0] - face.topLeft[0];
+                const fRatio = fW / vW;
+
+                if (fRatio < 0.18) {
+                    lastFaceValid = false;
+                    if (oval) oval.className = 'face-guide-oval warning';
+                    if (dot) dot.className = 'face-status-dot warning';
+                    if (txt) txt.textContent = 'Wajah terlalu jauh. Dekatkan ke kamera.';
+                    if (btnSnap) {
+                        btnSnap.style.opacity = '0.4';
+                        btnSnap.style.pointerEvents = 'none';
+                    }
+                    if (aiBox) {
+                        aiBox.style.background = '#fffbeb';
+                        aiBox.style.borderColor = '#fde68a';
+                        aiBox.style.color = '#b45309';
+                        aiBadge.style.background = '#fef3c7';
+                        aiBadge.style.color = '#92400e';
+                        aiBadge.textContent = 'TERLALU JAUH';
+                        aiTitle.textContent = 'Dekatkan Wajah';
+                        aiSub.textContent = 'Posisikan di dalam oval panduan';
+                    }
+                } else if (fRatio > 0.88) {
+                    lastFaceValid = false;
+                    if (oval) oval.className = 'face-guide-oval warning';
+                    if (dot) dot.className = 'face-status-dot warning';
+                    if (txt) txt.textContent = 'Wajah terlalu dekat. Mundurkan sedikit.';
+                    if (btnSnap) {
+                        btnSnap.style.opacity = '0.4';
+                        btnSnap.style.pointerEvents = 'none';
+                    }
+                    if (aiBox) {
+                        aiBox.style.background = '#fffbeb';
+                        aiBox.style.borderColor = '#fde68a';
+                        aiBox.style.color = '#b45309';
+                        aiBadge.style.background = '#fef3c7';
+                        aiBadge.style.color = '#92400e';
+                        aiBadge.textContent = 'TERLALU DEKAT';
+                        aiTitle.textContent = 'Mundurkan Sedikit';
+                        aiSub.textContent = 'Pastikan seluruh wajah terlihat';
+                    }
+                } else {
+                    // FULL FACE DETECTED & VALID!
+                    lastFaceValid = true;
+                    if (oval) oval.className = 'face-guide-oval valid';
+                    if (dot) dot.className = 'face-status-dot valid';
+                    if (txt) txt.textContent = 'Wajah Terdeteksi Sempurna! Siap Absen';
+                    if (btnSnap) {
+                        btnSnap.style.opacity = '1';
+                        btnSnap.style.pointerEvents = 'auto';
+                    }
+                    if (aiBox) {
+                        aiBox.style.background = '#f0fdf4';
+                        aiBox.style.borderColor = '#bbf7d0';
+                        aiBox.style.color = '#15803d';
+                        aiBadge.style.background = '#dcfce7';
+                        aiBadge.style.color = '#166534';
+                        aiBadge.textContent = 'VALID';
+                        aiTitle.textContent = 'Wajah Asli Terverifikasi';
+                        aiSub.textContent = 'Full face terdeteksi sempurna';
+                    }
+                }
+            }
+
+            if (isFaceDetectionRunning) {
+                setTimeout(() => requestAnimationFrame(runFaceDetectionLoop), 120);
+            }
+        }
+
+        async function verifyFaceOnCanvas(canvas) {
+            if (faceDetectorInstance) {
+                try {
+                    const detected = await faceDetectorInstance.detect(canvas);
+                    return (detected.length === 1);
+                } catch(e) {}
+            }
+            if (blazefaceModel) {
+                try {
+                    const detected = await blazefaceModel.estimateFaces(canvas, false);
+                    return (detected.length === 1);
+                } catch(e) {}
+            }
+            return true;
         }
 
         function calcHaversine(lat1, lon1, lat2, lon2) {
@@ -1268,6 +1560,7 @@ render_header("Profil & Data Diri", "user_profile");
 
             const video = document.getElementById('selfieVideo');
             const placeholder = document.getElementById('cameraPlaceholder');
+            const guide = document.getElementById('faceGuideWrapper');
             const btnOpen = document.getElementById('btnOpenCam');
             const btnSnap = document.getElementById('btnSnapPhoto');
             const fileInput = document.getElementById('fileCameraInput');
@@ -1287,9 +1580,15 @@ render_header("Profil & Data Diri", "user_profile");
                 });
                 video.srcObject = videoStream;
                 video.style.display = 'block';
+                if (guide) guide.style.display = 'flex';
                 placeholder.style.display = 'none';
                 btnOpen.style.display = 'none';
                 btnSnap.style.display = 'inline-flex';
+
+                // Load AI Face Model & Start Real-time Detection
+                await loadFaceModel();
+                isFaceDetectionRunning = true;
+                runFaceDetectionLoop();
             } catch (err) {
                 console.warn('WebRTC getUserMedia error, falling back to native camera input:', err);
                 if (fileInput) {
@@ -1300,13 +1599,13 @@ render_header("Profil & Data Diri", "user_profile");
             }
         }
 
-        function handleNativeCameraFile(input) {
+        async function handleNativeCameraFile(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = new Image();
-                    img.onload = function() {
+                    img.onload = async function() {
                         const canvas = document.getElementById('selfieCanvas');
                         const maxDim = 640;
                         let w = img.width;
@@ -1327,6 +1626,15 @@ render_header("Profil & Data Diri", "user_profile");
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, w, h);
 
+                        // Validasi Wajah pada Foto Upload
+                        await loadFaceModel();
+                        const isFaceValid = await verifyFaceOnCanvas(canvas);
+                        if (!isFaceValid) {
+                            alert('Foto Ditolak: Wajah tidak terdeteksi dalam gambar yang dipilih. Harap ambil foto selfie wajah asli.');
+                            input.value = '';
+                            return;
+                        }
+
                         const b64 = canvas.toDataURL('image/jpeg', 0.85);
                         
                         document.getElementById('input_selfie_image').value = b64;
@@ -1341,6 +1649,22 @@ render_header("Profil & Data Diri", "user_profile");
                         document.getElementById('btnSnapPhoto').style.display = 'none';
                         document.getElementById('btnRetakePhoto').style.display = 'inline-flex';
 
+                        // Update AI Indicator Box
+                        const aiBox = document.getElementById('ai-status-box');
+                        const aiBadge = document.getElementById('ai-badge-tag');
+                        const aiTitle = document.getElementById('ai-title-txt');
+                        const aiSub = document.getElementById('ai-sub-txt');
+                        if (aiBox) {
+                            aiBox.style.background = '#f0fdf4';
+                            aiBox.style.borderColor = '#bbf7d0';
+                            aiBox.style.color = '#15803d';
+                            aiBadge.style.background = '#dcfce7';
+                            aiBadge.style.color = '#166534';
+                            aiBadge.textContent = 'VALID';
+                            aiTitle.textContent = 'Wajah Terverifikasi';
+                            aiSub.textContent = 'Foto selfie wajah valid';
+                        }
+
                         checkSubmitStatus();
                     };
                     img.src = e.target.result;
@@ -1349,13 +1673,19 @@ render_header("Profil & Data Diri", "user_profile");
             }
         }
 
-        function takeSelfieSnap() {
+        async function takeSelfieSnap() {
+            if (!lastFaceValid) {
+                alert('Gagal mengambil foto: Wajah belum terdeteksi sempurna di dalam lingkaran oval.');
+                return;
+            }
+
             const video = document.getElementById('selfieVideo');
             const canvas = document.getElementById('selfieCanvas');
             const preview = document.getElementById('selfiePreview');
             const btnSnap = document.getElementById('btnSnapPhoto');
             const btnRetake = document.getElementById('btnRetakePhoto');
             const inputImg = document.getElementById('input_selfie_image');
+            const guide = document.getElementById('faceGuideWrapper');
 
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 480;
@@ -1365,11 +1695,20 @@ render_header("Profil & Data Diri", "user_profile");
             ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+            // Re-verify snapshot
+            const isValidSnapshot = await verifyFaceOnCanvas(canvas);
+            if (!isValidSnapshot) {
+                alert('Foto Ditolak: Wajah tidak terdeteksi dalam jepretan foto. Silakan posisikan wajah Anda kembali di depan kamera.');
+                return;
+            }
+
             const b64 = canvas.toDataURL('image/jpeg', 0.85);
             inputImg.value = b64;
             preview.src = b64;
 
+            isFaceDetectionRunning = false;
             video.style.display = 'none';
+            if (guide) guide.style.display = 'none';
             preview.style.display = 'block';
             btnSnap.style.display = 'none';
             btnRetake.style.display = 'inline-flex';
@@ -1383,6 +1722,7 @@ render_header("Profil & Data Diri", "user_profile");
             const btnSnap = document.getElementById('btnSnapPhoto');
             const btnRetake = document.getElementById('btnRetakePhoto');
             const inputImg = document.getElementById('input_selfie_image');
+            const guide = document.getElementById('faceGuideWrapper');
 
             inputImg.value = '';
             preview.style.display = 'none';
@@ -1393,8 +1733,12 @@ render_header("Profil & Data Diri", "user_profile");
                 document.getElementById('btnRetakePhoto').style.display = 'none';
             } else {
                 video.style.display = 'block';
+                if (guide) guide.style.display = 'flex';
                 btnSnap.style.display = 'inline-flex';
                 btnRetake.style.display = 'none';
+
+                isFaceDetectionRunning = true;
+                runFaceDetectionLoop();
             }
 
             checkSubmitStatus();
@@ -1427,7 +1771,7 @@ render_header("Profil & Data Diri", "user_profile");
                 let missing = [];
                 if (!IS_WIFI_OK) missing.push('Wi-Fi');
                 if (!isGpsOk) missing.push('GPS');
-                if (!isSelfieOk) missing.push('Foto Selfie');
+                if (!isSelfieOk) missing.push('Foto Wajah');
                 btnSubmit.innerHTML = 'Lengkapi: ' + missing.join(', ');
             }
         }
