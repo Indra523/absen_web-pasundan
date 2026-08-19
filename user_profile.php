@@ -332,6 +332,79 @@ render_header("Profil & Data Diri", "user_profile");
     box-shadow: 0 0 8px #f97316;
 }
 
+/* AI SCANNING & PROCESSING OVERLAY */
+.camera-scanning-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.84);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 25;
+    padding: 20px;
+    text-align: center;
+    color: #ffffff;
+    animation: fadeInOverlay 0.2s ease-out;
+}
+.scanning-scanner-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #38bdf8, #60a5fa, transparent);
+    box-shadow: 0 0 15px #38bdf8, 0 0 25px #60a5fa;
+    animation: scanLaser 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes scanLaser {
+    0% { top: 0%; opacity: 0.8; }
+    50% { top: 96%; opacity: 1; }
+    100% { top: 0%; opacity: 0.8; }
+}
+.scanning-loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: 280px;
+}
+.scanning-spinner {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 3.5px solid rgba(56, 189, 248, 0.2);
+    border-top-color: #38bdf8;
+    animation: spinLoader 0.75s linear infinite;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+}
+.btn-spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    animation: spinLoader 0.65s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+}
+@keyframes spinLoader {
+    100% { transform: rotate(360deg); }
+}
+.scanning-text-title {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.2px;
+}
+.scanning-text-sub {
+    font-size: 11.5px;
+    color: #94a3b8;
+    line-height: 1.45;
+}
+
 /* MODAL ANIMASI FOTO DITOLAK */
 .reject-modal-overlay {
     position: fixed;
@@ -1348,6 +1421,16 @@ render_header("Profil & Data Diri", "user_profile");
                                 </div>
                             </div>
 
+                            <!-- AI SCANNING & PROCESSING OVERLAY -->
+                            <div class="camera-scanning-overlay" id="cameraScanningOverlay" style="display:none;">
+                                <div class="scanning-scanner-line"></div>
+                                <div class="scanning-loader-content">
+                                    <div class="scanning-spinner"></div>
+                                    <div class="scanning-text-title" id="scanningTitle">Memindai Wajah AI...</div>
+                                    <div class="scanning-text-sub" id="scanningSub">Mohon tunggu, AI sedang menganalisis foto wajah...</div>
+                                </div>
+                            </div>
+
                             <div id="cameraPlaceholder" style="text-align:center; color:#94a3b8; padding:20px;">
                                 <div style="font-size:14px; font-weight:800; color:#e2e8f0; margin-bottom:4px;">Kamera Belum Aktif</div>
                                 <div style="font-size:11.5px; color:#94a3b8;">Klik tombol di bawah untuk membuka kamera</div>
@@ -1757,17 +1840,44 @@ render_header("Profil & Data Diri", "user_profile");
             );
         }
 
+        function showScanningOverlay(title, sub) {
+            const overlay = document.getElementById('cameraScanningOverlay');
+            const tEl = document.getElementById('scanningTitle');
+            const sEl = document.getElementById('scanningSub');
+            if (tEl && title) tEl.textContent = title;
+            if (sEl && sub) sEl.textContent = sub;
+            if (overlay) overlay.style.display = 'flex';
+        }
+
+        function hideScanningOverlay() {
+            const overlay = document.getElementById('cameraScanningOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
         async function startSelfieCamera() {
+            const btnOpen = document.getElementById('btnOpenCam');
+            if (btnOpen) {
+                btnOpen.disabled = true;
+                btnOpen.style.pointerEvents = 'none';
+                btnOpen.style.opacity = '0.75';
+                btnOpen.innerHTML = '<span class="btn-spinner"></span> <span>Memuat AI &amp; Membuka Kamera...</span>';
+            }
+
             startGPSDetection();
 
             const video = document.getElementById('selfieVideo');
             const placeholder = document.getElementById('cameraPlaceholder');
             const guide = document.getElementById('faceGuideWrapper');
-            const btnOpen = document.getElementById('btnOpenCam');
             const btnSnap = document.getElementById('btnSnapPhoto');
             const fileInput = document.getElementById('fileCameraInput');
 
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                if (btnOpen) {
+                    btnOpen.disabled = false;
+                    btnOpen.style.pointerEvents = 'auto';
+                    btnOpen.style.opacity = '1';
+                    btnOpen.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> <span>Buka Kamera &amp; Deteksi Lokasi</span>';
+                }
                 if (fileInput) {
                     fileInput.click();
                 } else {
@@ -1784,7 +1894,7 @@ render_header("Profil & Data Diri", "user_profile");
                 video.style.display = 'block';
                 if (guide) guide.style.display = 'flex';
                 placeholder.style.display = 'none';
-                btnOpen.style.display = 'none';
+                if (btnOpen) btnOpen.style.display = 'none';
                 btnSnap.style.display = 'inline-flex';
 
                 // Load AI Face Model & Start Real-time Detection
@@ -1793,6 +1903,12 @@ render_header("Profil & Data Diri", "user_profile");
                 runFaceDetectionLoop();
             } catch (err) {
                 console.warn('WebRTC getUserMedia error, falling back to native camera input:', err);
+                if (btnOpen) {
+                    btnOpen.disabled = false;
+                    btnOpen.style.pointerEvents = 'auto';
+                    btnOpen.style.opacity = '1';
+                    btnOpen.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> <span>Buka Kamera &amp; Deteksi Lokasi</span>';
+                }
                 if (fileInput) {
                     fileInput.click();
                 } else {
@@ -1832,6 +1948,7 @@ render_header("Profil & Data Diri", "user_profile");
 
         async function handleNativeCameraFile(input) {
             if (input.files && input.files[0]) {
+                showScanningOverlay('Memeriksa Foto...', 'AI sedang membaca biometrik wajah...');
                 const file = input.files[0];
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -1860,6 +1977,8 @@ render_header("Profil & Data Diri", "user_profile");
                         // Validasi Wajah pada Foto Upload
                         await loadFaceModel();
                         const isFaceValid = await verifyFaceOnCanvas(canvas);
+                        hideScanningOverlay();
+
                         if (!isFaceValid) {
                             showRejectModal('Wajah tidak terdeteksi dalam foto yang dipilih. Harap pilih/ambil foto selfie wajah asli Anda.');
                             input.value = '';
@@ -1905,15 +2024,23 @@ render_header("Profil & Data Diri", "user_profile");
         }
 
         async function takeSelfieSnap() {
+            const btnSnap = document.getElementById('btnSnapPhoto');
             if (!lastFaceValid) {
                 showRejectModal('Wajah belum terdeteksi sempurna di dalam lingkaran oval. Arahkan wajah ke tengah hingga garis oval berwarna hijau.');
                 return;
             }
 
+            // Lock snap button & show scanning feedback
+            if (btnSnap) {
+                btnSnap.disabled = true;
+                btnSnap.style.pointerEvents = 'none';
+                btnSnap.innerHTML = '<span class="btn-spinner"></span> <span>Memproses Biometrik...</span>';
+            }
+            showScanningOverlay('Memverifikasi Biometrik Wajah...', 'Mohon tunggu, AI sedang menganalisis foto wajah...');
+
             const video = document.getElementById('selfieVideo');
             const canvas = document.getElementById('selfieCanvas');
             const preview = document.getElementById('selfiePreview');
-            const btnSnap = document.getElementById('btnSnapPhoto');
             const btnRetake = document.getElementById('btnRetakePhoto');
             const inputImg = document.getElementById('input_selfie_image');
             const guide = document.getElementById('faceGuideWrapper');
@@ -1926,8 +2053,19 @@ render_header("Profil & Data Diri", "user_profile");
             ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+            // Give visual feedback delay (~450ms)
+            await new Promise(resolve => setTimeout(resolve, 450));
+
             // Re-verify snapshot
             const isValidSnapshot = await verifyFaceOnCanvas(canvas);
+            hideScanningOverlay();
+
+            if (btnSnap) {
+                btnSnap.disabled = false;
+                btnSnap.style.pointerEvents = 'auto';
+                btnSnap.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> <span>Ambil Foto Selfie</span>';
+            }
+
             if (!isValidSnapshot) {
                 showRejectModal('Wajah tidak terdeteksi dalam jepretan foto. Silakan posisikan wajah Anda kembali di depan kamera.');
                 return;
@@ -1941,7 +2079,7 @@ render_header("Profil & Data Diri", "user_profile");
             video.style.display = 'none';
             if (guide) guide.style.display = 'none';
             preview.style.display = 'block';
-            btnSnap.style.display = 'none';
+            if (btnSnap) btnSnap.style.display = 'none';
             btnRetake.style.display = 'inline-flex';
 
             checkSubmitStatus();
