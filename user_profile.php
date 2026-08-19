@@ -81,11 +81,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_PO
         $pesan_error = "Akun Anda tidak terhubung dengan PIN Karyawan. Absen gagal.";
     } else {
         // 1. Cek Wi-Fi Sekolah (IP Check)
-        $client_ip = $_SERVER['REMOTE_ADDR'] ?? '';
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            $client_ip = trim($ips[0]);
-        }
+        $client_ip = get_client_real_ip();
 
         if (!is_school_wifi($client_ip)) {
             $pesan_error = "<b>Absen Gagal (Wi-Fi Tidak Sesuai):</b> Anda harus terhubung ke jaringan Wi-Fi lokal sekolah. (IP Anda: <code>" . h($client_ip) . "</code>)";
@@ -232,11 +228,7 @@ $app_settings       = get_app_settings();
 $school_lat         = (float)($app_settings['school_latitude'] ?? -6.91750000);
 $school_lng         = (float)($app_settings['school_longitude'] ?? 107.61910000);
 $max_radius         = (float)($app_settings['gps_radius_meters'] ?? 100);
-$client_ip          = $_SERVER['REMOTE_ADDR'] ?? '';
-if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-    $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-    $client_ip = trim($ips[0]);
-}
+$client_ip          = get_client_real_ip();
 $is_wifi_valid      = is_school_wifi($client_ip);
 $next_absen_status  = ($absen_today['masuk'] === null) ? 'Masuk' : 'Pulang';
 
