@@ -1539,18 +1539,19 @@ render_header("Profil & Data Diri", "user_profile");
             }
         }
 
-        async function detectFacesOnSource(source) {
+        async function detectFacesOnSource(source, customMinScore) {
             let faces = [];
+            const threshold = (typeof customMinScore === 'number') ? customMinScore : 3.0;
 
             // 1. Primary: Pico.js Instant Embedded Offline Cascade
             if (window.PicoFaceDetector && window.PicoFaceDetector.isReady()) {
                 try {
                     const detected = window.PicoFaceDetector.detect(source, {
                         shiftfactor: 0.1,
-                        minsize: 60,
-                        maxsize: 700,
+                        minsize: 45,
+                        maxsize: 750,
                         scalefactor: 1.1,
-                        minScore: 18.0 // Strict confidence threshold
+                        minScore: threshold
                     });
                     if (detected && detected.length > 0) {
                         faces = detected.map(f => ({
@@ -1605,7 +1606,7 @@ render_header("Profil & Data Diri", "user_profile");
             const aiTitle = document.getElementById('ai-title-txt');
             const aiSub = document.getElementById('ai-sub-txt');
 
-            const faces = await detectFacesOnSource(video);
+            const faces = await detectFacesOnSource(video, 3.0);
 
             if (faces.length === 0) {
                 consecutiveValidFaceFrames = 0;
@@ -1653,7 +1654,7 @@ render_header("Profil & Data Diri", "user_profile");
                 const fW = face.width || (face.bottomRight[0] - face.topLeft[0]);
                 const fRatio = fW / vW;
 
-                if (fRatio < 0.18) {
+                if (fRatio < 0.15) {
                     consecutiveValidFaceFrames = 0;
                     lastFaceValid = false;
                     if (oval) oval.className = 'face-guide-oval warning';
@@ -1673,7 +1674,7 @@ render_header("Profil & Data Diri", "user_profile");
                         aiTitle.textContent = 'Dekatkan Wajah';
                         aiSub.textContent = 'Posisikan di dalam oval panduan';
                     }
-                } else if (fRatio > 0.88) {
+                } else if (fRatio > 0.90) {
                     consecutiveValidFaceFrames = 0;
                     lastFaceValid = false;
                     if (oval) oval.className = 'face-guide-oval warning';
@@ -1695,7 +1696,7 @@ render_header("Profil & Data Diri", "user_profile");
                     }
                 } else {
                     consecutiveValidFaceFrames++;
-                    if (consecutiveValidFaceFrames >= 2) {
+                    if (consecutiveValidFaceFrames >= 1) {
                         lastFaceValid = true;
                         if (oval) oval.className = 'face-guide-oval valid';
                         if (dot) dot.className = 'face-status-dot valid';
@@ -1724,9 +1725,14 @@ render_header("Profil & Data Diri", "user_profile");
         }
 
         async function verifyFaceOnCanvas(canvas) {
-            const faces = await detectFacesOnSource(canvas);
-            // STRICT: Exactly 1 face MUST be detected!
-            return (faces && faces.length === 1);
+            const faces = await detectFacesOnSource(canvas, 2.5);
+            if (faces && faces.length === 1) {
+                return true;
+            }
+            if (lastFaceValid && faces && faces.length > 0) {
+                return true;
+            }
+            return false;
         }
 
         function calcHaversine(lat1, lon1, lat2, lon2) {
