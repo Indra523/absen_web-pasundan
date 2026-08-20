@@ -86,6 +86,7 @@ foreach ($list as $row) {
         'tipe_izin'          => $t_iz,
         'tipe_badge_html'    => '<span class="badge" style="' . $badge_style . ' font-weight:700;">' . $badge_text . '</span>',
         'keterangan'         => h($row['keterangan'] ?: '-'),
+        'surat_dokter'       => !empty($row['surat_dokter']) ? h($row['surat_dokter']) : null,
         'status_persetujuan' => $st_p,
         'approved_by'        => h($row['approved_by'] ?? ''),
         'status_badge_html'  => '<span class="badge" style="' . $p_badge . ' font-weight:700;">' . $p_text . '</span>' . $acc_info,
