@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // PORTAL MANDIRI - PENGAJUAN CUTI / IZIN / SAKIT (ROLE USER)
-// Redesain Modern, Aesthetic, Sleek UI + Upload Surat Dokter Kondisional
+// Redesain Bersih, Elegan, Modern & Responsif Mobile (Anti-Over/Clunky)
 // ============================================================
 
 require_once __DIR__ . '/layout.php';
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $file_size = $file['size'];
 
             if (!in_array($file_ext, $allowed_ext)) {
-                $upload_error = "Format file surat dokter tidak valid! Hanya format JPG, PNG, WEBP, atau PDF yang diperbolehkan.";
+                $upload_error = "Format file surat dokter tidak valid! Gunakan JPG, PNG, WEBP, atau PDF.";
             } elseif ($file_size > 5 * 1024 * 1024) {
                 $upload_error = "Ukuran file surat dokter terlalu besar! Maksimal 5 MB.";
             } else {
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 }
             }
         } else {
-            $upload_error = "Terjadi kesalahan saat mengunggah file surat dokter (Kode error: " . $file['error'] . ").";
+            $upload_error = "Terjadi kesalahan saat mengunggah file surat dokter.";
         }
     }
 
@@ -95,12 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } elseif (!in_array($tipe_izin, ['cuti', 'izin', 'sakit'])) {
         $pesan_error = "Jenis perizinan tidak valid!";
     } elseif ($diff_days > 31) {
-        $pesan_error = "Maksimal durasi pengajuan perizinan sekaligus adalah 31 hari!";
+        $pesan_error = "Maksimal durasi pengajuan perizinan adalah 31 hari!";
     } elseif (!empty($upload_error)) {
         $pesan_error = $upload_error;
     } elseif ($tipe_izin === 'sakit' && $diff_days > 2 && empty($surat_dokter_path)) {
-        // ATURAN: Sakit > 2 hari WAJIB upload surat keterangan dokter
-        $pesan_error = "Perhatian: Izin sakit lebih dari 2 hari ({$diff_days} Hari) <b>WAJIB</b> melampirkan foto / file Surat Keterangan Dokter!";
+        $pesan_error = "Perhatian: Izin sakit lebih dari 2 hari ({$diff_days} Hari) <b>WAJIB</b> melampirkan Surat Keterangan Dokter!";
     } else {
         // Cek bentrokan dengan perizinan yang sudah DISETUJUI
         $stmt_check = $conn->prepare("SELECT tanggal, tgl_selesai FROM perizinan WHERE pin = ? AND ? <= COALESCE(tgl_selesai, tanggal) AND ? >= tanggal AND status_persetujuan = 'disetujui'");
@@ -111,7 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($res_check->num_rows > 0) {
             $pesan_error = "Pengajuan gagal! Periode ini berbenturan dengan perizinan yang sudah <b>DISETUJUI</b> sebelumnya.";
         } else {
-            // Simpan perizinan
             $stmt_ins = $conn->prepare("INSERT INTO perizinan (pin, tanggal, tgl_selesai, tipe_izin, keterangan, surat_dokter, status_persetujuan, created_by) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?) ON DUPLICATE KEY UPDATE tgl_selesai = VALUES(tgl_selesai), tipe_izin = VALUES(tipe_izin), keterangan = VALUES(keterangan), surat_dokter = COALESCE(VALUES(surat_dokter), surat_dokter), status_persetujuan = 'pending', created_by = VALUES(created_by)");
             $stmt_ins->bind_param("sssssss", $pin, $tgl_mulai, $tgl_selesai, $tipe_izin, $keterangan, $surat_dokter_path, $username);
 
@@ -123,10 +121,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $pesan_sukses = "Pengajuan <b>" . strtoupper($tipe_izin) . "</b> untuk <b>" . $dur_fmt . "</b> telah berhasil dikirim.";
                 log_audit("USER_INPUT_PERIZINAN", "User {$username} (PIN {$pin}) mengajukan " . strtoupper($tipe_izin) . " periode {$tgl_mulai} s.d {$tgl_selesai} ({$diff_days} hari)" . (!empty($surat_dokter_path) ? " + Surat Dokter" : ""));
 
-                // TRIGGER 1 NOTIFIKASI REAL-TIME UNTUK ADMIN & TATA USAHA
+                // NOTIFIKASI REAL-TIME UNTUK ADMIN & TU
                 $nama_pemohon = $detail_user['nama'] ?? $username;
                 $notif_title  = "Pengajuan " . ucfirst($tipe_izin) . " Baru (" . $diff_days . " Hari)";
-                $notif_msg    = "{$nama_pemohon} (PIN {$pin}) mengajukan " . strtoupper($tipe_izin) . " periode " . date('d/m/Y', $start_ts) . ($diff_days > 1 ? " s.d " . date('d/m/Y', $end_ts) . " ({$diff_days} Hari)" : "") . (!empty($surat_dokter_path) ? " (Disertai Surat Dokter)" : "");
+                $notif_msg    = "{$nama_pemohon} (PIN {$pin}) mengajukan " . strtoupper($tipe_izin) . " periode " . date('d/m/Y', $start_ts) . ($diff_days > 1 ? " s.d " . date('d/m/Y', $end_ts) : "") . (!empty($surat_dokter_path) ? " (Ada Surat Dokter)" : "");
                 $notif_link   = "kelola_izin.php";
                 $applicant_uid = (int)($_SESSION['user_id'] ?? 0);
 
@@ -179,44 +177,45 @@ render_header("Pengajuan Perizinan &amp; Cuti", "user_izin");
 ?>
 
 <style>
-/* ===== MODERN USER IZIN THEME ===== */
-.izin-container {
+/* ===== REFINED, SLEEK & MOBILE-FRIENDLY THEME ===== */
+.izin-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 22px;
-    max-width: 1160px;
-    margin: 0 auto 40px auto;
+    gap: 16px;
+    max-width: 1120px;
+    margin: 0 auto 30px auto;
     width: 100%;
 }
 
-/* 4 STAT SUMMARY CARDS */
+/* 4 STAT SUMMARY CARDS (CLEAN & COMPACT) */
 .stats-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
 }
 
-.stat-card-glass {
+@media (max-width: 768px) {
+    .stats-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+}
+
+.stat-card-clean {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 20px;
-    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
+    border-radius: 12px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.stat-card-glass:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.08);
-}
-
-.stat-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+.stat-icon-wrap {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -224,39 +223,34 @@ render_header("Pengajuan Perizinan &amp; Cuti", "user_izin");
 }
 
 .stat-metric-title {
-    font-size: 11px;
-    font-weight: 800;
+    font-size: 10.5px;
+    font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
 }
 
 .stat-metric-value {
-    font-size: 24px;
-    font-weight: 900;
+    font-size: 18px;
+    font-weight: 800;
     line-height: 1.1;
     color: #0f172a;
-}
-
-.stat-metric-sub {
-    font-size: 11.5px;
-    color: #94a3b8;
-    font-weight: 600;
     margin-top: 2px;
 }
 
-/* 2 COLUMNS LAYOUT */
+/* TWO COLUMNS LAYOUT */
 .user-izin-grid {
     display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 22px;
+    grid-template-columns: 360px 1fr;
+    gap: 16px;
     align-items: start;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 960px) {
     .user-izin-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
 }
 
@@ -264,512 +258,480 @@ render_header("Pengajuan Perizinan &amp; Cuti", "user_izin");
 .form-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 20px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 6px 25px -4px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
 }
 
-.form-header-gradient {
-    background: linear-gradient(135deg, #0b132b 0%, #1c2541 50%, #0f172a 100%);
-    padding: 20px 24px;
-    color: #ffffff;
+.form-header-clean {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 14px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
 .form-title-text {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
-    color: #ffffff;
+    color: #0f172a;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
 .form-body-padding {
-    padding: 22px;
+    padding: 16px 18px;
 }
 
-.form-label-custom {
-    font-size: 11.5px;
-    font-weight: 800;
-    color: #334155;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    margin-bottom: 6px;
+/* COMPACT PROFILE CHIP */
+.user-profile-chip {
     display: flex;
     align-items: center;
-    gap: 6px;
-}
-
-.input-date-custom {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1.5px solid #cbd5e1;
+    gap: 10px;
+    padding: 9px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
+    margin-bottom: 14px;
+}
+
+.user-avatar-initial {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
     font-size: 13px;
-    color: #0f172a;
-    background: #ffffff;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    outline: none;
-    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
-.input-date-custom:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.12);
+/* SLEEK INPUTS */
+.form-label-clean {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+    display: block;
 }
 
-/* TYPE SELECTOR CARDS */
-.type-selector-grid {
+.input-date-clean {
+    width: 100% !important;
+    padding: 8px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    font-weight: 600 !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    font-family: inherit !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.input-date-clean:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* DURATION INLINE CHIP */
+.duration-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    margin: 4px 0 14px 0;
+}
+
+/* SEGMENTED CONTROL (TAB PILL) UNTUK JENIS IZIN */
+.type-segmented-control {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 16px;
+    grid-template-columns: 1fr 1fr 1fr;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 10px;
+    gap: 3px;
+    margin-bottom: 14px;
 }
 
-.type-card-option {
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px 6px;
+.segmented-option {
+    padding: 8px 4px;
     text-align: center;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    background: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    background: transparent;
+    transition: all 0.15s ease;
     user-select: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
+    gap: 1px;
 }
 
-.type-card-option:hover {
-    border-color: #3b82f6;
-    background: #f8fafc;
-    transform: translateY(-1px);
-}
-
-.type-card-option.active {
-    border-color: #2563eb;
-    background: #eff6ff;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-.type-card-option.active.card-sakit {
-    border-color: #7e22ce;
-    background: #faf5ff;
-    box-shadow: 0 0 0 3px rgba(126, 34, 206, 0.15);
-}
-
-.type-card-option.active.card-izin {
-    border-color: #ea580c;
-    background: #fff7ed;
-    box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
-}
-
-.type-title {
-    font-size: 13px;
-    font-weight: 800;
+.segmented-option.active {
+    background: #ffffff;
     color: #0f172a;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
-.type-desc {
-    font-size: 10px;
-    color: #64748b;
-    font-weight: 600;
+.segmented-option.active.card-cuti { color: #1d4ed8; }
+.segmented-option.active.card-izin { color: #c2410c; }
+.segmented-option.active.card-sakit { color: #7e22ce; }
+
+.seg-title {
+    font-size: 12.5px;
+    font-weight: 800;
 }
 
-/* DURATION PILL */
-.duration-info-pill {
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease;
+.seg-sub {
+    font-size: 9.5px;
+    opacity: 0.8;
 }
 
-/* SURAT DOKTER UPLOAD BOX */
-.doctor-upload-section {
+/* SURAT DOKTER BOX */
+.doctor-upload-box {
     background: #f8fafc;
-    border: 1.5px dashed #cbd5e1;
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 18px;
-    transition: all 0.2s ease;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 14px;
 }
 
-.doctor-upload-section.required {
+.doctor-upload-box.required {
     background: #fffbeb;
     border-color: #f59e0b;
 }
 
-.doctor-upload-section.optional {
-    background: #f0f9ff;
-    border-color: #bae6fd;
+.doctor-upload-box.optional {
+    background: #f0fdf4;
+    border-color: #86efac;
 }
 
-.file-dropzone-label {
+/* TEXTAREA */
+.textarea-clean {
+    width: 100% !important;
+    padding: 8px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    font-family: inherit !important;
+    resize: vertical !important;
+    min-height: 65px !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+}
+
+.textarea-clean:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* SUBMIT BUTTON */
+.btn-submit-clean {
+    width: 100%;
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 14px 10px;
-    text-align: center;
-    border-radius: 10px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+    transition: background 0.15s ease;
 }
-
-.file-dropzone-label:hover {
-    border-color: #2563eb;
-    background: #f8fafc;
+.btn-submit-clean:hover {
+    background: #1d4ed8;
 }
 
 /* TABLE CARD */
-.table-card {
+.table-card-clean {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 20px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 6px 25px -4px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
 }
 
-.table-header-bar {
+.table-header-clean {
     background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 18px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 14px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
 }
 
-.table-modern {
+.table-compact {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
-    min-width: 640px;
+    font-size: 12.5px;
+    min-width: 580px;
 }
 
-.table-modern thead th {
+.table-compact thead th {
     background: #f8fafc;
     color: #475569;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.8px;
-    padding: 13px 16px;
-    border-bottom: 1.5px solid #e2e8f0;
+    font-size: 10.5px;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
     text-align: center;
 }
 
-.table-modern td {
-    padding: 14px 16px;
+.table-compact td {
+    padding: 11px 12px;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
     text-align: center;
     color: #334155;
 }
 
-.table-modern tbody tr:hover {
+.table-compact tbody tr:hover {
     background: #f8fafc;
 }
-
-/* STATUS PILLS */
-.status-pill-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11.5px;
-    font-weight: 800;
-}
-.status-pill-approved { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-.status-pill-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-.status-pill-rejected { background: #fee2e2; color: #be123c; border: 1px solid #fca5a5; }
-
-.badge-tipe {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3.5px 10px;
-    border-radius: 20px;
-    font-size: 11.5px;
-    font-weight: 800;
-}
-.badge-tipe-cuti { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.badge-tipe-izin { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
-.badge-tipe-sakit { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
 
 /* LIGHTBOX MODAL */
 .photo-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(6px);
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(4px);
     z-index: 99999;
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
 }
 .photo-modal-card {
     background: #ffffff;
-    border-radius: 20px;
-    max-width: 540px;
+    border-radius: 14px;
+    max-width: 480px;
     width: 100%;
     overflow: hidden;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-    animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
-@keyframes scaleIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 </style>
 
-<div class="izin-container">
+<div class="izin-wrapper">
 
     <!-- TOAST NOTIFICATIONS -->
     <?php if (!empty($pesan_sukses)): ?>
-        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:14px 18px; color:#15803d; font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:10px; box-shadow:0 2px 10px rgba(22,163,74,0.08);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 16px; color:#15803d; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <div><?php echo $pesan_sukses; ?></div>
         </div>
     <?php endif; ?>
 
     <?php if (!empty($pesan_error)): ?>
-        <div style="background:#fff1f2; border:1px solid #fca5a5; border-radius:14px; padding:14px 18px; color:#991b1b; font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:10px; box-shadow:0 2px 10px rgba(220,38,38,0.08);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="background:#fff1f2; border:1px solid #fca5a5; border-radius:10px; padding:12px 16px; color:#991b1b; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <div><?php echo $pesan_error; ?></div>
         </div>
     <?php endif; ?>
 
     <?php if (empty($pin) || !$detail_user): ?>
-        <div class="form-card" style="text-align:center; padding:60px 20px;">
-            <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin-bottom:8px;">Akun Belum Terhubung PIN Karyawan</h3>
-            <p style="color:#64748b; font-size:13.5px; max-width:440px; margin:0 auto;">
-                Akun <code><?php echo h($_SESSION['username']); ?></code> belum terhubung ke data PIN karyawan. Silakan hubungi Administrator.
+        <div class="form-card" style="text-align:center; padding:40px 20px;">
+            <div style="font-size:16px; font-weight:800; color:#0f172a; margin-bottom:6px;">Akun Belum Terhubung PIN Karyawan</div>
+            <p style="color:#64748b; font-size:13px; max-width:380px; margin:0 auto;">
+                Akun Anda belum terhubung ke data master karyawan. Silakan hubungi Administrator.
             </p>
         </div>
     <?php else: ?>
 
     <!-- 4 KPI SUMMARY CARDS -->
     <div class="stats-cards-grid">
-        <div class="stat-card-glass">
-            <div class="stat-icon-wrapper" style="background:#eff6ff; color:#2563eb;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div class="stat-card-clean">
+            <div class="stat-icon-wrap" style="background:#eff6ff; color:#2563eb;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
             <div>
                 <div class="stat-metric-title">Total Berkas</div>
-                <div class="stat-metric-value" id="stat_total"><?php echo $stat_count['total']; ?> <span style="font-size:12px; font-weight:700; color:#64748b;">Berkas</span></div>
-                <div class="stat-metric-sub">Semua Pengajuan</div>
+                <div class="stat-metric-value" id="stat_total"><?php echo $stat_count['total']; ?></div>
             </div>
         </div>
 
-        <div class="stat-card-glass">
-            <div class="stat-icon-wrapper" style="background:#f0fdf4; color:#16a34a;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div class="stat-card-clean">
+            <div class="stat-icon-wrap" style="background:#f0fdf4; color:#16a34a;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div>
                 <div class="stat-metric-title">Disetujui</div>
                 <div class="stat-metric-value" style="color:#16a34a;" id="stat_disetujui"><?php echo $stat_count['disetujui']; ?></div>
-                <div class="stat-metric-sub">Izin/Cuti Aktif</div>
             </div>
         </div>
 
-        <div class="stat-card-glass">
-            <div class="stat-icon-wrapper" style="background:#fffbeb; color:#d97706;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="stat-card-clean">
+            <div class="stat-icon-wrap" style="background:#fffbeb; color:#d97706;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <div>
-                <div class="stat-metric-title">Menunggu Approval</div>
+                <div class="stat-metric-title">Menunggu</div>
                 <div class="stat-metric-value" style="color:#d97706;" id="stat_pending"><?php echo $stat_count['pending']; ?></div>
-                <div class="stat-metric-sub">Dalam Proses Review</div>
             </div>
         </div>
 
-        <div class="stat-card-glass">
-            <div class="stat-icon-wrapper" style="background:#fff1f2; color:#e11d48;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <div class="stat-card-clean">
+            <div class="stat-icon-wrap" style="background:#fff1f2; color:#e11d48;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </div>
             <div>
                 <div class="stat-metric-title">Ditolak</div>
                 <div class="stat-metric-value" style="color:#e11d48;" id="stat_ditolak"><?php echo $stat_count['ditolak']; ?></div>
-                <div class="stat-metric-sub">Tidak Disetujui</div>
             </div>
         </div>
     </div>
 
-    <!-- MAIN TWO COLUMNS GRID -->
+    <!-- MAIN GRID LAYOUT -->
     <div class="user-izin-grid">
 
-        <!-- LEFT COLUMN: FORM PENGAJUAN IZIN -->
+        <!-- LEFT: FORM PENGAJUAN IZIN -->
         <div class="form-card">
-            <div class="form-header-gradient">
+            <div class="form-header-clean">
                 <div class="form-title-text">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    <span>Form Pengajuan Perizinan</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span>Form Pengajuan Izin</span>
                 </div>
             </div>
 
             <div class="form-body-padding">
-                <!-- IDENTITAS PEGAWAI CHIP -->
-                <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; margin-bottom:18px;">
-                    <div style="width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, #3b82f6, #1d4ed8); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; flex-shrink:0;">
+                <!-- COMPACT PROFILE CHIP -->
+                <div class="user-profile-chip">
+                    <div class="user-avatar-initial">
                         <?php echo strtoupper(mb_substr($detail_user['nama'], 0, 1)); ?>
                     </div>
-                    <div style="flex:1; min-width:0;">
-                        <div style="font-size:13.5px; font-weight:800; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo h($detail_user['nama']); ?></div>
-                        <div style="font-size:11.5px; color:#64748b; margin-top:2px;">
-                            PIN: <code style="font-weight:800; color:#0f172a;"><?php echo h($detail_user['pin']); ?></code> &bull; <?php echo h($detail_user['departemen'] ?: 'Umum'); ?>
-                        </div>
+                    <div style="min-width:0; flex:1;">
+                        <div style="font-size:12.5px; font-weight:800; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo h($detail_user['nama']); ?></div>
+                        <div style="font-size:11px; color:#64748b;">PIN: <b style="color:#0f172a;"><?php echo h($detail_user['pin']); ?></b> &bull; <?php echo h($detail_user['departemen'] ?: 'Umum'); ?></div>
                     </div>
                 </div>
 
-                <form method="POST" action="user_izin.php<?php echo !empty($_GET['pin']) ? '?pin=' . urlencode($_GET['pin']) : ''; ?>" enctype="multipart/form-data" id="formUserIzin">
+                <form method="POST" action="user_izin.php<?php echo !empty($_GET['pin']) ? '?pin=' . urlencode($_GET['pin']) : ''; ?>" enctype="multipart/form-data">
                     <?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="simpan_izin_mandiri">
 
-                    <!-- RENTANG TANGGAL -->
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <div>
-                            <label for="tgl_mulai" class="form-label-custom">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                <span>Dari Tanggal</span>
-                            </label>
-                            <input type="date" id="tgl_mulai" name="tgl_mulai" value="<?php echo date('Y-m-d'); ?>" class="input-date-custom" onchange="handleFormDateChange()" required>
+                    <!-- RENTANG TANGGAL (2 KOLOM RAPI TANPA OVERFLOW) -->
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:6px;">
+                        <div style="min-width:0;">
+                            <label for="tgl_mulai" class="form-label-clean">Dari Tanggal</label>
+                            <input type="date" id="tgl_mulai" name="tgl_mulai" value="<?php echo date('Y-m-d'); ?>" class="input-date-clean" onchange="handleDateChange()" required>
                         </div>
-                        <div>
-                            <label for="tgl_selesai" class="form-label-custom">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                <span>Sampai Tanggal</span>
-                            </label>
-                            <input type="date" id="tgl_selesai" name="tgl_selesai" value="<?php echo date('Y-m-d'); ?>" class="input-date-custom" onchange="handleFormDateChange()" required>
+                        <div style="min-width:0;">
+                            <label for="tgl_selesai" class="form-label-clean">Sampai Tanggal</label>
+                            <input type="date" id="tgl_selesai" name="tgl_selesai" value="<?php echo date('Y-m-d'); ?>" class="input-date-clean" onchange="handleDateChange()" required>
                         </div>
                     </div>
 
-                    <!-- DURATION INFO PILL -->
-                    <div id="durationPill" class="duration-info-pill" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        <span id="durationText">Durasi: <b>1 Hari</b> (Single Day)</span>
+                    <!-- DURATION INLINE CHIP -->
+                    <div>
+                        <div id="durationPill" class="duration-chip">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span id="durationText">Durasi: 1 Hari</span>
+                        </div>
                     </div>
 
-                    <!-- JENIS PERIZINAN (CARDS) -->
-                    <div style="margin-bottom:16px;">
-                        <label class="form-label-custom">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                            <span>Jenis Perizinan</span>
-                        </label>
+                    <!-- JENIS PERIZINAN (SEGMENTED PILL CONTROL) -->
+                    <div style="margin-bottom:12px;">
+                        <label class="form-label-clean">Jenis Perizinan</label>
                         <input type="hidden" id="tipe_izin_val" name="tipe_izin" value="cuti" required>
 
-                        <div class="type-selector-grid">
-                            <div class="type-card-option active" id="card_cuti" onclick="selectIzinType('cuti')">
-                                <div class="type-title">Cuti</div>
-                                <div class="type-desc">Resmi Kalender</div>
+                        <div class="type-segmented-control">
+                            <div class="segmented-option active card-cuti" id="card_cuti" onclick="setIzinType('cuti')">
+                                <span class="seg-title">Cuti</span>
+                                <span class="seg-sub">Resmi</span>
                             </div>
-                            <div class="type-card-option" id="card_izin" onclick="selectIzinType('izin')">
-                                <div class="type-title">Izin</div>
-                                <div class="type-desc">Dinas / Pribadi</div>
+                            <div class="segmented-option" id="card_izin" onclick="setIzinType('izin')">
+                                <span class="seg-title">Izin</span>
+                                <span class="seg-sub">Pribadi/Dinas</span>
                             </div>
-                            <div class="type-card-option" id="card_sakit" onclick="selectIzinType('sakit')">
-                                <div class="type-title">Sakit</div>
-                                <div class="type-desc">Surat Dokter</div>
+                            <div class="segmented-option" id="card_sakit" onclick="setIzinType('sakit')">
+                                <span class="seg-title">Sakit</span>
+                                <span class="seg-sub">Surat Dokter</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- CONDITIONAL SURAT DOKTER UPLOAD SECTION (SAKIT) -->
-                    <div id="doctorUploadSection" class="doctor-upload-section optional" style="display:none;">
-                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:8px;">
-                            <div style="font-size:12px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7e22ce" stroke-width="2.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-                                <span>Surat Keterangan Dokter</span>
-                            </div>
-                            <span id="doctorRequirementBadge" style="font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px; background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">
+                    <!-- CONDITIONAL SURAT DOKTER UPLOAD -->
+                    <div id="doctorUploadSection" class="doctor-upload-box optional" style="display:none;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                            <span style="font-size:11.5px; font-weight:800; color:#0f172a;">Surat Keterangan Dokter</span>
+                            <span id="doctorReqBadge" style="font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; background:#dcfce7; color:#15803d;">
                                 OPSIONAL (1-2 HARI)
                             </span>
                         </div>
 
-                        <!-- DYNAMIC ALERT DESCRIPTION -->
-                        <div id="doctorAlertDesc" style="font-size:11.5px; line-height:1.4; color:#0369a1; margin-bottom:12px;">
-                            Untuk izin sakit 1-2 hari yang hanya perlu istirahat di rumah tanpa ke dokter, upload surat dokter bersifat <b>opsional / tidak wajib</b>.
+                        <div id="doctorAlertDesc" style="font-size:11px; line-height:1.35; color:#0369a1; margin-bottom:8px;">
+                            Izin sakit 1-2 hari (istirahat ringan). Upload surat dokter bersifat opsional.
                         </div>
 
-                        <!-- DROPZONE BOX -->
-                        <label for="surat_dokter" class="file-dropzone-label">
-                            <input type="file" id="surat_dokter" name="surat_dokter" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display:none;" onchange="handleDoctorFileSelect(this)">
-                            
-                            <div id="dropzoneIcon" style="width:36px; height:36px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#64748b;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            </div>
-                            
-                            <div id="dropzoneText" style="font-size:12px; font-weight:700; color:#334155;">
-                                Klik untuk upload foto / PDF surat dokter
-                            </div>
-                            <div style="font-size:10.5px; color:#94a3b8;">Format: JPG, PNG, WEBP, PDF (Maks. 5 MB)</div>
-                        </label>
-
-                        <!-- PREVIEW CONTAINER -->
-                        <div id="doctorFilePreview" style="display:none; margin-top:10px; padding:10px; background:#ffffff; border:1px solid #bbf7d0; border-radius:10px; align-items:center; justify-content:space-between;">
-                            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                <span id="doctorFileName" style="font-size:12px; font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">nama_file.jpg</span>
-                            </div>
-                            <button type="button" onclick="clearDoctorFile()" style="background:none; border:none; color:#ef4444; font-size:11px; font-weight:800; cursor:pointer; padding:2px 6px;">Batal</button>
-                        </div>
+                        <input type="file" id="surat_dokter" name="surat_dokter" accept=".jpg,.jpeg,.png,.webp,.pdf" class="input-date-clean" style="font-size:11.5px; padding:6px 8px;" onchange="handleFileChange(this)">
                     </div>
 
                     <!-- KETERANGAN / ALASAN -->
-                    <div style="margin-bottom:18px;">
-                        <label for="keterangan" class="form-label-custom">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                            <span>Keterangan / Alasan</span>
-                        </label>
-                        <textarea id="keterangan" name="keterangan" rows="3" class="input-date-custom" placeholder="Jelaskan alasan izin secara singkat dan jelas..." style="resize:vertical;" required></textarea>
+                    <div style="margin-bottom:14px;">
+                        <label for="keterangan" class="form-label-clean">Keterangan / Alasan</label>
+                        <textarea id="keterangan" name="keterangan" rows="2" class="textarea-clean" placeholder="Jelaskan alasan izin secara singkat..." required></textarea>
                     </div>
 
                     <!-- SUBMIT BUTTON -->
-                    <button type="submit" id="btnSubmitIzin" style="width:100%; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border:none; padding:12px; font-size:13.5px; font-weight:800; border-radius:12px; cursor:pointer; box-shadow:0 4px 15px rgba(37,99,235,.3); display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s ease;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    <button type="submit" class="btn-submit-clean">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                         <span>Kirim Pengajuan</span>
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: RIWAYAT PENGAJUAN SAYA -->
-        <div class="table-card">
-            <div class="table-header-bar">
-                <div style="font-size:15px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <!-- RIGHT: RIWAYAT PENGAJUAN SAYA -->
+        <div class="table-card-clean">
+            <div class="table-header-clean">
+                <div style="font-size:13.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span>Riwayat Pengajuan Saya</span>
                 </div>
-                <div style="font-size:11px; color:#166534; font-weight:700; background:#dcfce7; border:1px solid #bbf7d0; padding:4px 12px; border-radius:20px; display:flex; align-items:center; gap:6px;">
-                    <span style="width:8px; height:8px; background:#22c55e; border-radius:50%; display:inline-block;"></span>
-                    <span>Realtime Sync</span>
+                <div style="font-size:10.5px; color:#166534; font-weight:700; background:#dcfce7; padding:2px 8px; border-radius:12px;">
+                    Realtime Sync
                 </div>
             </div>
 
             <div style="overflow-x:auto;">
-                <table class="table-modern">
+                <table class="table-compact">
                     <thead>
                         <tr>
-                            <th style="width:45px;">NO</th>
-                            <th style="text-align:left;">PERIODE TANGGAL</th>
+                            <th style="width:35px;">NO</th>
+                            <th style="text-align:left;">PERIODE</th>
                             <th>JENIS</th>
                             <th style="text-align:left;">KETERANGAN</th>
                             <th>SURAT DOKTER</th>
-                            <th>STATUS APPROVAL</th>
-                            <th>DIAJUKAN PADA</th>
+                            <th>STATUS</th>
+                            <th>WAKTU</th>
                         </tr>
                     </thead>
                     <tbody id="user_izin_tbody">
@@ -777,74 +739,60 @@ render_header("Pengajuan Perizinan &amp; Cuti", "user_izin");
                             $no = 1;
                             foreach ($list_izin as $row):
                                 $t_iz = $row['tipe_izin'];
-                                $badge_tipe_class = 'badge-tipe-cuti';
-                                if ($t_iz === 'izin') $badge_tipe_class = 'badge-tipe-izin';
-                                if ($t_iz === 'sakit') $badge_tipe_class = 'badge-tipe-sakit';
+                                $t_bg = '#eff6ff'; $t_col = '#1d4ed8'; $t_brd = '#bfdbfe';
+                                if ($t_iz === 'izin') { $t_bg = '#fff7ed'; $t_col = '#c2410c'; $t_brd = '#ffedd5'; }
+                                if ($t_iz === 'sakit') { $t_bg = '#faf5ff'; $t_col = '#7e22ce'; $t_brd = '#e9d5ff'; }
 
                                 $st_p = $row['status_persetujuan'] ?? 'disetujui';
-                                $p_class = 'status-pill-approved';
-                                $p_text  = 'Disetujui';
-                                if ($st_p === 'pending') {
-                                    $p_class = 'status-pill-pending';
-                                    $p_text  = 'Menunggu';
-                                } elseif ($st_p === 'ditolak') {
-                                    $p_class = 'status-pill-rejected';
-                                    $p_text  = 'Ditolak';
-                                }
+                                $p_bg = '#dcfce7'; $p_col = '#15803d'; $p_lbl = 'Disetujui';
+                                if ($st_p === 'pending') { $p_bg = '#fef3c7'; $p_col = '#92400e'; $p_lbl = 'Menunggu'; }
+                                if ($st_p === 'ditolak') { $p_bg = '#fee2e2'; $p_col = '#be123c'; $p_lbl = 'Ditolak'; }
 
                                 $tgl_m = date('d/m/Y', strtotime($row['tanggal']));
                                 $tgl_s = !empty($row['tgl_selesai']) ? date('d/m/Y', strtotime($row['tgl_selesai'])) : $tgl_m;
                                 $dur_days = (strtotime($row['tgl_selesai'] ?: $row['tanggal']) - strtotime($row['tanggal'])) / 86400 + 1;
                                 
-                                $tgl_display = ($tgl_m === $tgl_s) 
-                                    ? "<div style='font-weight:800; color:#0f172a;'>{$tgl_m}</div><div style='font-size:11px; color:#64748b;'>1 Hari</div>" 
-                                    : "<div style='font-weight:800; color:#0f172a;'>{$tgl_m} &ndash; {$tgl_s}</div><div style='font-size:11px; color:#2563eb; font-weight:700;'>{$dur_days} Hari</div>";
+                                $tgl_txt = ($tgl_m === $tgl_s) 
+                                    ? "<div style='font-weight:700; color:#0f172a;'>{$tgl_m}</div><div style='font-size:10px; color:#64748b;'>1 Hari</div>" 
+                                    : "<div style='font-weight:700; color:#0f172a;'>{$tgl_m} - {$tgl_s}</div><div style='font-size:10px; color:#2563eb; font-weight:700;'>{$dur_days} Hari</div>";
 
-                                // Surat Dokter Cell
                                 $td_surat = '<span style="color:#cbd5e1;">-</span>';
                                 if (!empty($row['surat_dokter']) && file_exists(__DIR__ . '/' . $row['surat_dokter'])) {
                                     $file_ext = strtolower(pathinfo($row['surat_dokter'], PATHINFO_EXTENSION));
                                     $file_url = h($row['surat_dokter']);
                                     if ($file_ext === 'pdf') {
-                                        $td_surat = "<a href='{$file_url}' target='_blank' style='background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:4px;'>
-                                                        <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/></svg>
-                                                        <span>Lihat PDF</span>
-                                                     </a>";
+                                        $td_surat = "<a href='{$file_url}' target='_blank' style='background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:700; text-decoration:none;'>Lihat PDF</a>";
                                     } else {
-                                        $td_surat = "<button type='button' onclick=\"openDoctorLightbox('{$file_url}', 'Surat Keterangan Dokter &bull; {$tgl_m}')\" style='background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:4px;'>
-                                                        <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/></svg>
-                                                        <span>Lihat Surat</span>
-                                                     </button>";
+                                        $td_surat = "<button type='button' onclick=\"openDoctorLightbox('{$file_url}', 'Surat Keterangan Dokter')\" style='background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:700; cursor:pointer;'>Lihat Foto</button>";
                                     }
                                 } elseif ($t_iz === 'sakit' && $dur_days <= 2) {
-                                    $td_surat = "<span style='font-size:10.5px; color:#64748b; background:#f1f5f9; padding:2px 6px; border-radius:4px;'>Istirahat (1-2 Hari)</span>";
+                                    $td_surat = "<span style='font-size:10px; color:#64748b;'>Istirahat</span>";
                                 }
                         ?>
                             <tr id="row_izin_<?php echo $row['id']; ?>" data-status="<?php echo $st_p; ?>">
-                                <td><b><?php echo $no++; ?></b></td>
-                                <td style="text-align:left;"><?php echo $tgl_display; ?></td>
+                                <td><?php echo $no++; ?></td>
+                                <td style="text-align:left;"><?php echo $tgl_txt; ?></td>
                                 <td>
-                                    <span class="badge-tipe <?php echo $badge_tipe_class; ?>"><?php echo ucfirst($t_iz); ?></span>
+                                    <span style="background:<?php echo $t_bg; ?>; color:<?php echo $t_col; ?>; border:1px solid <?php echo $t_brd; ?>; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">
+                                        <?php echo ucfirst($t_iz); ?>
+                                    </span>
                                 </td>
-                                <td style="text-align:left; color:#334155; line-height:1.4;">
+                                <td style="text-align:left; color:#334155; line-height:1.35; font-size:12px;">
                                     <?php echo h($row['keterangan'] ?: '-'); ?>
                                 </td>
                                 <td><?php echo $td_surat; ?></td>
                                 <td>
-                                    <span class="status-pill-badge <?php echo $p_class; ?>"><?php echo $p_text; ?></span>
-                                    <?php if (!empty($row['approved_by'])): ?>
-                                        <div style="font-size:10.5px; color:#64748b; margin-top:3px; font-weight:600;">
-                                            oleh <b><?php echo h($row['approved_by']); ?></b>
-                                        </div>
-                                    <?php endif; ?>
+                                    <span style="background:<?php echo $p_bg; ?>; color:<?php echo $p_col; ?>; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">
+                                        <?php echo $p_lbl; ?>
+                                    </span>
                                 </td>
-                                <td style="font-size:11.5px; color:#64748b;">
-                                    <?php echo date('d/m/Y H:i', strtotime($row['created_at'])); ?>
+                                <td style="font-size:10.5px; color:#64748b;">
+                                    <?php echo date('d/m H:i', strtotime($row['created_at'])); ?>
                                 </td>
                             </tr>
                         <?php endforeach; else: ?>
                             <tr>
-                                <td colspan="7" style="padding:40px; color:#94a3b8; text-align:center;">Belum ada riwayat perizinan yang diajukan.</td>
+                                <td colspan="7" style="padding:30px; color:#94a3b8; text-align:center; font-size:12px;">Belum ada riwayat perizinan yang diajukan.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -861,13 +809,13 @@ render_header("Pengajuan Perizinan &amp; Cuti", "user_izin");
     <div class="photo-modal-card" onclick="event.stopPropagation()">
         <div style="position:relative; width:100%; max-height:75vh; background:#0f172a; display:flex; align-items:center; justify-content:center; overflow:hidden;">
             <img id="doctorModalImg" src="" alt="Surat Dokter" style="width:100%; height:auto; max-height:75vh; object-fit:contain;">
-            <button type="button" onclick="closeDoctorLightbox()" style="position:absolute; top:12px; right:12px; background:rgba(15,23,42,0.75); color:#fff; border:none; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <button type="button" onclick="closeDoctorLightbox()" style="position:absolute; top:8px; right:8px; background:rgba(15,23,42,0.75); color:#fff; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                &times;
             </button>
         </div>
-        <div style="padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
-            <div id="doctorModalTitle" style="font-size:13px; font-weight:800; color:#0f172a;">Surat Keterangan Dokter</div>
-            <a id="doctorModalDownload" href="" target="_blank" download style="font-size:12px; font-weight:800; color:#2563eb; text-decoration:none;">Download File</a>
+        <div style="padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
+            <div id="doctorModalTitle" style="font-size:12px; font-weight:700; color:#0f172a;">Surat Keterangan Dokter</div>
+            <a id="doctorModalDownload" href="" target="_blank" download style="font-size:11.5px; font-weight:700; color:#2563eb; text-decoration:none;">Download File</a>
         </div>
     </div>
 </div>
@@ -875,17 +823,21 @@ render_header("Pengajuan Perizinan &amp; Cuti", "user_izin");
 <script>
 let currentDiffDays = 1;
 
-function selectIzinType(type) {
+function setIzinType(type) {
     document.getElementById('tipe_izin_val').value = type;
-    document.querySelectorAll('.type-card-option').forEach(card => card.classList.remove('active'));
+    document.querySelectorAll('.segmented-option').forEach(el => {
+        el.classList.remove('active', 'card-cuti', 'card-izin', 'card-sakit');
+    });
     
-    const targetCard = document.getElementById('card_' + type);
-    if (targetCard) targetCard.classList.add('active');
+    const activeEl = document.getElementById('card_' + type);
+    if (activeEl) {
+        activeEl.classList.add('active', 'card-' + type);
+    }
 
-    handleFormDateChange();
+    handleDateChange();
 }
 
-function handleFormDateChange() {
+function handleDateChange() {
     const t1 = document.getElementById('tgl_mulai').value;
     const t2 = document.getElementById('tgl_selesai').value;
     const pill = document.getElementById('durationPill');
@@ -901,7 +853,7 @@ function handleFormDateChange() {
         pill.style.background = '#fff1f2';
         pill.style.borderColor = '#fca5a5';
         pill.style.color = '#dc2626';
-        textEl.innerHTML = 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai!';
+        textEl.textContent = 'Tanggal selesai tidak valid';
         currentDiffDays = 0;
         return;
     }
@@ -914,16 +866,13 @@ function handleFormDateChange() {
     pill.style.color = '#1d4ed8';
 
     if (currentDiffDays === 1) {
-        textEl.innerHTML = 'Durasi: <b>1 Hari</b> (Single Day)';
+        textEl.textContent = 'Durasi: 1 Hari';
     } else {
-        const fmt1 = t1.split('-').reverse().join('/');
-        const fmt2 = t2.split('-').reverse().join('/');
-        textEl.innerHTML = `Durasi: <b>${currentDiffDays} Hari</b> (${fmt1} s.d ${fmt2})`;
+        textEl.textContent = `Durasi: ${currentDiffDays} Hari`;
     }
 
-    // UPDATE SURAT DOKTER REQUIREMENT
     const doctorSec = document.getElementById('doctorUploadSection');
-    const reqBadge = document.getElementById('doctorRequirementBadge');
+    const reqBadge = document.getElementById('doctorReqBadge');
     const alertDesc = document.getElementById('doctorAlertDesc');
     const fileInput = document.getElementById('surat_dokter');
 
@@ -931,24 +880,20 @@ function handleFormDateChange() {
         doctorSec.style.display = 'block';
 
         if (currentDiffDays > 2) {
-            // SAKIT > 2 HARI = WAJIB
-            doctorSec.className = 'doctor-upload-section required';
+            doctorSec.className = 'doctor-upload-box required';
             reqBadge.style.background = '#fef3c7';
-            reqBadge.style.borderColor = '#fde68a';
             reqBadge.style.color = '#92400e';
             reqBadge.textContent = 'WAJIB (> 2 HARI)';
             alertDesc.style.color = '#92400e';
-            alertDesc.innerHTML = `Izin sakit selama <b>${currentDiffDays} hari</b> (> 2 hari) <b>WAJIB</b> melampirkan foto / file Surat Keterangan Dokter.`;
-            fileInput.required = (document.getElementById('doctorFilePreview').style.display !== 'flex');
+            alertDesc.innerHTML = `Izin sakit selama <b>${currentDiffDays} hari</b> wajib melampirkan Surat Dokter.`;
+            fileInput.required = (fileInput.value === '');
         } else {
-            // SAKIT 1-2 HARI = OPSIONAL
-            doctorSec.className = 'doctor-upload-section optional';
-            reqBadge.style.background = '#e0f2fe';
-            reqBadge.style.borderColor = '#bae6fd';
-            reqBadge.style.color = '#0369a1';
+            doctorSec.className = 'doctor-upload-box optional';
+            reqBadge.style.background = '#dcfce7';
+            reqBadge.style.color = '#15803d';
             reqBadge.textContent = 'OPSIONAL (1-2 HARI)';
-            alertDesc.style.color = '#0369a1';
-            alertDesc.innerHTML = `Untuk izin sakit 1-2 hari yang hanya perlu istirahat di rumah tanpa ke dokter, upload surat dokter bersifat <b>opsional / tidak wajib</b>.`;
+            alertDesc.style.color = '#15803d';
+            alertDesc.innerHTML = 'Izin sakit 1-2 hari (istirahat ringan). Upload surat dokter bersifat opsional.';
             fileInput.required = false;
         }
     } else {
@@ -957,21 +902,9 @@ function handleFormDateChange() {
     }
 }
 
-function handleDoctorFileSelect(input) {
+function handleFileChange(input) {
     if (input.files && input.files[0]) {
-        const file = input.files[0];
-        document.getElementById('doctorFileName').textContent = file.name;
-        document.getElementById('doctorFilePreview').style.display = 'flex';
         input.required = false;
-    }
-}
-
-function clearDoctorFile() {
-    const input = document.getElementById('surat_dokter');
-    input.value = '';
-    document.getElementById('doctorFilePreview').style.display = 'none';
-    if (document.getElementById('tipe_izin_val').value === 'sakit' && currentDiffDays > 2) {
-        input.required = true;
     }
 }
 
@@ -995,15 +928,8 @@ function closeDoctorLightbox(e) {
     if (overlay) overlay.style.display = 'none';
 }
 
-// REALTIME LIVE AUTO-UPDATE STATUS PENGAJUAN
+// REALTIME POLLING
 const targetPin = "<?php echo h($pin); ?>";
-let prevStatuses = {};
-
-document.querySelectorAll('#user_izin_tbody tr[data-status]').forEach(tr => {
-    const id = tr.id.replace('row_izin_', '');
-    prevStatuses[id] = tr.getAttribute('data-status');
-});
-
 function pollRealtimeStatus() {
     if (!targetPin) return;
 
@@ -1011,17 +937,17 @@ function pollRealtimeStatus() {
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
-                document.getElementById('stat_total').innerHTML = data.stat.total + ' <span style="font-size:12px; font-weight:700; color:#64748b;">Berkas</span>';
+                document.getElementById('stat_total').textContent = data.stat.total;
                 document.getElementById('stat_disetujui').textContent = data.stat.disetujui;
                 document.getElementById('stat_pending').textContent = data.stat.pending;
                 document.getElementById('stat_ditolak').textContent = data.stat.ditolak;
             }
         })
-        .catch(err => console.error('Realtime sync error:', err));
+        .catch(err => console.error('Sync error:', err));
 }
 
 setInterval(pollRealtimeStatus, 5000);
-document.addEventListener('DOMContentLoaded', handleFormDateChange);
+document.addEventListener('DOMContentLoaded', handleDateChange);
 </script>
 
 <?php render_footer(); ?>
