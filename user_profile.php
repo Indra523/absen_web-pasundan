@@ -37,26 +37,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $tgl_l_val      = !empty($tanggal_lahir) ? $tanggal_lahir : null;
     $foto_path      = null;
 
-    if (isset($_FILES['foto_profil']) && $_FILES['foto_profil']['error'] === UPLOAD_ERR_OK) {
-        $file_tmp  = $_FILES['foto_profil']['tmp_name'];
-        $file_name = $_FILES['foto_profil']['name'];
-        $file_size = $_FILES['foto_profil']['size'];
-        $ext       = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-        $allowed   = ['jpg', 'jpeg', 'png', 'webp'];
-
-        if (!in_array($ext, $allowed)) {
-            $pesan_error = "Format foto tidak didukung. Gunakan format JPG, PNG, atau WEBP.";
-        } elseif ($file_size > 2 * 1024 * 1024) {
-            $pesan_error = "Ukuran file foto terlalu besar. Maksimal 2MB.";
-        } else {
+    // 1. Prioritas: Foto hasil kompresi otomatis Canvas di browser (Base64) - Sangat Cepat & Ringan
+    $foto_base64 = trim($_POST['foto_profil_base64'] ?? '');
+    if (!empty($foto_base64) && preg_match('/^data:image\/(jpeg|png|webp);base64,/', $foto_base64, $m_fmt)) {
+        $raw_base64 = preg_replace('/^data:image\/(jpeg|png|webp);base64,/', '', $foto_base64);
+        $img_data = base64_decode($raw_base64);
+        if ($img_data !== false && strlen($img_data) > 0) {
+            $ext_b64 = ($m_fmt[1] === 'jpeg') ? 'jpg' : $m_fmt[1];
             $target_dir = __DIR__ . '/uploads/foto_karyawan/';
-            if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
-            $new_filename = "foto_" . preg_replace('/[^a-zA-Z0-9]/', '', $target_pin) . "_" . time() . "." . $ext;
-            if (move_uploaded_file($file_tmp, $target_dir . $new_filename)) {
+            if (!is_dir($target_dir)) @mkdir($target_dir, 0777, true);
+            $new_filename = "foto_" . preg_replace('/[^a-zA-Z0-9]/', '', $target_pin) . "_" . time() . "." . $ext_b64;
+            if (file_put_contents($target_dir . $new_filename, $img_data)) {
                 $foto_path = "uploads/foto_karyawan/" . $new_filename;
             } else {
-                $pesan_error = "Gagal mengunggah foto ke server.";
+                $pesan_error = "Gagal menyimpan file foto ke server.";
             }
+        }
+    }
+    // 2. Fallback: Upload standar multipart $_FILES
+    elseif (isset($_FILES['foto_profil']) && $_FILES['foto_profil']['error'] !== UPLOAD_ERR_NO_FILE) {
+        if ($_FILES['foto_profil']['error'] === UPLOAD_ERR_OK) {
+            $file_tmp  = $_FILES['foto_profil']['tmp_name'];
+            $file_name = $_FILES['foto_profil']['name'];
+            $file_size = $_FILES['foto_profil']['size'];
+            $ext       = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+            $allowed   = ['jpg', 'jpeg', 'png', 'webp'];
+
+            if (!in_array($ext, $allowed)) {
+                $pesan_error = "Format foto tidak didukung. Gunakan format JPG, PNG, atau WEBP.";
+            } elseif ($file_size > 10 * 1024 * 1024) {
+                $pesan_error = "Ukuran file foto terlalu besar. Maksimal 10MB.";
+            } else {
+                $target_dir = __DIR__ . '/uploads/foto_karyawan/';
+                if (!is_dir($target_dir)) @mkdir($target_dir, 0777, true);
+                $new_filename = "foto_" . preg_replace('/[^a-zA-Z0-9]/', '', $target_pin) . "_" . time() . "." . $ext;
+                if (move_uploaded_file($file_tmp, $target_dir . $new_filename)) {
+                    $foto_path = "uploads/foto_karyawan/" . $new_filename;
+                } else {
+                    $pesan_error = "Gagal mengunggah foto ke server.";
+                }
+            }
+        } elseif ($_FILES['foto_profil']['error'] === UPLOAD_ERR_INI_SIZE || $_FILES['foto_profil']['error'] === UPLOAD_ERR_FORM_SIZE) {
+            $pesan_error = "Ukuran file foto terlalu besar untuk server. Gunakan foto di bawah 10MB.";
+        } else {
+            $pesan_error = "Gagal mengunggah foto (Kode error: " . $_FILES['foto_profil']['error'] . ").";
         }
     }
 
@@ -1036,8 +1060,10 @@ render_header("Profil & Data Diri", "user_profile");
                         <input type="hidden" name="action" value="update_profil_mandiri">
                         <input type="hidden" name="target_pin" value="<?php echo h($pin); ?>">
 
-                        <!-- INTERACTIVE AVATAR UPLOAD -->
+                        <!-- INTERACTIVE AVATAR UPLOAD DENGAN AUTO-COMPRESSION -->
                         <div class="form-label-custom" style="margin-bottom:8px;">Foto Profil</div>
+                        <input type="hidden" name="foto_profil_base64" id="foto_profil_base64" value="">
+
                         <div class="avatar-edit-stage">
                             <div class="avatar-edit-thumb" id="avatarPreviewContainer">
                                 <?php if (!empty($detail['foto']) && file_exists(__DIR__ . '/' . $detail['foto'])): ?>
@@ -1047,13 +1073,16 @@ render_header("Profil & Data Diri", "user_profile");
                                 <?php endif; ?>
                             </div>
                             <div style="flex:1;">
-                                <label for="foto_profil" style="display:inline-flex; align-items:center; gap:6px; background:#ffffff; border:1.5px solid #cbd5e1; padding:7px 14px; border-radius:10px; font-size:12.5px; font-weight:700; color:#334155; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.04);">
+                                <label for="foto_profil" style="display:inline-flex; align-items:center; gap:6px; background:#ffffff; border:1.5px solid #cbd5e1; padding:7px 14px; border-radius:10px; font-size:12.5px; font-weight:700; color:#334155; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.04); transition:all 0.15s ease;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                                    <span>Pilih Foto Baru</span>
+                                    <span>Pilih / Ambil Foto</span>
                                 </label>
-                                <input type="file" id="foto_profil" name="foto_profil" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="previewSelectedImage(this)">
-                                <div style="font-size:11.5px; color:#64748b; margin-top:6px; line-height:1.4;">
-                                    Format JPG, PNG, WEBP (Maksimal 2MB).
+                                <input type="file" id="foto_profil" name="foto_profil" accept="image/*" style="display:none;" onchange="previewAndCompressPhoto(this)">
+                                
+                                <div id="photoStatusBadge" style="display:none; margin-top:6px; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; border:1px solid #cbd5e1; align-items:center;"></div>
+                                
+                                <div style="font-size:11px; color:#64748b; margin-top:4px; line-height:1.4;">
+                                    Foto otomatis dikompresi agar proses simpan instan dan tidak lemot.
                                 </div>
                             </div>
                         </div>
@@ -1264,17 +1293,81 @@ function getCurrentHomeGPS() {
     );
 }
 
-function previewSelectedImage(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
+function previewAndCompressPhoto(input) {
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    const statusBadge = document.getElementById('photoStatusBadge');
+    if (statusBadge) {
+        statusBadge.style.display = 'inline-flex';
+        statusBadge.style.background = '#eff6ff';
+        statusBadge.style.color = '#1d4ed8';
+        statusBadge.style.borderColor = '#bfdbfe';
+        statusBadge.innerHTML = '<span class="btn-spinner" style="display:inline-block; width:10px; height:10px; border:2px solid #2563eb; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:4px;"></span> Mengompres foto...';
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            // Hitung skala kompresi (maksimal resolusi 1000px agar tajam & hemat memori)
+            const MAX_WIDTH = 1000;
+            const MAX_HEIGHT = 1000;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height = Math.round(height * (MAX_WIDTH / width));
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width = Math.round(width * (MAX_HEIGHT / height));
+                    height = MAX_HEIGHT;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Kompresi ke JPEG kualitas 0.85
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+            // Simpan ke hidden input Base64
+            const base64Input = document.getElementById('foto_profil_base64');
+            if (base64Input) {
+                base64Input.value = compressedDataUrl;
+            }
+
+            // Update live preview pada avatar
             const container = document.getElementById('avatarPreviewContainer');
             if (container) {
-                container.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                container.innerHTML = `<img src="${compressedDataUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+            }
+
+            // Update hero avatar
+            const heroAvatar = document.querySelector('.profile-avatar-large');
+            if (heroAvatar) {
+                heroAvatar.innerHTML = `<img src="${compressedDataUrl}" alt="Avatar" style="width:100%; height:100%; object-fit:cover; border-radius:20px;">`;
+            }
+
+            // Hitung perkiraan ukuran KB
+            const approxKb = Math.round((compressedDataUrl.length * 0.75) / 1024);
+            if (statusBadge) {
+                statusBadge.style.display = 'inline-flex';
+                statusBadge.style.background = '#dcfce7';
+                statusBadge.style.color = '#15803d';
+                statusBadge.style.borderColor = '#bbf7d0';
+                statusBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg> Foto siap disimpan (${approxKb} KB)`;
             }
         };
-        reader.readAsDataURL(input.files[0]);
-    }
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 function copyPIN(pin) {
