@@ -334,50 +334,72 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
     margin-top: 2px;
 }
 
-/* FILTER & SEARCH CARD */
+/* FILTER & SEARCH CARD COMPACT */
 .filter-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 20px 24px;
-    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+    border-radius: 16px;
+    padding: 14px 18px;
+    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
 }
 
-.filter-grid {
-    display: flex;
+.filter-toolbar-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.8fr) minmax(140px, 1.1fr) minmax(130px, 1fr) auto auto;
+    gap: 10px;
     align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
+}
+
+@media (max-width: 960px) {
+    .filter-toolbar-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+@media (max-width: 580px) {
+    .filter-toolbar-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .search-input-custom {
-    padding: 9.5px 14px;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 10px;
-    font-size: 13px;
-    color: #0f172a;
-    font-weight: 600;
-    outline: none;
-    transition: all 0.2s ease;
-    min-width: 240px;
+    width: 100% !important;
+    padding: 9.5px 12px 9.5px 34px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    color: #0f172a !important;
+    font-weight: 600 !important;
+    outline: none !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    background: #ffffff !important;
 }
 
 .search-input-custom:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.12);
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
 }
 
 .select-filter-custom {
-    padding: 9.5px 12px;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 10px;
-    font-size: 13px;
-    color: #0f172a;
-    font-weight: 700;
-    outline: none;
-    background: #ffffff;
-    cursor: pointer;
+    width: 100% !important;
+    padding: 9.5px 12px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    outline: none !important;
+    background: #ffffff !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    transition: all 0.2s ease !important;
+}
+
+.select-filter-custom:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
 }
 
 .btn-primary-custom {
@@ -395,6 +417,7 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
     box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
     transition: all 0.2s ease;
     text-decoration: none;
+    margin: 0;
 }
 .btn-primary-custom:hover {
     transform: translateY(-1px);
@@ -615,35 +638,52 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
         </div>
     </div>
 
-    <!-- FILTER & ACTION TOOLBAR -->
+    <!-- FILTER & ACTION TOOLBAR COMPACT SINGLE ROW -->
     <div class="filter-card">
         <form method="GET" action="kelola_izin.php" style="margin:0;">
-            <div class="filter-grid">
-                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1;">
+            <div class="filter-toolbar-grid">
+                <!-- SEARCH INPUT WITH ICON -->
+                <div style="position:relative; width:100%;">
+                    <svg style="position:absolute; left:11px; top:50%; transform:translateY(-50%); pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <input type="text" name="q" value="<?php echo h($search); ?>" placeholder="Cari Nama / PIN / Alasan..." class="search-input-custom">
+                </div>
 
+                <!-- FILTER STATUS -->
+                <div>
                     <select name="status" class="select-filter-custom" onchange="this.form.submit()">
                         <option value="semua" <?php echo $filter_st === 'semua' ? 'selected' : ''; ?>>Semua Status</option>
-                        <option value="pending" <?php echo $filter_st === 'pending' ? 'selected' : ''; ?>>Menunggu Review (<?php echo $stat['pending']; ?>)</option>
+                        <option value="pending" <?php echo $filter_st === 'pending' ? 'selected' : ''; ?>>Menunggu (<?php echo $stat['pending']; ?>)</option>
                         <option value="disetujui" <?php echo $filter_st === 'disetujui' ? 'selected' : ''; ?>>Disetujui (<?php echo $stat['disetujui']; ?>)</option>
                         <option value="ditolak" <?php echo $filter_st === 'ditolak' ? 'selected' : ''; ?>>Ditolak (<?php echo $stat['ditolak']; ?>)</option>
                     </select>
+                </div>
 
+                <!-- FILTER TIPE IZIN -->
+                <div>
                     <select name="tipe" class="select-filter-custom" onchange="this.form.submit()">
-                        <option value="semua" <?php echo $filter_tipe === 'semua' ? 'selected' : ''; ?>>Semua Jenis Izin</option>
+                        <option value="semua" <?php echo $filter_tipe === 'semua' ? 'selected' : ''; ?>>Semua Jenis</option>
                         <option value="cuti" <?php echo $filter_tipe === 'cuti' ? 'selected' : ''; ?>>Cuti</option>
                         <option value="izin" <?php echo $filter_tipe === 'izin' ? 'selected' : ''; ?>>Izin</option>
                         <option value="sakit" <?php echo $filter_tipe === 'sakit' ? 'selected' : ''; ?>>Sakit</option>
                     </select>
-
-                    <button type="submit" class="btn-primary-custom" style="padding:9.5px 14px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                        <span>Filter</span>
-                    </button>
                 </div>
 
-                <div>
-                    <button type="button" onclick="toggleInputIzinModal()" class="btn-primary-custom" style="background:linear-gradient(135deg, #059669, #047857); box-shadow:0 3px 10px rgba(5,150,105,0.25);">
+                <!-- FILTER & RESET BUTTON -->
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button type="submit" class="btn-primary-custom" style="padding:9.5px 14px; white-space:nowrap;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                        <span>Filter</span>
+                    </button>
+                    <?php if (!empty($search) || $filter_st !== 'semua' || $filter_tipe !== 'semua'): ?>
+                        <a href="kelola_izin.php" title="Reset Filter" style="padding:9px 10px; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </a>
+                    <?php endif; ?>
+                </div>
+
+                <!-- CATAT IZIN BUTTON (RIGHT) -->
+                <div style="display:flex; justify-content:flex-end;">
+                    <button type="button" onclick="toggleInputIzinModal()" class="btn-primary-custom" style="background:linear-gradient(135deg, #059669, #047857); box-shadow:0 3px 10px rgba(5,150,105,0.25); white-space:nowrap;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         <span>Catat Izin Pegawai</span>
                     </button>
