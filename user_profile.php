@@ -855,7 +855,7 @@ render_header("Profil & Data Diri", "user_profile");
                 <div class="card-header-gradient">
                     <div class="card-title-text">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <span>Informasi Pegawai</span>
+                        <span>Informasi Guru / Karyawan</span>
                     </div>
                     <span style="font-size:11px; font-weight:700; color:#10b981; background:#dcfce7; padding:3px 10px; border-radius:20px; border:1px solid #bbf7d0;">
                         TERDAFTAR
@@ -867,7 +867,7 @@ render_header("Profil & Data Diri", "user_profile");
                         <div class="info-row-item">
                             <div class="info-row-label">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                <span>PIN Pegawai</span>
+                                <span>PIN</span>
                             </div>
                             <div class="info-row-val" style="display:flex; align-items:center; gap:6px;">
                                 <span id="pinText" style="background:#e2e8f0; border:1px solid #cbd5e1; padding:2px 8px; border-radius:6px; font-family:monospace; font-weight:800; color:#0f172a;">

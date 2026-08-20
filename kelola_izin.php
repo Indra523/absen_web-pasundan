@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HALAMAN MANAJEMEN CUTI / IZIN / SAKIT (KARYAWAN & GURU)
+// HALAMAN MANAJEMEN CUTI / IZIN / SAKIT (GURU & KARYAWAN)
 // Akses: Superadmin, Admin, RnD, Tata Usaha, Staff
 // Redesain Modern, Aesthetic, Sleek UI + Preview Surat Dokter & Rute Rumah
 // ============================================================
@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $end_ts    = strtotime($tgl_selesai);
         $diff_days = ceil(($end_ts - $start_ts) / 86400) + 1;
 
-        // Handle Surat Dokter (Optional in Admin form)
+        // Handle Surat Dokter (Opsional untuk Admin / Superadmin / TU)
         $surat_dokter_path = null;
         if (isset($_FILES['surat_dokter']) && $_FILES['surat_dokter']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['surat_dokter'];
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         if (empty($pin) || empty($tgl_mulai) || empty($tipe_izin)) {
-            $pesan_error = "PIN karyawan, tanggal, dan jenis izin wajib diisi!";
+            $pesan_error = "PIN Guru/Karyawan, tanggal, dan jenis izin wajib diisi!";
         } elseif (!in_array($tipe_izin, ['cuti', 'izin', 'sakit'])) {
             $pesan_error = "Jenis izin tidak valid!";
         } else {
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $res_c = $stmt_c->get_result();
 
             if ($res_c->num_rows === 0) {
-                $pesan_error = "PIN karyawan (<b>" . h($pin) . "</b>) tidak terdaftar di master karyawan!";
+                $pesan_error = "PIN (<b>" . h($pin) . "</b>) tidak terdaftar di master data!";
             } else {
                 $emp_data = $res_c->fetch_assoc();
                 
@@ -267,44 +267,45 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
 ?>
 
 <style>
-/* ===== MODERN KELOLA IZIN THEME ===== */
-.kelola-izin-container {
+/* ===== REFINED KELOLA IZIN THEME ===== */
+.kelola-izin-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 22px;
-    max-width: 1200px;
-    margin: 0 auto 40px auto;
+    gap: 16px;
+    max-width: 1160px;
+    margin: 0 auto 30px auto;
     width: 100%;
 }
 
-/* 4 STAT SUMMARY CARDS */
+/* 4 STAT SUMMARY CARDS (COMPACT & MODERN) */
 .stats-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
 }
 
-.stat-card-glass {
+@media (max-width: 768px) {
+    .stats-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+}
+
+.stat-card-clean {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 20px;
-    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
+    border-radius: 12px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.stat-card-glass:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.08);
-}
-
-.stat-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+.stat-icon-wrap {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -312,41 +313,35 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
 }
 
 .stat-metric-title {
-    font-size: 11px;
-    font-weight: 800;
+    font-size: 10.5px;
+    font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
 }
 
 .stat-metric-value {
-    font-size: 24px;
-    font-weight: 900;
+    font-size: 18px;
+    font-weight: 800;
     line-height: 1.1;
     color: #0f172a;
-}
-
-.stat-metric-sub {
-    font-size: 11.5px;
-    color: #94a3b8;
-    font-weight: 600;
     margin-top: 2px;
 }
 
-/* FILTER & SEARCH CARD COMPACT */
+/* FILTER & ACTION TOOLBAR (COMPACT SINGLE ROW) */
 .filter-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 14px 18px;
-    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
 }
 
 .filter-toolbar-grid {
     display: grid;
-    grid-template-columns: minmax(180px, 1.8fr) minmax(140px, 1.1fr) minmax(130px, 1fr) auto auto;
-    gap: 10px;
+    grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1fr) minmax(120px, 1fr) auto auto;
+    gap: 8px;
     align-items: center;
 }
 
@@ -361,32 +356,32 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
     }
 }
 
-.search-input-custom {
+.search-input-clean {
     width: 100% !important;
-    padding: 9.5px 12px 9.5px 34px !important;
-    border: 1.5px solid #cbd5e1 !important;
-    border-radius: 10px !important;
-    font-size: 13px !important;
+    padding: 8px 10px 8px 32px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
     color: #0f172a !important;
     font-weight: 600 !important;
     outline: none !important;
-    transition: all 0.2s ease !important;
     box-sizing: border-box !important;
     margin: 0 !important;
     background: #ffffff !important;
+    transition: border-color 0.15s ease !important;
 }
 
-.search-input-custom:focus {
+.search-input-clean:focus {
     border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
 }
 
-.select-filter-custom {
+.select-filter-clean {
     width: 100% !important;
-    padding: 9.5px 12px !important;
-    border: 1.5px solid #cbd5e1 !important;
-    border-radius: 10px !important;
-    font-size: 13px !important;
+    padding: 8px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
     color: #0f172a !important;
     font-weight: 700 !important;
     outline: none !important;
@@ -394,263 +389,329 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
     cursor: pointer !important;
     box-sizing: border-box !important;
     margin: 0 !important;
-    transition: all 0.2s ease !important;
 }
 
-.select-filter-custom:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
-}
-
-.btn-primary-custom {
+.btn-primary-clean {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    gap: 6px;
+    background: #2563eb;
     color: #ffffff !important;
-    font-weight: 800;
-    font-size: 13px;
-    padding: 9.5px 18px;
-    border-radius: 10px;
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 8px 14px;
+    border-radius: 8px;
     border: none;
     cursor: pointer;
-    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
-    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+    transition: background 0.15s ease;
     text-decoration: none;
     margin: 0;
+    white-space: nowrap;
 }
-.btn-primary-custom:hover {
-    transform: translateY(-1px);
+.btn-primary-clean:hover {
+    background: #1d4ed8;
+}
+
+.btn-green-clean {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #059669;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
+    transition: background 0.15s ease;
+    text-decoration: none;
+    margin: 0;
+    white-space: nowrap;
+}
+.btn-green-clean:hover {
+    background: #047857;
 }
 
 /* DATA TABLE CARD */
-.table-card {
+.table-card-clean {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 20px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 6px 25px -4px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
 }
 
-.table-header-bar {
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 18px 24px;
+.table-header-clean {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 14px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
 }
 
-.table-modern {
+.table-compact {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
-    min-width: 820px;
+    font-size: 12.5px;
+    min-width: 780px;
 }
 
-.table-modern thead th {
+.table-compact thead th {
     background: #f8fafc;
     color: #475569;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.8px;
-    padding: 13px 16px;
-    border-bottom: 1.5px solid #e2e8f0;
+    font-size: 10.5px;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
     text-align: center;
 }
 
-.table-modern td {
-    padding: 14px 16px;
+.table-compact td {
+    padding: 11px 12px;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
     text-align: center;
     color: #334155;
 }
 
-.table-modern tbody tr:hover {
+.table-compact tbody tr:hover {
     background: #f8fafc;
 }
-
-/* STATUS & TIPE PILLS */
-.status-pill-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11.5px;
-    font-weight: 800;
-}
-.status-pill-approved { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-.status-pill-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-.status-pill-rejected { background: #fee2e2; color: #be123c; border: 1px solid #fca5a5; }
-
-.badge-tipe {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3.5px 10px;
-    border-radius: 20px;
-    font-size: 11.5px;
-    font-weight: 800;
-}
-.badge-tipe-cuti { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.badge-tipe-izin { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
-.badge-tipe-sakit { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
 
 /* ACTION BUTTONS */
 .btn-approve {
     background: #10b981;
     color: #ffffff;
     border: none;
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 11.5px;
-    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    transition: all 0.15s ease;
+    gap: 3px;
 }
-.btn-approve:hover { background: #059669; transform: scale(1.02); }
+.btn-approve:hover { background: #059669; }
 
 .btn-reject {
     background: #ef4444;
     color: #ffffff;
     border: none;
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 11.5px;
-    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    transition: all 0.15s ease;
+    gap: 3px;
 }
-.btn-reject:hover { background: #dc2626; transform: scale(1.02); }
+.btn-reject:hover { background: #dc2626; }
 
 .btn-route-sick {
-    background: linear-gradient(135deg, #059669, #047857);
+    background: #059669;
     color: #ffffff !important;
     text-decoration: none;
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 11px;
-    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    box-shadow: 0 2px 8px rgba(5,150,105,0.25);
-    transition: all 0.15s ease;
+    gap: 3px;
 }
-.btn-route-sick:hover { transform: translateY(-1px); }
+
+/* SEGMENTED CONTROL IN MODAL */
+.type-segmented-control {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 10px;
+    gap: 3px;
+    margin-bottom: 12px;
+}
+
+.segmented-option {
+    padding: 8px 4px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    background: transparent;
+    transition: all 0.15s ease;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+.segmented-option.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+.segmented-option.active.card-cuti { color: #1d4ed8; }
+.segmented-option.active.card-izin { color: #c2410c; }
+.segmented-option.active.card-sakit { color: #7e22ce; }
+
+.duration-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    margin: 2px 0 10px 0;
+}
+
+.doctor-upload-box {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.input-date-clean {
+    width: 100% !important;
+    padding: 7px 9px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    font-weight: 600 !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    font-family: inherit !important;
+}
+
+.textarea-clean {
+    width: 100% !important;
+    padding: 7px 9px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    font-family: inherit !important;
+    resize: vertical !important;
+    min-height: 60px !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+}
 
 /* LIGHTBOX MODAL */
 .photo-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(6px);
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(4px);
     z-index: 99999;
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
 }
 .photo-modal-card {
     background: #ffffff;
-    border-radius: 20px;
-    max-width: 560px;
+    border-radius: 14px;
+    max-width: 480px;
     width: 100%;
     overflow: hidden;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-    animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
-@keyframes scaleIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 </style>
 
-<div class="kelola-izin-container">
+<div class="kelola-izin-wrapper">
 
     <!-- TOAST NOTIFICATIONS -->
     <?php if (!empty($pesan_sukses)): ?>
-        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:14px 18px; color:#15803d; font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:10px; box-shadow:0 2px 10px rgba(22,163,74,0.08);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 16px; color:#15803d; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <div><?php echo $pesan_sukses; ?></div>
         </div>
     <?php endif; ?>
 
     <?php if (!empty($pesan_error)): ?>
-        <div style="background:#fff1f2; border:1px solid #fca5a5; border-radius:14px; padding:14px 18px; color:#991b1b; font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:10px; box-shadow:0 2px 10px rgba(220,38,38,0.08);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="background:#fff1f2; border:1px solid #fca5a5; border-radius:10px; padding:12px 16px; color:#991b1b; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <div><?php echo $pesan_error; ?></div>
         </div>
     <?php endif; ?>
 
     <!-- 4 KPI STAT CARDS -->
     <div class="stats-cards-grid">
-        <div class="stat-card-glass">
-            <div class="stat-icon-wrapper" style="background:#eff6ff; color:#2563eb;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div class="stat-card-clean">
+            <div class="stat-icon-wrap" style="background:#eff6ff; color:#2563eb;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
             <div>
                 <div class="stat-metric-title">Total Pengajuan</div>
-                <div class="stat-metric-value"><?php echo $stat['total']; ?> <span style="font-size:12px; font-weight:700; color:#64748b;">Berkas</span></div>
-                <div class="stat-metric-sub">Keseluruhan Record</div>
+                <div class="stat-metric-value"><?php echo $stat['total']; ?></div>
             </div>
         </div>
 
-        <div class="stat-card-glass">
-            <div class="stat-icon-wrapper" style="background:#fffbeb; color:#d97706;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="stat-card-clean">
+            <div class="stat-icon-wrap" style="background:#fffbeb; color:#d97706;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <div>
                 <div class="stat-metric-title">Menunggu Review</div>
-                <div class="stat-metric-value" style="color:#d97706;"><?php echo $stat['pending']; ?> <span style="font-size:12px; font-weight:700; color:#64748b;">Antrean</span></div>
-                <div class="stat-metric-sub">Perlu Tindakan</div>
+                <div class="stat-metric-value" style="color:#d97706;"><?php echo $stat['pending']; ?></div>
             </div>
         </div>
 
-        <div class="stat-card-glass">
-            <div class="stat-icon-wrapper" style="background:#f0fdf4; color:#16a34a;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div class="stat-card-clean">
+            <div class="stat-icon-wrap" style="background:#f0fdf4; color:#16a34a;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div>
                 <div class="stat-metric-title">Disetujui</div>
                 <div class="stat-metric-value" style="color:#16a34a;"><?php echo $stat['disetujui']; ?></div>
-                <div class="stat-metric-sub">Izin/Cuti Aktif</div>
             </div>
         </div>
 
-        <div class="stat-card-glass">
-            <div class="stat-icon-wrapper" style="background:#fff1f2; color:#e11d48;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <div class="stat-card-clean">
+            <div class="stat-icon-wrap" style="background:#fff1f2; color:#e11d48;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </div>
             <div>
                 <div class="stat-metric-title">Ditolak</div>
                 <div class="stat-metric-value" style="color:#e11d48;"><?php echo $stat['ditolak']; ?></div>
-                <div class="stat-metric-sub">Tidak Disetujui</div>
             </div>
         </div>
     </div>
 
-    <!-- FILTER & ACTION TOOLBAR COMPACT SINGLE ROW -->
+    <!-- FILTER & ACTION TOOLBAR -->
     <div class="filter-card">
         <form method="GET" action="kelola_izin.php" style="margin:0;">
             <div class="filter-toolbar-grid">
                 <!-- SEARCH INPUT WITH ICON -->
                 <div style="position:relative; width:100%;">
-                    <svg style="position:absolute; left:11px; top:50%; transform:translateY(-50%); pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" name="q" value="<?php echo h($search); ?>" placeholder="Cari Nama / PIN / Alasan..." class="search-input-custom">
+                    <svg style="position:absolute; left:10px; top:50%; transform:translateY(-50%); pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" name="q" value="<?php echo h($search); ?>" placeholder="Cari Nama / PIN / Alasan..." class="search-input-clean">
                 </div>
 
                 <!-- FILTER STATUS -->
                 <div>
-                    <select name="status" class="select-filter-custom" onchange="this.form.submit()">
+                    <select name="status" class="select-filter-clean" onchange="this.form.submit()">
                         <option value="semua" <?php echo $filter_st === 'semua' ? 'selected' : ''; ?>>Semua Status</option>
                         <option value="pending" <?php echo $filter_st === 'pending' ? 'selected' : ''; ?>>Menunggu (<?php echo $stat['pending']; ?>)</option>
                         <option value="disetujui" <?php echo $filter_st === 'disetujui' ? 'selected' : ''; ?>>Disetujui (<?php echo $stat['disetujui']; ?>)</option>
@@ -660,7 +721,7 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
 
                 <!-- FILTER TIPE IZIN -->
                 <div>
-                    <select name="tipe" class="select-filter-custom" onchange="this.form.submit()">
+                    <select name="tipe" class="select-filter-clean" onchange="this.form.submit()">
                         <option value="semua" <?php echo $filter_tipe === 'semua' ? 'selected' : ''; ?>>Semua Jenis</option>
                         <option value="cuti" <?php echo $filter_tipe === 'cuti' ? 'selected' : ''; ?>>Cuti</option>
                         <option value="izin" <?php echo $filter_tipe === 'izin' ? 'selected' : ''; ?>>Izin</option>
@@ -670,22 +731,22 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
 
                 <!-- FILTER & RESET BUTTON -->
                 <div style="display:flex; gap:6px; align-items:center;">
-                    <button type="submit" class="btn-primary-custom" style="padding:9.5px 14px; white-space:nowrap;">
+                    <button type="submit" class="btn-primary-clean">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                         <span>Filter</span>
                     </button>
                     <?php if (!empty($search) || $filter_st !== 'semua' || $filter_tipe !== 'semua'): ?>
-                        <a href="kelola_izin.php" title="Reset Filter" style="padding:9px 10px; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
+                        <a href="kelola_izin.php" title="Reset Filter" style="padding:8px 9px; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </a>
                     <?php endif; ?>
                 </div>
 
-                <!-- CATAT IZIN BUTTON (RIGHT) -->
+                <!-- CATAT IZIN BUTTON (GURU / KARYAWAN) -->
                 <div style="display:flex; justify-content:flex-end;">
-                    <button type="button" onclick="toggleInputIzinModal()" class="btn-primary-custom" style="background:linear-gradient(135deg, #059669, #047857); box-shadow:0 3px 10px rgba(5,150,105,0.25); white-space:nowrap;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        <span>Catat Izin Pegawai</span>
+                    <button type="button" onclick="toggleInputIzinModal()" class="btn-green-clean">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Catat Izin Guru / Karyawan</span>
                     </button>
                 </div>
             </div>
@@ -693,29 +754,29 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
     </div>
 
     <!-- TABLE REKAP DATA PERIZINAN -->
-    <div class="table-card">
-        <div class="table-header-bar">
-            <div style="font-size:15px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                <span>Daftar Pengajuan Cuti, Izin &amp; Sakit</span>
+    <div class="table-card-clean">
+        <div class="table-header-clean">
+            <div style="font-size:13.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span>Daftar Pengajuan Cuti, Izin &amp; Sakit Guru / Karyawan</span>
             </div>
-            <div style="font-size:12px; font-weight:700; color:#64748b;">
-                Total: <b style="color:#0f172a;"><?php echo $total_records; ?></b> Berkas &bull; Halaman <?php echo $page; ?> dari <?php echo $total_pages; ?>
+            <div style="font-size:11.5px; font-weight:700; color:#64748b;">
+                Total: <b style="color:#0f172a;"><?php echo $total_records; ?></b> Berkas
             </div>
         </div>
 
         <div style="overflow-x:auto;">
-            <table class="table-modern">
+            <table class="table-compact">
                 <thead>
                     <tr>
-                        <th style="width:45px;">NO</th>
-                        <th style="text-align:left;">PEGAWAI</th>
-                        <th style="text-align:left;">PERIODE &amp; DURASI</th>
+                        <th style="width:35px;">NO</th>
+                        <th style="text-align:left;">GURU / KARYAWAN</th>
+                        <th style="text-align:left;">PERIODE</th>
                         <th>JENIS</th>
                         <th style="text-align:left;">KETERANGAN</th>
                         <th>SURAT DOKTER</th>
                         <th>STATUS</th>
-                        <th>TINDAKAN / AKSI</th>
+                        <th>TINDAKAN</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -723,28 +784,22 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
                         $no = $offset + 1;
                         foreach ($list_izin as $row):
                             $t_iz = $row['tipe_izin'];
-                            $badge_tipe_class = 'badge-tipe-cuti';
-                            if ($t_iz === 'izin') $badge_tipe_class = 'badge-tipe-izin';
-                            if ($t_iz === 'sakit') $badge_tipe_class = 'badge-tipe-sakit';
+                            $t_bg = '#eff6ff'; $t_col = '#1d4ed8'; $t_brd = '#bfdbfe';
+                            if ($t_iz === 'izin') { $t_bg = '#fff7ed'; $t_col = '#c2410c'; $t_brd = '#ffedd5'; }
+                            if ($t_iz === 'sakit') { $t_bg = '#faf5ff'; $t_col = '#7e22ce'; $t_brd = '#e9d5ff'; }
 
                             $st_p = $row['status_persetujuan'] ?? 'disetujui';
-                            $p_class = 'status-pill-approved';
-                            $p_text  = 'Disetujui';
-                            if ($st_p === 'pending') {
-                                $p_class = 'status-pill-pending';
-                                $p_text  = 'Menunggu';
-                            } elseif ($st_p === 'ditolak') {
-                                $p_class = 'status-pill-rejected';
-                                $p_text  = 'Ditolak';
-                            }
+                            $p_bg = '#dcfce7'; $p_col = '#15803d'; $p_lbl = 'Disetujui';
+                            if ($st_p === 'pending') { $p_bg = '#fef3c7'; $p_col = '#92400e'; $p_lbl = 'Menunggu'; }
+                            if ($st_p === 'ditolak') { $p_bg = '#fee2e2'; $p_col = '#be123c'; $p_lbl = 'Ditolak'; }
 
                             $tgl_m = date('d/m/Y', strtotime($row['tanggal']));
                             $tgl_s = !empty($row['tgl_selesai']) ? date('d/m/Y', strtotime($row['tgl_selesai'])) : $tgl_m;
                             $dur_days = (strtotime($row['tgl_selesai'] ?: $row['tanggal']) - strtotime($row['tanggal'])) / 86400 + 1;
 
                             $tgl_display = ($tgl_m === $tgl_s) 
-                                ? "<div style='font-weight:800; color:#0f172a;'>{$tgl_m}</div><div style='font-size:11px; color:#64748b;'>1 Hari (Single Day)</div>" 
-                                : "<div style='font-weight:800; color:#0f172a;'>{$tgl_m} &ndash; {$tgl_s}</div><div style='font-size:11px; color:#2563eb; font-weight:700;'>{$dur_days} Hari</div>";
+                                ? "<div style='font-weight:700; color:#0f172a;'>{$tgl_m}</div><div style='font-size:10px; color:#64748b;'>1 Hari</div>" 
+                                : "<div style='font-weight:700; color:#0f172a;'>{$tgl_m} - {$tgl_s}</div><div style='font-size:10px; color:#2563eb; font-weight:700;'>{$dur_days} Hari</div>";
 
                             // Surat Dokter
                             $td_surat = '<span style="color:#cbd5e1;">-</span>';
@@ -752,56 +807,53 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
                                 $file_ext = strtolower(pathinfo($row['surat_dokter'], PATHINFO_EXTENSION));
                                 $file_url = h($row['surat_dokter']);
                                 if ($file_ext === 'pdf') {
-                                    $td_surat = "<a href='{$file_url}' target='_blank' style='background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:4px;'>
-                                                    <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/></svg>
-                                                    <span>Lihat PDF</span>
-                                                 </a>";
+                                    $td_surat = "<a href='{$file_url}' target='_blank' style='background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:700; text-decoration:none;'>Lihat PDF</a>";
                                 } else {
-                                    $td_surat = "<button type='button' onclick=\"openDoctorLightbox('{$file_url}', 'Surat Keterangan Dokter &bull; " . h($row['nama']) . "')\" style='background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:4px;'>
-                                                    <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/></svg>
-                                                    <span>Lihat Surat</span>
-                                                 </button>";
+                                    $td_surat = "<button type='button' onclick=\"openDoctorLightbox('{$file_url}', 'Surat Keterangan Dokter &bull; " . h($row['nama']) . "')\" style='background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:700; cursor:pointer;'>Lihat Surat</button>";
                                 }
                             } elseif ($t_iz === 'sakit' && $dur_days <= 2) {
-                                $td_surat = "<span style='font-size:10.5px; color:#64748b; background:#f1f5f9; padding:2px 6px; border-radius:4px;'>Istirahat (1-2 Hari)</span>";
+                                $td_surat = "<span style='font-size:10px; color:#64748b;'>Istirahat</span>";
                             }
 
-                            // Cek rute ke rumah (jika sakit dan ada koordinat)
                             $has_coords = (!empty($row['latitude_rumah']) && !empty($row['longitude_rumah']));
                     ?>
                         <tr>
-                            <td><b><?php echo $no++; ?></b></td>
+                            <td><?php echo $no++; ?></td>
                             <td style="text-align:left;">
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex-shrink:0;">
-                                        <?php echo strtoupper(mb_substr($row['nama'] ?? 'P', 0, 1)); ?>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div style="width:30px; height:30px; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; flex-shrink:0;">
+                                        <?php echo strtoupper(mb_substr($row['nama'] ?? 'G', 0, 1)); ?>
                                     </div>
                                     <div style="min-width:0;">
-                                        <div style="font-weight:800; color:#0f172a;"><?php echo h($row['nama']); ?></div>
-                                        <div style="font-size:11px; color:#64748b;">
-                                            PIN: <code style="font-weight:700; color:#0f172a;"><?php echo h($row['pin']); ?></code> &bull; <?php echo h($row['departemen'] ?: 'Umum'); ?>
+                                        <div style="font-weight:800; color:#0f172a; font-size:12.5px;"><?php echo h($row['nama']); ?></div>
+                                        <div style="font-size:10.5px; color:#64748b;">
+                                            PIN: <b><?php echo h($row['pin']); ?></b> &bull; <?php echo h($row['departemen'] ?: 'Umum'); ?>
                                         </div>
                                     </div>
                                 </div>
                             </td>
                             <td style="text-align:left;"><?php echo $tgl_display; ?></td>
                             <td>
-                                <span class="badge-tipe <?php echo $badge_tipe_class; ?>"><?php echo ucfirst($t_iz); ?></span>
+                                <span style="background:<?php echo $t_bg; ?>; color:<?php echo $t_col; ?>; border:1px solid <?php echo $t_brd; ?>; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">
+                                    <?php echo ucfirst($t_iz); ?>
+                                </span>
                             </td>
-                            <td style="text-align:left; color:#334155; line-height:1.4; max-width:200px;">
+                            <td style="text-align:left; color:#334155; line-height:1.35; max-width:200px; font-size:12px;">
                                 <?php echo h($row['keterangan'] ?: '-'); ?>
                             </td>
                             <td><?php echo $td_surat; ?></td>
                             <td>
-                                <span class="status-pill-badge <?php echo $p_class; ?>"><?php echo $p_text; ?></span>
+                                <span style="background:<?php echo $p_bg; ?>; color:<?php echo $p_col; ?>; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">
+                                    <?php echo $p_lbl; ?>
+                                </span>
                                 <?php if (!empty($row['approved_by'])): ?>
-                                    <div style="font-size:10px; color:#64748b; margin-top:2px; font-weight:600;">
+                                    <div style="font-size:9.5px; color:#64748b; margin-top:2px;">
                                         oleh <b><?php echo h($row['approved_by']); ?></b>
                                     </div>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap; align-items:center;">
+                                <div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap; align-items:center;">
                                     <?php if ($st_p === 'pending'): ?>
                                         <form method="POST" action="kelola_izin.php" style="margin:0;">
                                             <?php echo csrf_field(); ?>
@@ -809,7 +861,7 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
                                             <input type="hidden" name="id_target" value="<?php echo $row['id']; ?>">
                                             <input type="hidden" name="status_baru" value="disetujui">
                                             <button type="submit" class="btn-approve" title="Setujui Pengajuan">
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                                 <span>Setujui</span>
                                             </button>
                                         </form>
@@ -819,24 +871,24 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
                                             <input type="hidden" name="id_target" value="<?php echo $row['id']; ?>">
                                             <input type="hidden" name="status_baru" value="ditolak">
                                             <button type="submit" class="btn-reject" title="Tolak Pengajuan">
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                                 <span>Tolak</span>
                                             </button>
                                         </form>
                                     <?php endif; ?>
 
-                                    <!-- TOMBOL RUTE KE RUMAH JIKA PEGAWAI SAKIT (RBAC PROTECTED) -->
+                                    <!-- TOMBOL RUTE KE RUMAH JIKA SAKIT -->
                                     <?php if ($t_iz === 'sakit' && $has_coords && can_access_route_maps()): ?>
-                                        <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo $row['latitude_rumah'] . ',' . $row['longitude_rumah']; ?>" target="_blank" class="btn-route-sick" title="Buka Rute Navigasi Google Maps untuk Menjenguk">
-                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                                        <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo $row['latitude_rumah'] . ',' . $row['longitude_rumah']; ?>" target="_blank" class="btn-route-sick" title="Rute ke Rumah Guru / Karyawan">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                                             <span>Rute Rumah</span>
                                         </a>
                                     <?php endif; ?>
 
                                     <!-- TOMBOL HUBUNGI WA -->
                                     <?php if (!empty($row['no_hp'])): ?>
-                                        <a href="https://wa.me/<?php echo preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $row['no_hp'])); ?>" target="_blank" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:3px;" title="Hubungi WA Pegawai">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                        <a href="https://wa.me/<?php echo preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $row['no_hp'])); ?>" target="_blank" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; padding:3px 6px; border-radius:6px; font-size:10.5px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:2px;" title="Hubungi WhatsApp">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                                             <span>WA</span>
                                         </a>
                                     <?php endif; ?>
@@ -846,8 +898,8 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
                                             <?php echo csrf_field(); ?>
                                             <input type="hidden" name="action" value="hapus_izin">
                                             <input type="hidden" name="id_hapus" value="<?php echo $row['id']; ?>">
-                                            <button type="submit" style="background:#fff1f2; color:#dc2626; border:1px solid #fca5a5; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" title="Hapus">
-                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                            <button type="submit" style="background:#fff1f2; color:#dc2626; border:1px solid #fca5a5; padding:3px 6px; border-radius:6px; font-size:10.5px; font-weight:700; cursor:pointer;" title="Hapus">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                             </button>
                                         </form>
                                     <?php endif; ?>
@@ -856,7 +908,7 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
                         </tr>
                     <?php endforeach; else: ?>
                         <tr>
-                            <td colspan="8" style="padding:50px 20px; color:#94a3b8; font-size:14px; text-align:center;">Belum ada data perizinan pada kriteria filter yang dipilih.</td>
+                            <td colspan="8" style="padding:40px 20px; color:#94a3b8; font-size:13px; text-align:center;">Belum ada data perizinan pada kriteria filter yang dipilih.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -865,12 +917,12 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
 
         <!-- PAGINATION -->
         <?php if ($total_pages > 1): ?>
-            <div style="padding:16px 24px; border-top:1px solid #f1f5f9; display:flex; justify-content:center; gap:6px;">
+            <div style="padding:12px 18px; border-top:1px solid #f1f5f9; display:flex; justify-content:center; gap:4px;">
                 <?php for ($i = 1; $i <= $total_pages; $i++): 
                     $active_pg = ($i === $page);
                     $pg_url = 'kelola_izin.php?' . http_build_query(array_merge($_GET, ['page' => $i]));
                 ?>
-                    <a href="<?php echo $pg_url; ?>" style="padding:6px 12px; border-radius:8px; font-size:12px; font-weight:800; text-decoration:none; <?php echo $active_pg ? 'background:#2563eb; color:#fff;' : 'background:#f8fafc; color:#334155; border:1px solid #e2e8f0;'; ?>">
+                    <a href="<?php echo $pg_url; ?>" style="padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:700; text-decoration:none; <?php echo $active_pg ? 'background:#2563eb; color:#fff;' : 'background:#f8fafc; color:#334155; border:1px solid #e2e8f0;'; ?>">
                         <?php echo $i; ?>
                     </a>
                 <?php endfor; ?>
@@ -880,61 +932,93 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
 
 </div>
 
-<!-- MODAL INPUT IZIN PEGAWAI (ADMIN) -->
+<!-- REFINED MODAL INPUT IZIN GURU / KARYAWAN (ADMIN) -->
 <div class="photo-modal-overlay" id="modalInputIzin" onclick="closeInputIzinModal(event)">
-    <div class="photo-modal-card" style="max-width:480px;" onclick="event.stopPropagation()">
-        <div style="background:linear-gradient(135deg, #0b132b, #1c2541); padding:18px 22px; color:#fff; display:flex; align-items:center; justify-content:space-between;">
-            <div style="font-size:15px; font-weight:800;">Catat Izin Pegawai (Admin)</div>
-            <button type="button" onclick="closeInputIzinModal()" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">&times;</button>
+    <div class="photo-modal-card" style="max-width:440px;" onclick="event.stopPropagation()">
+        <!-- CLEAN MODAL HEADER -->
+        <div style="background:#ffffff; border-bottom:1px solid #f1f5f9; padding:14px 18px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:14px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span>Catat Izin Guru / Karyawan</span>
+            </div>
+            <button type="button" onclick="closeInputIzinModal()" style="background:none; border:none; color:#94a3b8; font-size:20px; line-height:1; cursor:pointer; padding:0 4px;">&times;</button>
         </div>
 
-        <form method="POST" action="kelola_izin.php" enctype="multipart/form-data" style="padding:22px;">
+        <form method="POST" action="kelola_izin.php" enctype="multipart/form-data" style="padding:16px 18px;">
             <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="simpan_izin">
 
-            <div style="margin-bottom:14px;">
-                <label style="font-size:11.5px; font-weight:800; color:#334155; text-transform:uppercase;">Pilih Pegawai</label>
-                <select name="pin" required class="select-filter-custom" style="width:100%; margin-top:4px;">
-                    <option value="">-- Pilih Pegawai --</option>
+            <!-- PILIH GURU / KARYAWAN -->
+            <div style="margin-bottom:10px;">
+                <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px; display:block;">Pilih Guru / Karyawan</label>
+                <select name="pin" required class="input-date-clean" style="font-size:12.5px; padding:8px 10px;">
+                    <option value="">-- Pilih Guru / Karyawan --</option>
                     <?php foreach ($master_employees as $emp): ?>
                         <option value="<?php echo h($emp['pin']); ?>">[<?php echo h($emp['pin']); ?>] <?php echo h($emp['nama']); ?> (<?php echo h($emp['departemen'] ?: 'Umum'); ?>)</option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
-                <div>
-                    <label style="font-size:11.5px; font-weight:800; color:#334155; text-transform:uppercase;">Dari Tanggal</label>
-                    <input type="date" name="tgl_mulai" value="<?php echo date('Y-m-d'); ?>" required class="input-date-custom" style="margin-top:4px;">
+            <!-- RENTANG TANGGAL -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;">
+                <div style="min-width:0;">
+                    <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px; display:block;">Dari Tanggal</label>
+                    <input type="date" id="admin_tgl_mulai" name="tgl_mulai" value="<?php echo date('Y-m-d'); ?>" required class="input-date-clean" onchange="handleAdminDateChange()">
                 </div>
-                <div>
-                    <label style="font-size:11.5px; font-weight:800; color:#334155; text-transform:uppercase;">Sampai Tanggal</label>
-                    <input type="date" name="tgl_selesai" value="<?php echo date('Y-m-d'); ?>" required class="input-date-custom" style="margin-top:4px;">
+                <div style="min-width:0;">
+                    <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px; display:block;">Sampai Tanggal</label>
+                    <input type="date" id="admin_tgl_selesai" name="tgl_selesai" value="<?php echo date('Y-m-d'); ?>" required class="input-date-clean" onchange="handleAdminDateChange()">
                 </div>
             </div>
 
+            <!-- DURATION CHIP -->
+            <div>
+                <div id="adminDurationPill" class="duration-chip">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span id="adminDurationText">Durasi: 1 Hari</span>
+                </div>
+            </div>
+
+            <!-- JENIS PERIZINAN (SEGMENTED CONTROL) -->
+            <div style="margin-bottom:10px;">
+                <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px; display:block;">Jenis Perizinan</label>
+                <input type="hidden" id="admin_tipe_izin_val" name="tipe_izin" value="cuti" required>
+
+                <div class="type-segmented-control">
+                    <div class="segmented-option active card-cuti" id="adm_card_cuti" onclick="setAdminIzinType('cuti')">
+                        <span class="seg-title">Cuti</span>
+                        <span class="seg-sub">Resmi</span>
+                    </div>
+                    <div class="segmented-option" id="adm_card_izin" onclick="setAdminIzinType('izin')">
+                        <span class="seg-title">Izin</span>
+                        <span class="seg-sub">Pribadi/Dinas</span>
+                    </div>
+                    <div class="segmented-option" id="adm_card_sakit" onclick="setAdminIzinType('sakit')">
+                        <span class="seg-title">Sakit</span>
+                        <span class="seg-sub">Surat Dokter</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SURAT DOKTER (OPSIONAL UNTUK ADMIN) -->
+            <div id="adminDoctorSection" class="doctor-upload-box optional" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:11.5px; font-weight:800; color:#0f172a;">Surat Dokter</span>
+                    <span style="font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:4px; background:#dcfce7; color:#15803d;">OPSIONAL</span>
+                </div>
+                <div style="font-size:11px; color:#15803d; margin-bottom:6px;">Upload surat dokter bersifat opsional bila dicatat langsung oleh Admin/Tata Usaha.</div>
+                <input type="file" name="surat_dokter" accept=".jpg,.jpeg,.png,.webp,.pdf" class="input-date-clean" style="font-size:11.5px; padding:5px 8px;">
+            </div>
+
+            <!-- KETERANGAN / ALASAN -->
             <div style="margin-bottom:14px;">
-                <label style="font-size:11.5px; font-weight:800; color:#334155; text-transform:uppercase;">Jenis Perizinan</label>
-                <select name="tipe_izin" required class="select-filter-custom" style="width:100%; margin-top:4px;">
-                    <option value="cuti">Cuti</option>
-                    <option value="izin">Izin</option>
-                    <option value="sakit">Sakit</option>
-                </select>
+                <label style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; margin-bottom:4px; display:block;">Keterangan / Alasan</label>
+                <textarea name="keterangan" rows="2" placeholder="Tulis alasan izin..." class="textarea-clean"></textarea>
             </div>
 
-            <div style="margin-bottom:14px;">
-                <label style="font-size:11.5px; font-weight:800; color:#334155; text-transform:uppercase;">Surat Dokter (Opsional)</label>
-                <input type="file" name="surat_dokter" accept=".jpg,.jpeg,.png,.webp,.pdf" class="input-date-custom" style="margin-top:4px; font-size:12px;">
-            </div>
-
-            <div style="margin-bottom:18px;">
-                <label style="font-size:11.5px; font-weight:800; color:#334155; text-transform:uppercase;">Keterangan / Alasan</label>
-                <textarea name="keterangan" rows="2" placeholder="Tulis alasan..." class="input-date-custom" style="margin-top:4px; resize:vertical;"></textarea>
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:8px;">
-                <button type="button" onclick="closeInputIzinModal()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:9px 16px; border-radius:10px; font-weight:700; cursor:pointer;">Batal</button>
-                <button type="submit" class="btn-primary-custom">Simpan &amp; Setujui</button>
+            <div style="display:flex; justify-content:flex-end; gap:6px;">
+                <button type="button" onclick="closeInputIzinModal()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">Batal</button>
+                <button type="submit" class="btn-primary-clean">Simpan &amp; Setujui</button>
             </div>
         </form>
     </div>
@@ -945,13 +1029,13 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
     <div class="photo-modal-card" onclick="event.stopPropagation()">
         <div style="position:relative; width:100%; max-height:75vh; background:#0f172a; display:flex; align-items:center; justify-content:center; overflow:hidden;">
             <img id="doctorModalImg" src="" alt="Surat Dokter" style="width:100%; height:auto; max-height:75vh; object-fit:contain;">
-            <button type="button" onclick="closeDoctorLightbox()" style="position:absolute; top:12px; right:12px; background:rgba(15,23,42,0.75); color:#fff; border:none; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <button type="button" onclick="closeDoctorLightbox()" style="position:absolute; top:8px; right:8px; background:rgba(15,23,42,0.75); color:#fff; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                &times;
             </button>
         </div>
-        <div style="padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
-            <div id="doctorModalTitle" style="font-size:13px; font-weight:800; color:#0f172a;">Surat Keterangan Dokter</div>
-            <a id="doctorModalDownload" href="" target="_blank" download style="font-size:12px; font-weight:800; color:#2563eb; text-decoration:none;">Download File</a>
+        <div style="padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
+            <div id="doctorModalTitle" style="font-size:12px; font-weight:700; color:#0f172a;">Surat Keterangan Dokter</div>
+            <a id="doctorModalDownload" href="" target="_blank" download style="font-size:11.5px; font-weight:700; color:#2563eb; text-decoration:none;">Download File</a>
         </div>
     </div>
 </div>
@@ -960,6 +1044,7 @@ render_header("Kelola Cuti, Izin &amp; Sakit", "kelola_izin");
 function toggleInputIzinModal() {
     const modal = document.getElementById('modalInputIzin');
     modal.style.display = 'flex';
+    handleAdminDateChange();
 }
 
 function closeInputIzinModal(e) {
@@ -968,6 +1053,45 @@ function closeInputIzinModal(e) {
     }
     const modal = document.getElementById('modalInputIzin');
     if (modal) modal.style.display = 'none';
+}
+
+function setAdminIzinType(type) {
+    document.getElementById('admin_tipe_izin_val').value = type;
+    document.querySelectorAll('#modalInputIzin .segmented-option').forEach(el => {
+        el.classList.remove('active', 'card-cuti', 'card-izin', 'card-sakit');
+    });
+    
+    const activeEl = document.getElementById('adm_card_' + type);
+    if (activeEl) {
+        activeEl.classList.add('active', 'card-' + type);
+    }
+
+    const docSec = document.getElementById('adminDoctorSection');
+    if (docSec) {
+        docSec.style.display = (type === 'sakit') ? 'block' : 'none';
+    }
+}
+
+function handleAdminDateChange() {
+    const t1 = document.getElementById('admin_tgl_mulai').value;
+    const t2 = document.getElementById('admin_tgl_selesai').value;
+    const pill = document.getElementById('adminDurationPill');
+    const textEl = document.getElementById('adminDurationText');
+
+    if (!t1 || !t2 || !pill) return;
+
+    const d1 = new Date(t1);
+    const d2 = new Date(d2);
+
+    if (d2 < d1) {
+        textEl.textContent = 'Tanggal tidak valid';
+        return;
+    }
+
+    const diffTime = Math.abs(new Date(t2) - new Date(t1));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    textEl.textContent = (diffDays === 1) ? 'Durasi: 1 Hari' : `Durasi: ${diffDays} Hari`;
 }
 
 function openDoctorLightbox(src, title) {

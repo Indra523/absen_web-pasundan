@@ -904,7 +904,7 @@ render_header("Riwayat Absensi Individual", "riwayat");
                 <div>
                     <label for="input-search-emp" class="form-label-custom">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <span>Pilih Pegawai:</span>
+                        <span>Pilih Guru / Karyawan:</span>
                     </label>
                     <div class="search-input-wrap">
                         <input type="hidden" name="pin" id="selected-pin" value="<?php echo h($pin_selected); ?>">
@@ -1090,7 +1090,7 @@ render_header("Riwayat Absensi Individual", "riwayat");
                 <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:18px 24px; font-size:15px; font-weight:800; color:#0f172a; display:flex; align-items:center; justify-content:space-between;">
                     <div style="display:flex; align-items:center; gap:9px;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <span>Informasi Pegawai</span>
+                        <span>Informasi Guru / Karyawan</span>
                     </div>
                     <span style="font-size:11px; font-weight:800; color:#15803d; background:#dcfce7; padding:3px 10px; border-radius:20px;">AKTIF</span>
                 </div>
@@ -1098,7 +1098,7 @@ render_header("Riwayat Absensi Individual", "riwayat");
                 <div style="padding:20px 24px;">
                     <?php
                     $rows_profil = [
-                        'PIN Pegawai' => '<span style="background:#f1f5f9; border:1px solid #e2e8f0; padding:2px 8px; border-radius:6px; font-family:monospace; font-weight:800; color:#0f172a;">' . h($detail_profil['pin']) . '</span>',
+                        'PIN' => '<span style="background:#f1f5f9; border:1px solid #e2e8f0; padding:2px 8px; border-radius:6px; font-family:monospace; font-weight:800; color:#0f172a;">' . h($detail_profil['pin']) . '</span>',
                         'Nama Lengkap' => h($detail_profil['nama']),
                         'Departemen'   => h($detail_profil['departemen'] ?: '-'),
                         'Jabatan'      => $detail_profil['tipe'] === 'guru' ? '<span style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700;">Guru / Pendidik</span>' : '<span style="background:#f8fafc; color:#334155; border:1px solid #cbd5e1; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700;">Tenaga Kependidikan</span>',
@@ -1280,7 +1280,7 @@ render_header("Riwayat Absensi Individual", "riwayat");
             <div class="table-header-bar">
                 <div class="table-header-title">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>Rekaman Presensi Pegawai</span>
+                    <span>Rekaman Presensi Guru / Karyawan</span>
                 </div>
                 <div style="font-size:12px; font-weight:700; color:#64748b;">
                     Total: <b style="color:#0f172a;"><?php echo count($logs); ?></b> Data &bull; <?php echo $sort_order === 'desc' ? 'Waktu Terbaru ➔ Terlama' : 'Waktu Terlama ➔ Terbaru'; ?>
