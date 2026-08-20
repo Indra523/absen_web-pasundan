@@ -103,27 +103,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         }
 
                         if (empty($pesan_error)) {
-                            // 4. Tentukan Status Absen (0 = Masuk, 1 = Pulang)
+                            // 4. Periksa Riwayat Absensi Hari Ini untuk Mencegah Duplikasi & Menentukan Target Status
                             $tgl_today = date('Y-m-d');
-                            $stmt_c = $conn->prepare("SELECT status FROM log_absen WHERE pin = ? AND DATE(waktu) = ? ORDER BY waktu ASC");
+                            $stmt_c = $conn->prepare("SELECT id, status, waktu FROM log_absen WHERE pin = ? AND DATE(waktu) = ? ORDER BY waktu ASC");
                             $stmt_c->bind_param("ss", $user_pin, $tgl_today);
                             $stmt_c->execute();
-                            $res_c = $stmt_c->get_result();
+                            $existing_logs = $stmt_c->get_result()->fetch_all(MYSQLI_ASSOC);
 
-                            $status_absen = 0; // Default Masuk
-                            if ($res_c->num_rows > 0) {
-                                $status_absen = 1; // Jika sudah pernah absen hari ini, maka Pulang
+                            $has_masuk = false;
+                            $has_pulang = false;
+                            $last_time = null;
+
+                            foreach ($existing_logs as $l) {
+                                if ((int)$l['status'] === 0) {
+                                    $has_masuk = true;
+                                }
+                                if ((int)$l['status'] === 1) {
+                                    $has_pulang = true;
+                                }
+                                $last_time = strtotime($l['waktu']);
                             }
 
-                            $stmt_ins = $conn->prepare("INSERT INTO log_absen (pin, waktu, status, tipe_verifikasi, foto_selfie, latitude, longitude, ip_address) VALUES (?, NOW(), ?, 'SELFIE', ?, ?, ?, ?)");
-                            $stmt_ins->bind_param("sisdds", $user_pin, $status_absen, $db_rel_path, $user_lat, $user_lng, $client_ip);
-
-                            if ($stmt_ins->execute()) {
-                                $st_label = ($status_absen === 0) ? 'MASUK' : 'PULANG';
-                                $pesan_sukses = "<b>Absen {$st_label} Berhasil!</b> Foto selfie &amp; koordinat GPS terverifikasi (Jarak: <b>{$dist_meters}m</b> | IP Wi-Fi: <code>" . h($client_ip) . "</code>).";
-                                log_audit("ABSEN_SELFIE_USER", "Absen {$st_label} PIN {$user_pin} via Selfie Web (Jarak: {$dist_meters}m, Lat: {$user_lat}, Lng: {$user_lng}, IP: {$client_ip})");
+                            // Aturan Presensi Mandiri:
+                            // a) Belum ada absen masuk hari ini -> Status = 0 (MASUK)
+                            // b) Sudah ada absen masuk, belum ada absen pulang -> Status = 1 (PULANG)
+                            // c) Sudah ada absen masuk DAN absen pulang -> Tolak (Sudah Lengkap)
+                            if (!$has_masuk) {
+                                $status_absen = 0; // MASUK
+                            } elseif (!$has_pulang) {
+                                if ($last_time && (time() - $last_time < 60)) {
+                                    $pesan_error = "<b>Absen Ditolak:</b> Anda baru saja melakukan absensi masuk. Mohon beri jeda minimal 1 menit sebelum absen pulang.";
+                                } else {
+                                    $status_absen = 1; // PULANG
+                                }
                             } else {
-                                $pesan_error = "Gagal menyimpan data absensi: " . $conn->error;
+                                $pesan_error = "<b>Presensi Lengkap:</b> Anda sudah menyelesaikan absensi Masuk &amp; Pulang untuk hari ini. Tidak dapat melakukan absen ganda.";
+                            }
+
+                            if (empty($pesan_error)) {
+                                // Double Check Concurrency Protection
+                                $stmt_dup = $conn->prepare("SELECT id FROM log_absen WHERE pin = ? AND DATE(waktu) = ? AND status = ?");
+                                $stmt_dup->bind_param("ssi", $user_pin, $tgl_today, $status_absen);
+                                $stmt_dup->execute();
+                                if ($stmt_dup->get_result()->num_rows > 0) {
+                                    $st_nm = ($status_absen === 0) ? 'Masuk' : 'Pulang';
+                                    $pesan_error = "<b>Absen Dibatalkan:</b> Anda sudah tercatat absen {$st_nm} hari ini. Mencegah duplikasi data.";
+                                } else {
+                                    $stmt_ins = $conn->prepare("INSERT INTO log_absen (pin, waktu, status, tipe_verifikasi, foto_selfie, latitude, longitude, ip_address) VALUES (?, NOW(), ?, 'SELFIE', ?, ?, ?, ?)");
+                                    $stmt_ins->bind_param("sisdds", $user_pin, $status_absen, $db_rel_path, $user_lat, $user_lng, $client_ip);
+
+                                    if ($stmt_ins->execute()) {
+                                        $st_label = ($status_absen === 0) ? 'MASUK' : 'PULANG';
+                                        $pesan_sukses = "<b>Absen {$st_label} Berhasil!</b> Foto selfie &amp; koordinat GPS terverifikasi (Jarak: <b>{$dist_meters}m</b> | IP Wi-Fi: <code>" . h($client_ip) . "</code>).";
+                                        log_audit("ABSEN_SELFIE_USER", "Absen {$st_label} PIN {$user_pin} via Selfie Web (Jarak: {$dist_meters}m, Lat: {$user_lat}, Lng: {$user_lng}, IP: {$client_ip})");
+                                    } else {
+                                        $pesan_error = "Gagal menyimpan data absensi: " . $conn->error;
+                                    }
+                                }
                             }
                         }
                     }
@@ -162,7 +198,15 @@ $school_lng         = (float)($app_settings['school_longitude'] ?? 107.57195250)
 $max_radius         = (float)($app_settings['gps_radius_meters'] ?? 4000);
 $client_ip          = get_client_real_ip();
 $is_wifi_valid      = is_school_wifi($client_ip);
-$next_absen_status  = ($absen_today['masuk'] === null) ? 'Masuk' : 'Pulang';
+$is_completed_today = (!empty($absen_today['masuk']) && !empty($absen_today['pulang']));
+
+if (empty($absen_today['masuk'])) {
+    $next_absen_status = 'Masuk';
+} elseif (empty($absen_today['pulang'])) {
+    $next_absen_status = 'Pulang';
+} else {
+    $next_absen_status = 'Selesai';
+}
 
 render_header("Absen Mandiri", "absen_mandiri");
 ?>
@@ -808,13 +852,25 @@ render_header("Absen Mandiri", "absen_mandiri");
         </div>
 
         <div class="today-stat-box">
-            <div class="today-stat-icon" style="background:#f0fdf4; color:#16a34a;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div class="today-stat-icon" style="background:<?php echo $next_absen_status === 'Selesai' ? '#f0fdf4' : ($next_absen_status === 'Masuk' ? '#eff6ff' : '#fef2f2'); ?>; color:<?php echo $next_absen_status === 'Selesai' ? '#16a34a' : ($next_absen_status === 'Masuk' ? '#2563eb' : '#dc2626'); ?>;">
+                <?php if ($next_absen_status === 'Selesai'): ?>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <?php elseif ($next_absen_status === 'Masuk'): ?>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                <?php else: ?>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <?php endif; ?>
             </div>
             <div>
                 <div class="today-stat-label">Target Absen Berikutnya</div>
-                <div class="today-stat-val" style="color:<?php echo $next_absen_status === 'Masuk' ? '#2563eb' : '#dc2626'; ?>;">
-                    Absen <?php echo $next_absen_status; ?>
+                <div class="today-stat-val" style="color:<?php echo $next_absen_status === 'Selesai' ? '#16a34a' : ($next_absen_status === 'Masuk' ? '#2563eb' : '#dc2626'); ?>;">
+                    <?php 
+                    if ($next_absen_status === 'Selesai') {
+                        echo 'Sudah Lengkap';
+                    } else {
+                        echo 'Absen ' . $next_absen_status;
+                    }
+                    ?>
                 </div>
             </div>
         </div>
@@ -834,6 +890,20 @@ render_header("Absen Mandiri", "absen_mandiri");
         </div>
 
         <div style="padding: 20px;">
+            <!-- BANNER PRESENSI LENGKAP HARI INI -->
+            <?php if ($is_completed_today): ?>
+                <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:14px; padding:14px 18px; margin-bottom:16px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 10px rgba(22,163,74,0.06);">
+                    <div style="width:36px; height:36px; border-radius:50%; background:#dcfce7; color:#15803d; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-size:13.5px; font-weight:800; color:#15803d;">Presensi Hari Ini Sudah Lengkap!</div>
+                        <div style="font-size:11.5px; color:#166534; margin-top:2px;">
+                            Tercatat <strong>Masuk: <?php echo h($absen_today['masuk']); ?> WIB</strong> dan <strong>Pulang: <?php echo h($absen_today['pulang']); ?> WIB</strong>. Anda tidak perlu melakukan presensi lagi hari ini.
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
             <!-- NOTIFIKASI HTTPS UNTUK KAMERA LIVE WEBRTC -->
             <div id="https-banner-notice" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:10px 14px; margin-bottom:14px; align-items:center; justify-content:space-between; gap:10px; font-size:12px; color:#1e40af; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:8px;">
@@ -1018,6 +1088,7 @@ const SCHOOL_LAT = <?php echo $school_lat; ?>;
 const SCHOOL_LNG = <?php echo $school_lng; ?>;
 const MAX_RADIUS = <?php echo $max_radius; ?>;
 const IS_WIFI_OK = <?php echo $is_wifi_valid ? 'true' : 'false'; ?>;
+const IS_COMPLETED_TODAY = <?php echo $is_completed_today ? 'true' : 'false'; ?>;
 const NEXT_STATUS = "<?php echo strtoupper($next_absen_status); ?>";
 
 let videoStream = null;
@@ -1832,10 +1903,22 @@ function retakeSelfiePhoto() {
 }
 
 function checkSubmitStatus() {
+    const btnSubmit = document.getElementById('btnSubmitAbsen');
+    if (!btnSubmit) return;
+
+    if (IS_COMPLETED_TODAY) {
+        btnSubmit.disabled = true;
+        btnSubmit.style.background = '#e2e8f0';
+        btnSubmit.style.color = '#15803d';
+        btnSubmit.style.cursor = 'default';
+        btnSubmit.style.boxShadow = 'none';
+        btnSubmit.innerHTML = '✓ PRESENSI HARI INI SUDAH LENGKAP';
+        return;
+    }
+
     const lat = parseFloat(document.getElementById('input_latitude').value || 0);
     const lng = parseFloat(document.getElementById('input_longitude').value || 0);
     const b64 = document.getElementById('input_selfie_image').value;
-    const btnSubmit = document.getElementById('btnSubmitAbsen');
 
     const dist = calcHaversine(SCHOOL_LAT, SCHOOL_LNG, lat, lng);
     const isGpsOk = (lat !== 0 && lng !== 0 && dist <= MAX_RADIUS);
@@ -1861,6 +1944,31 @@ function checkSubmitStatus() {
         if (!isSelfieOk) missing.push('Foto Wajah');
         btnSubmit.innerHTML = 'Lengkapi: ' + missing.join(', ');
     }
+}
+
+// Pencegahan Double Submit / Multi-Klik pada Form Selfie
+let isSubmittingAbsen = false;
+const selfieForm = document.getElementById('form-selfie-absen');
+if (selfieForm) {
+    selfieForm.addEventListener('submit', function(e) {
+        if (isSubmittingAbsen) {
+            e.preventDefault();
+            return false;
+        }
+        if (IS_COMPLETED_TODAY) {
+            e.preventDefault();
+            alert('Presensi Anda hari ini sudah lengkap (Masuk & Pulang). Tidak perlu absen lagi.');
+            return false;
+        }
+        isSubmittingAbsen = true;
+        const btnSubmit = document.getElementById('btnSubmitAbsen');
+        if (btnSubmit) {
+            btnSubmit.disabled = true;
+            btnSubmit.style.opacity = '0.75';
+            btnSubmit.style.cursor = 'wait';
+            btnSubmit.innerHTML = '<span class="btn-spinner" style="display:inline-block; width:13px; height:13px; border:2px solid #ffffff; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:8px;"></span> Menyimpan Presensi...';
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
