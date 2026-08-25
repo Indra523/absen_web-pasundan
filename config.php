@@ -328,9 +328,13 @@ function get_app_settings() {
             'kota_surat'           => 'Bandung',
             'logo_sekolah'         => 'assets/logo_pasundan2.jpg',
             'favicon_sekolah'      => 'assets/logo_pasundan2.png',
-            'jam_masuk'            => '06:30',
+            'jam_masuk'            => '07:00',
             'jam_toleransi'        => '07:15',
-            'jam_pulang'           => '17:00',
+            'jam_pulang'           => '15:00',
+            'allowed_wifi_subnets' => '172.16., 192.168., 10., 114., 103., 127.0.0.1, ::1',
+            'school_latitude'      => '-6.906528629790896',
+            'school_longitude'     => '107.57195249522985',
+            'gps_radius_meters'    => '100',
         ];
         $conn = getDB();
         $res = $conn->query("SELECT setting_key, setting_value FROM app_settings");

@@ -37,9 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'nama_admin_rekap'    => trim($_POST['nama_admin_rekap'] ?? ''),
         'nip_admin_rekap'     => trim($_POST['nip_admin_rekap'] ?? '-'),
         'jabatan_admin_rekap' => trim($_POST['jabatan_admin_rekap'] ?? 'Administrator System'),
-        'jam_masuk'           => trim($_POST['jam_masuk'] ?? '06:30'),
-        'jam_toleransi'       => trim($_POST['jam_toleransi'] ?? '07:15'),
-        'jam_pulang'          => trim($_POST['jam_pulang'] ?? '17:00'),
+        'jam_masuk'            => trim($_POST['jam_masuk'] ?? '07:00'),
+        'jam_toleransi'        => trim($_POST['jam_toleransi'] ?? '07:15'),
+        'jam_pulang'           => trim($_POST['jam_pulang'] ?? '15:00'),
+        'allowed_wifi_subnets' => trim($_POST['allowed_wifi_subnets'] ?? '172.16., 192.168., 10., 114., 103., 127.0.0.1, ::1'),
+        'school_latitude'      => trim($_POST['school_latitude'] ?? '-6.906528629790896'),
+        'school_longitude'     => trim($_POST['school_longitude'] ?? '107.57195249522985'),
+        'gps_radius_meters'    => trim($_POST['gps_radius_meters'] ?? '100'),
     ];
 
     // Direktori upload logo tenant
@@ -415,32 +419,70 @@ render_header("Pengaturan Sekolah", "pengaturan_sekolah");
             </div>
         </div>
 
-        <!-- KARTU 3: JADWAL & TOLERANSI -->
+        <!-- KARTU 3: PENGATURAN TOLERANSI JAM KERJA & GEOLOCATION GPS / WI-FI -->
         <div class="settings-card" style="margin-top:20px;">
             <div class="settings-card-header">
-                <div class="settings-card-icon" style="background:#f0fdf4; color:#16a34a;">
+                <div class="settings-card-icon" style="background:#eff6ff; color:#2563eb;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </div>
                 <div>
-                    <h3 style="font-size:16.5px; font-weight:800; color:#0f172a;">Waktu Jam Masuk &amp; Pulang Default</h3>
-                    <p style="font-size:12px; color:#64748b;">Aturan jam absensi harian sekolah</p>
+                    <h3 style="font-size:16.5px; font-weight:800; color:#0f172a;">Pengaturan Toleransi Jam Kerja &amp; Geolocation</h3>
+                    <p style="font-size:12px; color:#64748b;">Aturan jam kerja harian, toleransi terlambat, Wi-Fi lokal, dan titik koordinat GPS sekolah</p>
                 </div>
             </div>
 
             <div class="settings-card-body">
+                <!-- SUB-SECTION 1: PARAMETER WAKTU KERJA -->
+                <div style="font-size:13.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px; padding-bottom:8px; border-bottom:1px solid #f1f5f9;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Parameter Waktu Kerja Harian</span>
+                </div>
+
                 <div class="form-grid-3">
                     <div class="form-group">
-                        <label>Jam Masuk Normal</label>
-                        <input type="time" name="jam_masuk" value="<?php echo h($app_settings['jam_masuk'] ?? '06:30'); ?>" required>
+                        <label>Jam Masuk Standar</label>
+                        <input type="time" name="jam_masuk" value="<?php echo h($app_settings['jam_masuk'] ?? '07:00'); ?>" required>
+                        <div class="form-help">Waktu resmi mulainya kehadiran tepat waktu.</div>
                     </div>
                     <div class="form-group">
-                        <label>Batas Jam Toleransi Terlambat</label>
+                        <label>Batas Akhir Toleransi</label>
                         <input type="time" name="jam_toleransi" value="<?php echo h($app_settings['jam_toleransi'] ?? '07:15'); ?>" required>
-                        <div class="form-help">Lewat jam ini dihitung Terlambat</div>
+                        <div class="form-help">Presensi setelah waktu ini dicatat sebagai terlambat.</div>
                     </div>
                     <div class="form-group">
-                        <label>Jam Pulang Normal</label>
-                        <input type="time" name="jam_pulang" value="<?php echo h($app_settings['jam_pulang'] ?? '17:00'); ?>" required>
+                        <label>Jam Pulang Standar</label>
+                        <input type="time" name="jam_pulang" value="<?php echo h($app_settings['jam_pulang'] ?? '15:00'); ?>" required>
+                        <div class="form-help">Batas minimal scan pulang guru &amp; karyawan.</div>
+                    </div>
+                </div>
+
+                <!-- SUB-SECTION 2: PARAMETER ABSEN SELFIE, WI-FI & GEOLOCATION GPS -->
+                <div style="font-size:13.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px; margin-top:10px; padding-bottom:8px; border-bottom:1px solid #f1f5f9;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>Parameter Absen Selfie, Wi-Fi Sekolah &amp; Geolocation GPS</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Segmen IP Wi-Fi Lokal Sekolah (Pisahkan Koma)</label>
+                    <input type="text" name="allowed_wifi_subnets" value="<?php echo h($app_settings['allowed_wifi_subnets'] ?? '172.16., 192.168., 10., 114., 103., 127.0.0.1, ::1'); ?>" placeholder="Contoh: 172.16., 192.168., 10., 114., 103., 127.0.0.1, ::1">
+                    <div class="form-help">Awalan IP yang diizinkan untuk verifikasi Wi-Fi (contoh: <code>172.16.</code> mencakup semua <code>172.16.x.x</code>).</div>
+                </div>
+
+                <div class="form-grid-3">
+                    <div class="form-group">
+                        <label>Latitude GPS Sekolah</label>
+                        <input type="text" name="school_latitude" value="<?php echo h($app_settings['school_latitude'] ?? '-6.906528629790896'); ?>" placeholder="-6.906528629790896">
+                        <div class="form-help">Koordinat Latitude titik pusat sekolah.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Longitude GPS Sekolah</label>
+                        <input type="text" name="school_longitude" value="<?php echo h($app_settings['school_longitude'] ?? '107.57195249522985'); ?>" placeholder="107.57195249522985">
+                        <div class="form-help">Koordinat Longitude titik pusat sekolah.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Radius Toleransi GPS (Meter)</label>
+                        <input type="number" name="gps_radius_meters" value="<?php echo h($app_settings['gps_radius_meters'] ?? '100'); ?>" placeholder="100" min="10" max="5000">
+                        <div class="form-help">Jarak maksimal kehadiran dari titik pusat sekolah.</div>
                     </div>
                 </div>
             </div>

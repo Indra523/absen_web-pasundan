@@ -13,46 +13,8 @@ if (!can_access_page('rnd_analytics')) {
 }
 
 $conn = getDB();
-$pesan_sukses = '';
-$pesan_error  = '';
 
-// --- 1. PROSES SIMPAN PENGATURAN JAM KERJA & ABSEN SELFIE (SUPERADMIN ONLY) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
-    csrf_verify();
-    
-    if (!is_superadmin()) {
-        $pesan_error = "Akses Ditolak: Anda berada dalam mode Read-Only (RnD). Pengubahan konfigurasi hanya dapat dilakukan oleh Superadmin.";
-    } else {
-        $jam_masuk            = trim($_POST['jam_masuk'] ?? '07:00');
-        $jam_toleransi        = trim($_POST['jam_toleransi'] ?? '07:15');
-        $jam_pulang           = trim($_POST['jam_pulang'] ?? '15:00');
-        $allowed_wifi_subnets = trim($_POST['allowed_wifi_subnets'] ?? '172.16., 192.168., 127.0.0.1, ::1');
-        $school_latitude      = trim($_POST['school_latitude'] ?? '-6.91750000');
-        $school_longitude     = trim($_POST['school_longitude'] ?? '107.61910000');
-        $gps_radius_meters    = (int)($_POST['gps_radius_meters'] ?? 100);
-
-        $stmt = $conn->prepare("INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
-        
-        $sets = [
-            'jam_masuk'            => $jam_masuk,
-            'jam_toleransi'        => $jam_toleransi,
-            'jam_pulang'           => $jam_pulang,
-            'allowed_wifi_subnets' => $allowed_wifi_subnets,
-            'school_latitude'      => $school_latitude,
-            'school_longitude'     => $school_longitude,
-            'gps_radius_meters'    => (string)$gps_radius_meters
-        ];
-
-        foreach ($sets as $k => $v) {
-            $stmt->bind_param("ss", $k, $v);
-            $stmt->execute();
-        }
-
-        $pesan_sukses = "Konfigurasi jam kerja, segmen IP Wi-Fi, dan parameter Geolocation GPS sekolah berhasil diperbarui.";
-    }
-}
-
-// --- 2. AMBIL APP SETTINGS DARI DATABASE ---
+// --- AMBIL APP SETTINGS DARI DATABASE ---
 $settings             = get_app_settings();
 $jam_masuk            = $settings['jam_masuk'] ?? '07:00';
 $jam_toleransi        = $settings['jam_toleransi'] ?? '07:15';
@@ -528,96 +490,7 @@ render_header("RnD Analytics & Toleransi Jam Kerja", "rnd_analytics");
         </div>
     </div>
 
-    <!-- 2. PENGATURAN SYSTEM JAM KERJA & GEOLOCATION (CARD) -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                <span>Pengaturan Toleransi Jam Kerja &amp; Geolocation</span>
-            </div>
-            <div>
-                <?php if (is_rnd()): ?>
-                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:11px;">Mode Lihat Saja</span>
-                <?php else: ?>
-                    <span class="badge" style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; font-size:11px;">Dapat Diubah</span>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <form method="POST" action="rnd_analytics.php">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="save_settings" value="1">
-
-            <!-- SUB-SECTION 1: JAM KERJA -->
-            <div class="settings-section-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>Parameter Waktu Kerja Harian</span>
-            </div>
-
-            <div class="settings-grid" style="margin-bottom:24px;">
-                <div>
-                    <label for="jam_masuk">Jam Masuk Standar</label>
-                    <input type="time" id="jam_masuk" name="jam_masuk" value="<?php echo h($jam_masuk); ?>" <?php echo is_rnd() ? 'disabled' : ''; ?> required>
-                    <div class="form-help-text">Waktu resmi mulainya kehadiran tepat waktu.</div>
-                </div>
-
-                <div>
-                    <label for="jam_toleransi">Batas Akhir Toleransi</label>
-                    <input type="time" id="jam_toleransi" name="jam_toleransi" value="<?php echo h($jam_toleransi); ?>" <?php echo is_rnd() ? 'disabled' : ''; ?> required>
-                    <div class="form-help-text">Presensi setelah waktu ini dicatat sebagai terlambat.</div>
-                </div>
-
-                <div>
-                    <label for="jam_pulang">Jam Pulang Standar</label>
-                    <input type="time" id="jam_pulang" name="jam_pulang" value="<?php echo h($jam_pulang); ?>" <?php echo is_rnd() ? 'disabled' : ''; ?> required>
-                    <div class="form-help-text">Batas minimal scan pulang pegawai.</div>
-                </div>
-            </div>
-
-            <!-- SUB-SECTION 2: GEOLOCATION & WI-FI -->
-            <div class="settings-section-title">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span>Parameter Absen Selfie, Wi-Fi Sekolah &amp; Geolocation GPS</span>
-            </div>
-
-            <div class="settings-grid">
-                <div style="grid-column: span 2;">
-                    <label for="allowed_wifi_subnets">Segmen IP Wi-Fi Lokal Sekolah (Pisahkan Koma)</label>
-                    <input type="text" id="allowed_wifi_subnets" name="allowed_wifi_subnets" value="<?php echo h($allowed_wifi_subnets); ?>" placeholder="Contoh: 172.16., 192.168.1., 127.0.0.1" <?php echo is_rnd() ? 'disabled' : ''; ?> required style="width:100%;">
-                    <div class="form-help-text">Awalan IP yang diizinkan untuk verifikasi Wi-Fi (contoh: <code>172.16.</code> mencakup semua <code>172.16.x.x</code>).</div>
-                </div>
-
-                <div>
-                    <label for="school_latitude">Latitude GPS Sekolah</label>
-                    <input type="text" id="school_latitude" name="school_latitude" value="<?php echo h($school_latitude); ?>" placeholder="-6.91750000" <?php echo is_rnd() ? 'disabled' : ''; ?> required style="width:100%;">
-                    <div class="form-help-text">Koordinat Latitude titik pusat sekolah.</div>
-                </div>
-
-                <div>
-                    <label for="school_longitude">Longitude GPS Sekolah</label>
-                    <input type="text" id="school_longitude" name="school_longitude" value="<?php echo h($school_longitude); ?>" placeholder="107.61910000" <?php echo is_rnd() ? 'disabled' : ''; ?> required style="width:100%;">
-                    <div class="form-help-text">Koordinat Longitude titik pusat sekolah.</div>
-                </div>
-
-                <div>
-                    <label for="gps_radius_meters">Radius Toleransi GPS (Meter)</label>
-                    <input type="number" id="gps_radius_meters" name="gps_radius_meters" value="<?php echo h($gps_radius_meters); ?>" placeholder="100" min="10" max="5000" <?php echo is_rnd() ? 'disabled' : ''; ?> required style="width:100%;">
-                    <div class="form-help-text">Jarak maksimal kehadiran dari titik pusat sekolah.</div>
-                </div>
-            </div>
-
-            <?php if (is_superadmin()): ?>
-                <div style="margin-top:24px; padding-top:16px; border-top:1px solid #f1f5f9; text-align:right;">
-                    <button type="submit" class="btn btn-primary" style="padding:10px 22px; font-weight:800; box-shadow:0 4px 12px rgba(37,99,235,0.25);">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                        <span>Simpan Konfigurasi Presensi</span>
-                    </button>
-                </div>
-            <?php endif; ?>
-        </form>
-    </div>
-
-    <!-- 3. DEPARTEMEN BREAKDOWN -->
+    <!-- 2. DEPARTEMEN BREAKDOWN -->
     <div class="card">
         <div class="card-header">
             <div class="card-title">
