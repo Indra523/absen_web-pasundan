@@ -215,4 +215,69 @@ class TenantProvisioner {
             return ['success' => false, 'message' => 'Gagal mengeksekusi mysqldump.'];
         }
     }
+
+    /**
+     * Hapus Sekolah & Database Tenant Secara Permanen
+     */
+    public static function deleteTenant($tenant_id, $drop_database = true) {
+        $master_conn = getMasterDB();
+        if (!$master_conn) {
+            return ['success' => false, 'message' => 'Gagal terhubung ke Database Master System.'];
+        }
+
+        $stmt = $master_conn->prepare("SELECT * FROM master_tenants WHERE id = ?");
+        $stmt->bind_param("i", $tenant_id);
+        $stmt->execute();
+        $tenant = $stmt->get_result()->fetch_assoc();
+
+        if (!$tenant) {
+            return ['success' => false, 'message' => 'Data sekolah tidak ditemukan.'];
+        }
+
+        if ($tenant['tenant_code'] === 'pasundan2') {
+            return ['success' => false, 'message' => 'Sekolah utama (SMK Pasundan 2) tidak dapat dihapus.'];
+        }
+
+        $db_name = $tenant['db_name'];
+        $tenant_code = $tenant['tenant_code'];
+        $nama_sekolah = $tenant['nama_sekolah'];
+
+        // 1. Drop Database jika dipilih
+        if ($drop_database && !empty($db_name) && strpos($db_name, 'db_tenant_') === 0) {
+            $master_conn->query("DROP DATABASE IF EXISTS `{$db_name}`");
+        }
+
+        // 2. Hapus direktori uploads tenant
+        $upload_dir = __DIR__ . "/uploads/tenants/{$tenant_code}/";
+        if (is_dir($upload_dir)) {
+            self::deleteDirRecursively($upload_dir);
+        }
+
+        // 3. Hapus dari master_tenants
+        $stmt_del = $master_conn->prepare("DELETE FROM master_tenants WHERE id = ?");
+        $stmt_del->bind_param("i", $tenant_id);
+        if ($stmt_del->execute()) {
+            // Catat log audit
+            $admin_name = $_SESSION['master_username'] ?? 'Master Admin';
+            $stmt_log = $master_conn->prepare("INSERT INTO master_audit_logs (admin_username, tenant_code, action, details, ip_address) VALUES (?, ?, 'DELETE_TENANT', ?, ?)");
+            $details = "Menghapus sekolah '{$nama_sekolah}' (DB: {$db_name})";
+            $ip = get_client_real_ip();
+            $stmt_log->bind_param("ssss", $admin_name, $tenant_code, $details, $ip);
+            $stmt_log->execute();
+
+            return ['success' => true, 'message' => "Sekolah <b>{$nama_sekolah}</b> dan database <code>{$db_name}</code> berhasil dihapus secara permanen."];
+        } else {
+            return ['success' => false, 'message' => 'Gagal menghapus data sekolah dari master: ' . $master_conn->error];
+        }
+    }
+
+    private static function deleteDirRecursively($dir) {
+        if (!file_exists($dir)) return true;
+        if (!is_dir($dir)) return unlink($dir);
+        foreach (scandir($dir) as $item) {
+            if ($item == '.' || $item == '..') continue;
+            if (!self::deleteDirRecursively($dir . DIRECTORY_SEPARATOR . $item)) return false;
+        }
+        return rmdir($dir);
+    }
 }
