@@ -562,19 +562,21 @@ render_header("Absen Mandiri", "absen_mandiri");
 }
 
 /* ============================================================ */
-/* MODAL POPUP PENJELASAN ABSEN MANDIRI (ANIMASI TANDA SERU !)   */
+/* ============================================================ */
+/* ULTRA-MODERN POPUP INFORMASI ABSEN MANDIRI                   */
 /* ============================================================ */
 .mandiri-notice-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.7);
-    backdrop-filter: blur(5px);
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 99999;
     display: none;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    animation: noticeFadeIn 0.25s ease-out;
+    animation: noticeFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes noticeFadeIn {
@@ -584,76 +586,140 @@ render_header("Absen Mandiri", "absen_mandiri");
 
 .mandiri-notice-card {
     background: #ffffff;
-    border-radius: 20px;
+    border-radius: 24px;
     max-width: 440px;
     width: 100%;
-    padding: 30px 26px 26px 26px;
+    padding: 28px 24px 24px 24px;
     text-align: center;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
-    border: 1px solid #e2e8f0;
+    box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8);
     position: relative;
-    animation: noticeCardIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    animation: noticeCardPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes noticeCardIn {
-    0% { transform: scale(0.9) translateY(18px); opacity: 0; }
+.mandiri-notice-card::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+@keyframes noticeCardPop {
+    0% { transform: scale(0.92) translateY(14px); opacity: 0; }
     100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-.notice-exclamation-wrap {
+.notice-icon-container {
     position: relative;
-    width: 76px;
-    height: 76px;
-    margin: 0 auto 20px auto;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px auto;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.notice-pulse-ring {
+.notice-icon-glow {
     position: absolute;
     inset: -6px;
     border-radius: 50%;
-    background: rgba(37, 99, 235, 0.15);
-    animation: noticePulseRing 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, rgba(37, 99, 235, 0) 70%);
+    animation: noticePulseRing 2.2s infinite ease-in-out;
 }
 
 @keyframes noticePulseRing {
-    0% { transform: scale(0.92); opacity: 0.8; }
-    50% { transform: scale(1.15); opacity: 0.3; }
-    100% { transform: scale(1.28); opacity: 0; }
+    0%, 100% { transform: scale(0.95); opacity: 0.7; }
+    50% { transform: scale(1.2); opacity: 0.2; }
 }
 
-.notice-circle-icon {
+.notice-icon-badge {
     position: relative;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    box-shadow: 0 10px 24px -4px rgba(37, 99, 235, 0.45);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+.notice-tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    border: 1px solid #bfdbfe;
 }
 
 .notice-title {
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 800;
     color: #0f172a;
-    margin-bottom: 12px;
+    letter-spacing: -0.3px;
+    margin-bottom: 8px;
 }
 
 .notice-desc {
-    font-size: 13.5px;
+    font-size: 13px;
     color: #475569;
-    line-height: 1.6;
-    margin-bottom: 24px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+    padding: 0 6px;
+}
+
+.notice-features-list {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.notice-feature-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #334155;
+    font-weight: 600;
+}
+
+.notice-feature-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .btn-notice-confirm {
     width: 100%;
-    padding: 13px;
+    padding: 12px 18px;
     font-size: 13.5px;
     font-weight: 800;
     color: #ffffff;
@@ -661,14 +727,18 @@ render_header("Absen Mandiri", "absen_mandiri");
     border: none;
     border-radius: 12px;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
 }
 
 .btn-notice-confirm:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.45);
     background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
 }
 
 /* REJECT MODAL */
@@ -1027,28 +1097,56 @@ render_header("Absen Mandiri", "absen_mandiri");
 </div>
 
 <!-- ============================================================ -->
-<!-- MODAL POPUP INFORMASI ABSEN MANDIRI (ANIMASI TANDA SERU !)   -->
+<!-- MODAL POPUP INFORMASI ABSEN MANDIRI (MODERN & REFINED)       -->
 <!-- ============================================================ -->
 <div class="mandiri-notice-modal-overlay" id="mandiriNoticeModal">
     <div class="mandiri-notice-card" onclick="event.stopPropagation()">
-        <!-- ANIMATED EXCLAMATION ICON (NO EMOJI) -->
-        <div class="notice-exclamation-wrap">
-            <div class="notice-pulse-ring"></div>
-            <div class="notice-circle-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <!-- DUAL-LAYER GLOWING ICON (NO EMOJI) -->
+        <div class="notice-icon-container">
+            <div class="notice-icon-glow"></div>
+            <div class="notice-icon-badge">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="7" x2="12" y2="13"></line>
                     <circle cx="12" cy="17" r="1.2" fill="#ffffff"></circle>
                 </svg>
             </div>
         </div>
 
+        <div class="notice-tag-pill">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <span>Panduan Presensi</span>
+        </div>
+
         <h3 class="notice-title">Informasi Absen Mandiri</h3>
         <p class="notice-desc">
-            Ini adalah menu Absen mandiri. Apabila bapak/ibu lupa absen di mesin, silahkan absen disini
+            Ini adalah menu <strong>Absen Mandiri</strong>. Apabila Bapak/Ibu lupa atau berhalangan absen pada mesin fingerprint di sekolah, silakan lakukan presensi di sini.
         </p>
 
+        <!-- 3 REQUIREMENT SUMMARY CHIPS -->
+        <div class="notice-features-list">
+            <div class="notice-feature-item">
+                <div class="notice-feature-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                </div>
+                <div>Terhubung ke <strong>Wi-Fi Lokal Sekolah</strong></div>
+            </div>
+            <div class="notice-feature-item">
+                <div class="notice-feature-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </div>
+                <div>Berada di dalam <strong>Radius Area Sekolah</strong></div>
+            </div>
+            <div class="notice-feature-item">
+                <div class="notice-feature-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <div>Foto Selfie Wajah Tegak &amp; Jelas</div>
+            </div>
+        </div>
+
         <button type="button" class="btn-notice-confirm" onclick="closeMandiriNoticeModal()">
-            OK
+            <span>Saya Mengerti &amp; Lanjutkan</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
     </div>
 </div>
