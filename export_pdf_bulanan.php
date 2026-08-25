@@ -28,6 +28,7 @@ $str_bulan = $nama_bulan[$bulan] ?? '';
 $jumlah_hari = cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun);
 
 $conn = getDB();
+$app_settings = get_app_settings();
 
 // Fetch Hari Libur Kalender
 $hari_libur = [];
@@ -132,17 +133,18 @@ log_audit("EXPORT_PDF_BULANAN", "Export PDF Laporan Bulanan {$str_bulan} {$tahun
     <!-- KOP SURAT SEKOLAH OFISIAL -->
     <div class="header-kop">
         <div class="logo-kop">
-            <img src="assets/logo_pasundan2.png" alt="Logo SMK Pasundan 2 Bandung">
+            <img src="<?php echo h($app_settings['logo_sekolah'] ?? 'assets/logo_pasundan2.png'); ?>" alt="Logo Sekolah">
         </div>
         <div class="text-kop">
-            <div class="line-1">YAYASAN PENDIDIKAN DASAR DAN MENENGAH PASUNDAN</div>
-            <div class="line-2">SEKOLAH MENENGAH KEJURUAN PASUNDAN 2 BANDUNG</div>
-            <div class="line-3">KOMPETENSI KEAHLIAN :</div>
-            <div class="line-jurusan">TEKNIK PEMESINAN (TERAKREDITASI A) &nbsp;&nbsp;&nbsp;&nbsp; TEKNIK KENDARAAN RINGAN (TERAKREDITASI A)</div>
-            <div class="line-jurusan">TEKNIK AUDIO VIDEO (TERAKREDITASI A) &nbsp;&nbsp;&nbsp;&nbsp; TEKNIK KOMPUTER JARINGAN (TERAKREDITASI A)</div>
-            <div class="line-jurusan">TEKNIK SEPEDA MOTOR (TERAKREDITASI A)</div>
-            <div class="line-alamat">Jl. Pelita Karya I No. 2 Telp/Fax. (022) 6034059 Maleber Barat - Bandung 40184</div>
-            <div class="line-web">Web Site : http://www.smkpasundan2bdg.org &nbsp;&nbsp;&nbsp;&nbsp; e-mail : smkpas2bdg@yahoo.com</div>
+            <div class="line-1"><?php echo h(strtoupper($app_settings['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN')); ?></div>
+            <div class="line-2"><?php echo h(strtoupper($app_settings['nama_sekolah'] ?? 'SMK PASUNDAN 2 BANDUNG')); ?></div>
+            <?php if (!empty($app_settings['sub_header_kop'])): ?>
+            <div class="line-jurusan"><?php echo h($app_settings['sub_header_kop']); ?></div>
+            <?php endif; ?>
+            <div class="line-alamat"><?php echo h($app_settings['alamat_sekolah'] ?? ''); ?> <?php echo !empty($app_settings['telepon_sekolah']) ? 'Telp. ' . h($app_settings['telepon_sekolah']) : ''; ?></div>
+            <?php if (!empty($app_settings['email_sekolah'])): ?>
+            <div class="line-web">e-mail : <?php echo h($app_settings['email_sekolah']); ?></div>
+            <?php endif; ?>
         </div>
     </div>
     <div class="double-line"></div>
@@ -235,14 +237,14 @@ log_audit("EXPORT_PDF_BULANAN", "Export PDF Laporan Bulanan {$str_bulan} {$tahun
     <!-- BLOK TANDA TANGAN -->
     <div class="ttd-box">
         <div class="ttd-col">
-            <p style="margin:0; line-height:1.4;">Mengetahui,<br><b>Kepala SMK Pasundan 2 Bandung</b></p>
+            <p style="margin:0; line-height:1.4;">Mengetahui,<br><b><?php echo h($app_settings['jabatan_kepsek'] ?? 'Kepala Sekolah'); ?> <?php echo h($app_settings['nama_sekolah'] ?? ''); ?></b></p>
             <div style="height:50px;"></div>
-            <p style="margin:0; line-height:1.4;"><b><u>Umar Khatob, S.Pd, M.Si.</u></b><br>NIP. -</p>
+            <p style="margin:0; line-height:1.4;"><b><u><?php echo h($app_settings['nama_kepsek'] ?? 'Umar Khatob, S.Pd, M.Si.'); ?></u></b><br><?php echo (!empty($app_settings['nip_kepsek']) && $app_settings['nip_kepsek'] !== '-') ? 'NIP. ' . h($app_settings['nip_kepsek']) : ''; ?></p>
         </div>
         <div class="ttd-col" style="margin-left:50px;">
-            <p style="margin:0; line-height:1.4;">Bandung, <?php echo date('d') . ' ' . $str_bulan . ' ' . $tahun; ?><br><b>Administrator System</b></p>
+            <p style="margin:0; line-height:1.4;"><?php echo h($app_settings['kota_surat'] ?? 'Bandung'); ?>, <?php echo date('d') . ' ' . $str_bulan . ' ' . $tahun; ?><br><b><?php echo h($app_settings['jabatan_admin_rekap'] ?? 'Administrator System'); ?></b></p>
             <div style="height:50px;"></div>
-            <p style="margin:0; line-height:1.4;"><b><u>Indra Setia Budi</u></b><br></p>
+            <p style="margin:0; line-height:1.4;"><b><u><?php echo h($app_settings['nama_admin_rekap'] ?? 'Indra Setia Budi'); ?></u></b><br><?php echo (!empty($app_settings['nip_admin_rekap']) && $app_settings['nip_admin_rekap'] !== '-') ? 'NIP. ' . h($app_settings['nip_admin_rekap']) : ''; ?></p>
         </div>
     </div>
 </div>

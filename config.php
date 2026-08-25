@@ -44,6 +44,97 @@ function getMasterDB() {
     return $master_conn;
 }
 
+// --- Helper: Render Tampilan Error Sekolah Tidak Ditemukan / Suspend ---
+function render_tenant_error($title, $msg, $http_code = 404) {
+    http_response_code($http_code);
+    ?>
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title><?php echo htmlspecialchars($title); ?> — Sistem Presensi</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+                font-family: 'Inter', system-ui, sans-serif;
+                background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                color: #0f172a;
+            }
+            .error-card {
+                background: rgba(255, 255, 255, 0.96);
+                backdrop-filter: blur(12px);
+                border-radius: 24px;
+                padding: 40px 36px;
+                max-width: 460px;
+                width: 100%;
+                text-align: center;
+                box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+                border: 1px solid rgba(255,255,255,0.3);
+                animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            @keyframes popIn {
+                from { opacity: 0; transform: scale(0.9) translateY(15px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            .error-icon {
+                width: 68px;
+                height: 68px;
+                border-radius: 20px;
+                background: #fee2e2;
+                color: #ef4444;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 20px auto;
+                box-shadow: 0 8px 20px rgba(239, 68, 68, 0.2);
+            }
+            h2 { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+            p { font-size: 13.5px; color: #64748b; line-height: 1.55; margin-bottom: 24px; }
+            code { background: #f1f5f9; color: #e11d48; padding: 2px 6px; border-radius: 6px; font-weight: 700; font-family: monospace; }
+            .btn-home {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                color: #fff;
+                font-weight: 700;
+                font-size: 13.5px;
+                padding: 12px 24px;
+                border-radius: 12px;
+                text-decoration: none;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+                transition: transform 0.2s ease;
+            }
+            .btn-home:hover { transform: translateY(-1px); }
+        </style>
+    </head>
+    <body>
+        <div class="error-card">
+            <div class="error-icon">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h2><?php echo htmlspecialchars($title); ?></h2>
+            <p><?php echo $msg; ?></p>
+            <a href="https://attendance-pas2.my.id" class="btn-home">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Halaman Utama</span>
+            </a>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 // --- Tenant Resolver: Deteksi & Ambil Konfigurasi Sekolah Aktif ---
 function get_active_tenant() {
     static $active_tenant = null;
@@ -85,40 +176,62 @@ function get_active_tenant() {
             $res = $stmt->get_result();
             if ($res && $res->num_rows > 0) {
                 $active_tenant = $res->fetch_assoc();
+                if ($active_tenant['status'] === 'suspend') {
+                    render_tenant_error('Sekolah Ditangguhkan', 'Akses untuk sekolah ini sedang ditangguhkan sementara waktu. Silakan hubungi Administrator.', 403);
+                }
                 return $active_tenant;
+            } else {
+                render_tenant_error('Sekolah Tidak Ditemukan', 'Kode sekolah <code>' . htmlspecialchars($query_tenant) . '</code> tidak terdaftar atau telah dinonaktifkan.', 404);
             }
         }
     }
 
-    // 2. Cek Subdomain atau Custom Domain dari HTTP Host (cth: sman1bdg.attendance.my.id atau absen.smk.sch.id)
+    // 2. Cek Subdomain atau Custom Domain dari HTTP Host
     if (!empty($_SERVER['HTTP_HOST'])) {
         $host = strtolower(explode(':', $_SERVER['HTTP_HOST'])[0]);
+        $main_hosts = ['attendance-pas2.my.id', 'www.attendance-pas2.my.id', '172.16.0.61', 'localhost', '127.0.0.1'];
         
-        // A. Cek kecocokan exact Custom Domain (cth: attendance-pas2.my.id, absen.smk.sch.id)
-        $stmt_cd = $master_conn->prepare("SELECT * FROM master_tenants WHERE custom_domain = ? LIMIT 1");
-        if ($stmt_cd) {
-            $stmt_cd->bind_param("s", $host);
-            $stmt_cd->execute();
-            $res_cd = $stmt_cd->get_result();
-            if ($res_cd && $res_cd->num_rows > 0) {
-                $active_tenant = $res_cd->fetch_assoc();
-                return $active_tenant;
-            }
-        }
-
-        // B. Cek Subdomain (cth: sman1bdg.attendance.my.id -> subdomain = sman1bdg)
-        $parts = explode('.', $host);
-        if (count($parts) >= 3 && $parts[0] !== 'www' && $parts[0] !== 'master') {
-            $sub = $parts[0];
-            $stmt_sub = $master_conn->prepare("SELECT * FROM master_tenants WHERE subdomain = ? OR tenant_code = ? LIMIT 1");
-            if ($stmt_sub) {
-                $stmt_sub->bind_param("ss", $sub, $sub);
-                $stmt_sub->execute();
-                $res_sub = $stmt_sub->get_result();
-                if ($res_sub && $res_sub->num_rows > 0) {
-                    $active_tenant = $res_sub->fetch_assoc();
+        // Jika BUKAN domain utama (yaitu subdomain cth: pasundan3.attendance-pas2.my.id atau custom domain)
+        if (!in_array($host, $main_hosts)) {
+            // A. Cek kecocokan exact Custom Domain
+            $stmt_cd = $master_conn->prepare("SELECT * FROM master_tenants WHERE custom_domain = ? LIMIT 1");
+            if ($stmt_cd) {
+                $stmt_cd->bind_param("s", $host);
+                $stmt_cd->execute();
+                $res_cd = $stmt_cd->get_result();
+                if ($res_cd && $res_cd->num_rows > 0) {
+                    $active_tenant = $res_cd->fetch_assoc();
+                    if ($active_tenant['status'] === 'suspend') {
+                        render_tenant_error('Sekolah Ditangguhkan', 'Akses untuk domain sekolah ini sedang ditangguhkan sementara waktu.', 403);
+                    }
                     return $active_tenant;
                 }
+            }
+
+            // B. Cek Subdomain (cth: pasundan3.attendance-pas2.my.id)
+            $parts = explode('.', $host);
+            if (count($parts) >= 3 && $parts[0] !== 'www' && $parts[0] !== 'master') {
+                $sub = $parts[0];
+                $stmt_sub = $master_conn->prepare("SELECT * FROM master_tenants WHERE subdomain = ? OR tenant_code = ? LIMIT 1");
+                if ($stmt_sub) {
+                    $stmt_sub->bind_param("ss", $sub, $sub);
+                    $stmt_sub->execute();
+                    $res_sub = $stmt_sub->get_result();
+                    if ($res_sub && $res_sub->num_rows > 0) {
+                        $active_tenant = $res_sub->fetch_assoc();
+                        if ($active_tenant['status'] === 'suspend') {
+                            render_tenant_error('Sekolah Ditangguhkan', 'Akses untuk sekolah <b>' . htmlspecialchars($active_tenant['nama_sekolah']) . '</b> sedang ditangguhkan sementara waktu.', 403);
+                        }
+                        return $active_tenant;
+                    } else {
+                        // SUBDOMAIN TIDAK ADA DI DATABASE MASTER (MISAL SUDAH DIHAPUS)!
+                        // JANGAN FALLBACK KE PASUNDAN 2!
+                        render_tenant_error('Sekolah Tidak Ditemukan', 'Subdomain <code>' . htmlspecialchars($sub) . '</code> tidak terdaftar atau telah dinonaktifkan dari sistem.', 404);
+                    }
+                }
+            } else {
+                // Domain tidak dikenal
+                render_tenant_error('Sekolah Tidak Ditemukan', 'Domain <code>' . htmlspecialchars($host) . '</code> tidak terhubung ke instansi sekolah mana pun.', 404);
             }
         }
     }
@@ -138,7 +251,7 @@ function get_active_tenant() {
         }
     }
 
-    // Fallback Default ke SMK Pasundan 2
+    // Fallback Default ke SMK Pasundan 2 (Hanya untuk akses domain utama)
     $active_tenant = $default;
     return $active_tenant;
 }
@@ -218,16 +331,34 @@ function validate_sn($sn) {
 function get_app_settings() {
     static $settings = null;
     if ($settings === null) {
+        $tenant = get_active_tenant();
         $settings = [
-            'jam_masuk'     => '06:30',
-            'jam_toleransi' => '07:15',
-            'jam_pulang'    => '17:00',
+            'nama_sekolah'         => $tenant['nama_sekolah'] ?? 'SMK Pasundan 2 Bandung',
+            'alamat_sekolah'       => $tenant['alamat_sekolah'] ?? 'Jl. Citarum No. 12, Bandung, Jawa Barat',
+            'telepon_sekolah'      => $tenant['no_hp_pic'] ?? '022-1234567',
+            'email_sekolah'        => $tenant['email_pic'] ?? 'info@sekolah.sch.id',
+            'nama_yayasan'         => 'YAYASAN PENDIDIKAN DASAR DAN MENENGAH PASUNDAN',
+            'sub_header_kop'       => 'KOMPETENSI KEAHLIAN : REKAYASA PERANGKAT LUNAK, TEKNIK KOMPUTER JARINGAN',
+            'nama_kepsek'          => 'Umar Khatob, S.Pd, M.Si.',
+            'nip_kepsek'           => '-',
+            'jabatan_kepsek'       => 'Kepala Sekolah',
+            'nama_admin_rekap'     => 'Indra Setia Budi',
+            'nip_admin_rekap'      => '-',
+            'jabatan_admin_rekap'  => 'Administrator System',
+            'kota_surat'           => 'Bandung',
+            'logo_sekolah'         => 'assets/logo_pasundan2.jpg',
+            'favicon_sekolah'      => 'assets/logo_pasundan2.png',
+            'jam_masuk'            => '06:30',
+            'jam_toleransi'        => '07:15',
+            'jam_pulang'           => '17:00',
         ];
         $conn = getDB();
         $res = $conn->query("SELECT setting_key, setting_value FROM app_settings");
         if ($res && $res->num_rows > 0) {
             while ($row = $res->fetch_assoc()) {
-                $settings[$row['setting_key']] = $row['setting_value'];
+                if ($row['setting_value'] !== null && $row['setting_value'] !== '') {
+                    $settings[$row['setting_key']] = $row['setting_value'];
+                }
             }
         }
     }

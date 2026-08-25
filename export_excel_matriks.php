@@ -7,6 +7,7 @@
 require_once __DIR__ . '/auth.php';
 
 $conn = getDB();
+$app_settings = get_app_settings();
 
 $bulan    = (int)($_GET['bulan'] ?? date('n'));
 $tahun    = (int)($_GET['tahun'] ?? date('Y'));
@@ -278,8 +279,8 @@ header("Expires: 0");
     </style>
 </head>
 <body>
-    <div class="header-title">LAPORAN EVALUASI & MATRIKS KEHADIRAN BULANAN</div>
-    <div class="header-school">SMK PASUNDAN 2 BANDUNG</div>
+    <div class="header-title">LAPORAN EVALUASI &amp; MATRIKS KEHADIRAN BULANAN</div>
+    <div class="header-school"><?php echo h(strtoupper($app_settings['nama_sekolah'] ?? 'SMK PASUNDAN 2 BANDUNG')); ?></div>
     <div style="text-align:center; font-size:10pt; margin-bottom:12px;">
         <b>Periode:</b> <?php echo $nama_bulan[$bulan] . ' ' . $tahun; ?> | 
         <b>Kategori:</b> <?php echo ucfirst($kategori); ?> | 
@@ -450,5 +451,26 @@ header("Expires: 0");
         </tbody>
     </table>
     <?php endif; ?>
+
+    <br><br>
+    <table style="width:100%; border:none; margin-top:20px;">
+        <tr style="border:none;">
+            <td colspan="5" style="border:none; text-align:center; font-size:11pt; vertical-align:top;">
+                Mengetahui,<br>
+                <b><?php echo h($app_settings['jabatan_kepsek'] ?? 'Kepala Sekolah'); ?> <?php echo h($app_settings['nama_sekolah'] ?? ''); ?></b>
+                <br><br><br><br>
+                <b><u><?php echo h($app_settings['nama_kepsek'] ?? 'Umar Khatob, S.Pd, M.Si.'); ?></u></b><br>
+                <?php echo (!empty($app_settings['nip_kepsek']) && $app_settings['nip_kepsek'] !== '-') ? 'NIP. ' . h($app_settings['nip_kepsek']) : ''; ?>
+            </td>
+            <td colspan="<?php echo max(1, $total_hari - 6); ?>" style="border:none;"></td>
+            <td colspan="5" style="border:none; text-align:center; font-size:11pt; vertical-align:top;">
+                <?php echo h($app_settings['kota_surat'] ?? 'Bandung'); ?>, <?php echo date('d') . ' ' . $nama_bulan[$bulan] . ' ' . $tahun; ?><br>
+                <b><?php echo h($app_settings['jabatan_admin_rekap'] ?? 'Administrator System'); ?></b>
+                <br><br><br><br>
+                <b><u><?php echo h($app_settings['nama_admin_rekap'] ?? 'Indra Setia Budi'); ?></u></b><br>
+                <?php echo (!empty($app_settings['nip_admin_rekap']) && $app_settings['nip_admin_rekap'] !== '-') ? 'NIP. ' . h($app_settings['nip_admin_rekap']) : ''; ?>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

@@ -7,6 +7,7 @@
 require_once __DIR__ . '/auth.php';
 
 $conn = getDB();
+$app_settings = get_app_settings();
 
 // Filter Tanggal, Pencarian, & Status
 $tgl           = trim($_GET['tgl'] ?? date('Y-m-d'));
@@ -95,8 +96,8 @@ header("Expires: 0");
 </head>
 <body>
 
-    <div class="header-title">LAPORAN ABSENSI GURU & KARYAWAN</div>
-    <div class="header-school">SMK PASUNDAN 2 BANDUNG</div>
+    <div class="header-title">LAPORAN ABSENSI GURU &amp; KARYAWAN</div>
+    <div class="header-school"><?php echo h(strtoupper($app_settings['nama_sekolah'] ?? 'SMK PASUNDAN 2 BANDUNG')); ?></div>
     <br>
 
     <table class="meta-table">
@@ -178,5 +179,25 @@ header("Expires: 0");
         </tbody>
     </table>
 
+    <br><br>
+    <table style="width:100%; border:none; margin-top:20px;">
+        <tr style="border:none;">
+            <td colspan="3" style="border:none; text-align:center; font-size:11pt; vertical-align:top;">
+                Mengetahui,<br>
+                <b><?php echo h($app_settings['jabatan_kepsek'] ?? 'Kepala Sekolah'); ?> <?php echo h($app_settings['nama_sekolah'] ?? ''); ?></b>
+                <br><br><br><br>
+                <b><u><?php echo h($app_settings['nama_kepsek'] ?? 'Umar Khatob, S.Pd, M.Si.'); ?></u></b><br>
+                <?php echo (!empty($app_settings['nip_kepsek']) && $app_settings['nip_kepsek'] !== '-') ? 'NIP. ' . h($app_settings['nip_kepsek']) : ''; ?>
+            </td>
+            <td colspan="1" style="border:none;"></td>
+            <td colspan="3" style="border:none; text-align:center; font-size:11pt; vertical-align:top;">
+                <?php echo h($app_settings['kota_surat'] ?? 'Bandung'); ?>, <?php echo date('d') . ' ' . (['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][(int)date('n')]) . ' ' . date('Y'); ?><br>
+                <b><?php echo h($app_settings['jabatan_admin_rekap'] ?? 'Administrator System'); ?></b>
+                <br><br><br><br>
+                <b><u><?php echo h($app_settings['nama_admin_rekap'] ?? 'Indra Setia Budi'); ?></u></b><br>
+                <?php echo (!empty($app_settings['nip_admin_rekap']) && $app_settings['nip_admin_rekap'] !== '-') ? 'NIP. ' . h($app_settings['nip_admin_rekap']) : ''; ?>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

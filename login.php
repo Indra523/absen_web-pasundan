@@ -6,6 +6,9 @@
 
 require_once __DIR__ . '/config.php';
 
+// Pastikan tenant valid sebelum memproses apapun
+$active_tenant = get_active_tenant();
+
 // Jika sudah login, langsung ke dashboard
 if (isset($_SESSION['user_id'])) {
     header("Location: index.php");
@@ -86,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — <?php echo h(get_tenant_school_name()); ?></title>
     <!-- Favicon & Icon Tab Browser -->
-    <link rel="icon" type="image/jpeg" href="assets/logo_pasundan2.png">
+    <link rel="icon" type="image/png" href="<?php echo h(get_app_settings()['favicon_sekolah'] ?? 'assets/logo_pasundan2.png'); ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -197,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="login-card">
         <div class="school-badge">
-            <img src="assets/logo_pasundan2.jpg" alt="Logo Sekolah">
+            <img src="<?php echo h(get_app_settings()['logo_sekolah'] ?? 'assets/logo_pasundan2.jpg'); ?>" alt="Logo Sekolah">
         </div>
         <h2>Monitoring Absensi Guru &amp; Karyawan</h2>
         <div class="school-name"><?php echo h(get_tenant_school_name()); ?></div>
