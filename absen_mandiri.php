@@ -617,8 +617,8 @@ render_header("Absen Mandiri", "absen_mandiri");
 
 .notice-icon-container {
     position: relative;
-    width: 72px;
-    height: 72px;
+    width: 76px;
+    height: 76px;
     margin: 0 auto 16px auto;
     display: flex;
     align-items: center;
@@ -627,29 +627,99 @@ render_header("Absen Mandiri", "absen_mandiri");
 
 .notice-icon-glow {
     position: absolute;
-    inset: -6px;
+    inset: -8px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, rgba(37, 99, 235, 0) 70%);
-    animation: noticePulseRing 2.2s infinite ease-in-out;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(37, 99, 235, 0) 70%);
+    animation: noticePulseRing 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.notice-icon-glow-delayed {
+    animation: noticePulseRing 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    animation-delay: 1.2s;
 }
 
 @keyframes noticePulseRing {
-    0%, 100% { transform: scale(0.95); opacity: 0.7; }
-    50% { transform: scale(1.2); opacity: 0.2; }
+    0% { transform: scale(0.85); opacity: 0.8; }
+    50% { transform: scale(1.25); opacity: 0.3; }
+    100% { transform: scale(1.45); opacity: 0; }
 }
 
 .notice-icon-badge {
     position: relative;
-    width: 60px;
-    height: 60px;
-    border-radius: 18px;
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 10px 24px -4px rgba(37, 99, 235, 0.45);
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.5);
+    border: 2.5px solid rgba(255, 255, 255, 0.4);
+    animation: noticeBadgePop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes noticeBadgePop {
+    0% { transform: scale(0.4) rotate(-15deg); opacity: 0; }
+    70% { transform: scale(1.1) rotate(4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* ANIMASI TANDA SERU: LINE JATUH MEMBAL & DOT MELETUP */
+.anim-exclamation-line {
+    transform-origin: 12px 6px;
+    animation: exclamationLineAnim 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.35) 0.15s both, exclamationLinePulse 2.8s ease-in-out 1.2s infinite;
+}
+
+@keyframes exclamationLineAnim {
+    0% {
+        transform: translateY(-22px) scaleY(0.2);
+        opacity: 0;
+    }
+    60% {
+        transform: translateY(2px) scaleY(1.18);
+        opacity: 1;
+    }
+    80% {
+        transform: translateY(-1.5px) scaleY(0.95);
+    }
+    100% {
+        transform: translateY(0) scaleY(1);
+        opacity: 1;
+    }
+}
+
+.anim-exclamation-dot {
+    transform-origin: 12px 18px;
+    animation: exclamationDotAnim 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.4) 0.35s both, exclamationDotPulse 2.8s ease-in-out 1.2s infinite;
+}
+
+@keyframes exclamationDotAnim {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    65% {
+        transform: scale(1.35);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* EFEK PULSE PERIODIK SETELAH MUNCUL */
+@keyframes exclamationLinePulse {
+    0%, 100% { transform: scale(1); }
+    15% { transform: scaleY(1.2) translateY(-1px); }
+    30% { transform: scale(1); }
+}
+
+@keyframes exclamationDotPulse {
+    0%, 100% { transform: scale(1); }
+    15% { transform: scale(1.35); }
+    30% { transform: scale(1); }
 }
 
 .notice-tag-pill {
@@ -1101,13 +1171,14 @@ render_header("Absen Mandiri", "absen_mandiri");
 <!-- ============================================================ -->
 <div class="mandiri-notice-modal-overlay" id="mandiriNoticeModal">
     <div class="mandiri-notice-card" onclick="event.stopPropagation()">
-        <!-- DUAL-LAYER GLOWING ICON (NO EMOJI) -->
+        <!-- DUAL-LAYER GLOWING ICON WITH ANIMATED EXCLAMATION -->
         <div class="notice-icon-container">
             <div class="notice-icon-glow"></div>
+            <div class="notice-icon-glow notice-icon-glow-delayed"></div>
             <div class="notice-icon-badge">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="7" x2="12" y2="13"></line>
-                    <circle cx="12" cy="17" r="1.2" fill="#ffffff"></circle>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <line class="anim-exclamation-line" x1="12" y1="6" x2="12" y2="13" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round"></line>
+                    <circle class="anim-exclamation-dot" cx="12" cy="18" r="1.4" fill="#ffffff"></circle>
                 </svg>
             </div>
         </div>
