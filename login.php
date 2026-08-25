@@ -19,6 +19,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if (!empty($username) && !empty($password)) {
+        // 1. Cek Autentikasi Master Platform Admin (db_master_system)
+        $master_conn = getMasterDB();
+        if ($master_conn) {
+            $stmt_m = $master_conn->prepare("SELECT id, username, password_hash, nama, role FROM master_admins WHERE username = ?");
+            if ($stmt_m) {
+                $stmt_m->bind_param("s", $username);
+                $stmt_m->execute();
+                $res_m = $stmt_m->get_result();
+                if ($res_m && $res_m->num_rows === 1) {
+                    $m_user = $res_m->fetch_assoc();
+                    if (password_verify($password, $m_user['password_hash'])) {
+                        session_regenerate_id(true);
+                        $_SESSION['user_id']         = $m_user['id'];
+                        $_SESSION['username']        = $m_user['username'];
+                        $_SESSION['role']            = 'superadmin';
+                        $_SESSION['is_master_admin']  = true;
+                        $_SESSION['master_username'] = $m_user['username'];
+                        
+                        // Update last login
+                        $master_conn->query("UPDATE master_admins SET last_login = NOW() WHERE id = {$m_user['id']}");
+                        
+                        header("Location: master_tenants.php");
+                        exit;
+                    }
+                }
+            }
+        }
+
+        // 2. Autentikasi User/Admin di Database Sekolah Aktif
         $conn = getDB();
         $stmt = $conn->prepare("SELECT id, username, password, role, pin FROM users WHERE username = ?");
         $stmt->bind_param("s", $username);
@@ -28,24 +57,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
             if (password_verify($password, $user['password'])) {
-                // Fix Bug #5: Regenerasi session ID setelah login sukses (mencegah session fixation)
                 session_regenerate_id(true);
                 $_SESSION['user_id']  = $user['id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['role']     = !empty($user['role']) ? $user['role'] : 'user';
                 $_SESSION['pin']      = $user['pin'] ?? null;
 
-                // Audit Log Login (termasuk pencatatan User Agent / Browser)
-                log_audit('LOGIN', 'Login berhasil ke sistem');
+                log_audit('LOGIN', 'Login berhasil ke sistem ' . get_tenant_school_name());
 
                 header("Location: index.php");
                 exit;
             } else {
-                // Fix Bug #4: Pesan generik — tidak membedakan username vs password salah
                 $error = "Username atau password yang Anda masukkan salah!";
             }
         } else {
-            // Fix Bug #4: Pesan sama agar attacker tidak bisa enumerate username valid
             $error = "Username atau password yang Anda masukkan salah!";
         }
     } else {
@@ -59,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — Monitoring Absensi SMK Pasundan 2 Bandung</title>
+    <title>Login — <?php echo h(get_tenant_school_name()); ?></title>
     <!-- Favicon & Icon Tab Browser -->
     <link rel="icon" type="image/jpeg" href="assets/logo_pasundan2.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -172,10 +197,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="login-card">
         <div class="school-badge">
-            <img src="assets/logo_pasundan2.jpg" alt="Logo SMK Pasundan 2 Bandung">
+            <img src="assets/logo_pasundan2.jpg" alt="Logo Sekolah">
         </div>
-        <h2>Monitoring Absensi Guru & Karyawan</h2>
-        <div class="school-name">SMK Pasundan 2 Bandung</div>
+        <h2>Monitoring Absensi Guru &amp; Karyawan</h2>
+        <div class="school-name"><?php echo h(get_tenant_school_name()); ?></div>
 
         <?php if ($error): ?>
             <div class="error">⚠️ <?php echo h($error); ?></div>
