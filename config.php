@@ -97,24 +97,8 @@ function render_tenant_error($title, $msg, $http_code = 404) {
                 box-shadow: 0 8px 20px rgba(239, 68, 68, 0.2);
             }
             h2 { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
-            p { font-size: 13.5px; color: #64748b; line-height: 1.55; margin-bottom: 24px; }
+            p { font-size: 13.5px; color: #64748b; line-height: 1.55; margin-bottom: 0; }
             code { background: #f1f5f9; color: #e11d48; padding: 2px 6px; border-radius: 6px; font-weight: 700; font-family: monospace; }
-            .btn-home {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                gap: 8px;
-                background: linear-gradient(135deg, #2563eb, #1d4ed8);
-                color: #fff;
-                font-weight: 700;
-                font-size: 13.5px;
-                padding: 12px 24px;
-                border-radius: 12px;
-                text-decoration: none;
-                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-                transition: transform 0.2s ease;
-            }
-            .btn-home:hover { transform: translateY(-1px); }
         </style>
     </head>
     <body>
@@ -124,10 +108,6 @@ function render_tenant_error($title, $msg, $http_code = 404) {
             </div>
             <h2><?php echo htmlspecialchars($title); ?></h2>
             <p><?php echo $msg; ?></p>
-            <a href="https://attendance-pas2.my.id" class="btn-home">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <span>Halaman Utama</span>
-            </a>
         </div>
     </body>
     </html>
