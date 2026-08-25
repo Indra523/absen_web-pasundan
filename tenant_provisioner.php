@@ -81,7 +81,16 @@ class TenantProvisioner {
 
         $schema_path = __DIR__ . '/sql/schema_template.sql';
         if (!file_exists($schema_path)) {
-            return ['success' => false, 'message' => 'Berkas sql/schema_template.sql tidak ditemukan.'];
+            $schema_path = __DIR__ . '/schema_template.sql';
+        }
+        if (!file_exists($schema_path) && file_exists('/var/www/absen_web/sql/schema_template.sql')) {
+            $schema_path = '/var/www/absen_web/sql/schema_template.sql';
+        }
+        if (!file_exists($schema_path) && file_exists('/home/setia/absen_web/schema_template.sql')) {
+            $schema_path = '/home/setia/absen_web/schema_template.sql';
+        }
+        if (!file_exists($schema_path)) {
+            return ['success' => false, 'message' => 'Berkas skema database (schema_template.sql) tidak ditemukan di server.'];
         }
 
         $schema_sql = file_get_contents($schema_path);
