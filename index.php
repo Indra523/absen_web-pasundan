@@ -272,6 +272,74 @@ render_header("Live Monitoring Absensi", "index");
     </div>
 </div>
 
+<!-- ================= LIGHTBOX MODAL FOTO SELFIE MOBILE ================= -->
+<style>
+.photo-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(6px);
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeInModal 0.2s ease;
+}
+
+.photo-modal-card {
+    background: #ffffff;
+    border-radius: 24px;
+    max-width: 420px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+    animation: scaleInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.status-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 800;
+}
+.status-pill-masuk {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+.status-pill-pulang {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+@keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleInModal { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>
+
+<div class="photo-modal-overlay" id="photoModalOverlay" onclick="closePhotoLightbox(event)">
+    <div class="photo-modal-card" onclick="event.stopPropagation()">
+        <div style="position:relative; width:100%; aspect-ratio:4/3; background:#0f172a; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            <img id="lightboxImg" src="" alt="Bukti Foto Selfie" style="width:100%; height:100%; object-fit:cover;">
+            <button type="button" onclick="closePhotoLightbox()" style="position:absolute; top:12px; right:12px; background:rgba(15,23,42,0.7); color:#fff; border:none; border-radius:50%; width:34px; height:34px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s;" onmouseover="this.style.background='rgba(15,23,42,0.9)'" onmouseout="this.style.background='rgba(15,23,42,0.7)'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div style="padding:18px 22px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+                <span id="lightboxStatusBadge" class="status-pill-badge status-pill-masuk">Absen Masuk</span>
+                <span style="font-size:11.5px; color:#10b981; font-weight:700; background:#dcfce7; padding:4px 10px; border-radius:8px;">Selfie Terverifikasi</span>
+            </div>
+            <div id="lightboxTimeText" style="font-size:13.5px; font-weight:800; color:#0f172a; margin-top:4px;">-</div>
+            <div style="font-size:12px; color:#64748b; margin-top:2px;">Bukti absensi mandiri karyawan</div>
+        </div>
+    </div>
+</div>
+
 <?php if (is_superadmin()): ?>
 <!-- ================= MODAL INPUT ABSEN MANUAL (SUPERADMIN ONLY) ================= -->
 <div id="modal-manual-absen" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center;">
@@ -508,6 +576,34 @@ inputQ.addEventListener('input', () => {
 selectStatus.addEventListener('change', () => {
     fetchMonitoringData();
 });
+
+// Lightbox Modal Foto Selfie Mobile
+function openPhotoLightbox(src, timeTxt, statusTxt, empName, gpsUrl, ipAddress) {
+    const overlay = document.getElementById('photoModalOverlay');
+    const img = document.getElementById('lightboxImg');
+    const timeEl = document.getElementById('lightboxTimeText');
+    const statusBadge = document.getElementById('lightboxStatusBadge');
+
+    if (img) img.src = src;
+    if (timeEl) timeEl.textContent = timeTxt;
+    if (statusBadge) {
+        statusBadge.textContent = statusTxt;
+        if (statusTxt.toLowerCase().includes('pulang')) {
+            statusBadge.className = 'status-pill-badge status-pill-pulang';
+        } else {
+            statusBadge.className = 'status-pill-badge status-pill-masuk';
+        }
+    }
+    if (overlay) overlay.style.display = 'flex';
+}
+
+function closePhotoLightbox(e) {
+    if (e && e.target && e.target.closest && e.target.closest('.photo-modal-card') && e.target.tagName !== 'BUTTON') {
+        return;
+    }
+    const overlay = document.getElementById('photoModalOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {

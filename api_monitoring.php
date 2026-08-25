@@ -165,22 +165,33 @@ if ($result->num_rows > 0) {
             $verif_style = "background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;";
         }
 
+        $days_indo = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+        $months_indo = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+
+        $day_num = date('N', $waktu_ts);
+        $day_name = $days_indo[$day_num] ?? date('l', $waktu_ts);
+        $m_num = (int)date('n', $waktu_ts);
+        $m_name = $months_indo[$m_num] ?? date('F', $waktu_ts);
+        $time_label = $day_name . ', ' . date('d', $waktu_ts) . ' ' . $m_name . ' ' . date('Y', $waktu_ts) . ' (' . date('H:i:s', $waktu_ts) . ' WIB)';
+        $status_label = ($row['status'] == '0') ? 'Absen Masuk' : 'Absen Pulang';
+
         // Tampilkan Foto Selfie (jika ada)
         $foto_selfie_html = "";
         if (!empty($row['foto_selfie']) && file_exists(__DIR__ . '/' . $row['foto_selfie'])) {
             $selfie_url = h($row['foto_selfie']);
             $gps_url = (!empty($row['latitude']) && !empty($row['longitude'])) 
                 ? "https://maps.google.com/?q={$row['latitude']},{$row['longitude']}" 
-                : "#";
+                : "";
             
+            $nama_safe = htmlspecialchars($row['nama'] ?? '', ENT_QUOTES);
+            $time_safe = htmlspecialchars($time_label, ENT_QUOTES);
+            $status_safe = htmlspecialchars($status_label, ENT_QUOTES);
+            $gps_safe = htmlspecialchars($gps_url, ENT_QUOTES);
+            $ip_safe = htmlspecialchars($row['ip_address'] ?? '', ENT_QUOTES);
+
             $foto_selfie_html = "<div style='margin-top:4px; display:flex; flex-direction:column; align-items:center;'>
-                <a href='{$selfie_url}' target='_blank' title='Klik untuk melihat foto selfie lengkap'>
-                    <img src='{$selfie_url}' style='width:38px; height:38px; border-radius:8px; object-fit:cover; border:1.5px solid #2563eb; box-shadow:0 2px 6px rgba(37,99,235,0.2); transition:transform .15s;' onmouseover=\"this.style.transform='scale(1.1)'\" onmouseout=\"this.style.transform='scale(1)'\">
-                </a>";
-            if (!empty($row['latitude'])) {
-                $foto_selfie_html .= "<a href='{$gps_url}' target='_blank' style='font-size:9.5px; color:#2563eb; font-weight:700; text-decoration:none; margin-top:2px;'>Maps GPS</a>";
-            }
-            $foto_selfie_html .= "</div>";
+                <img src='{$selfie_url}' class='selfie-thumb-btn' onclick=\"openPhotoLightbox('{$selfie_url}', '{$time_safe}', '{$status_safe}', '{$nama_safe}', '{$gps_safe}', '{$ip_safe}')\" style='width:38px; height:38px; border-radius:8px; object-fit:cover; border:2px solid #3b82f6; box-shadow:0 2px 6px rgba(37,99,235,0.25); cursor:pointer; transition:transform .15s;' onmouseover=\"this.style.transform='scale(1.12)'\" onmouseout=\"this.style.transform='scale(1)'\" title='Klik untuk melihat foto selfie'>
+            </div>";
         }
 
         $row_bg = ($no % 2 === 0) ? '#ffffff' : '#f8fafc';
