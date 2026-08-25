@@ -20,6 +20,35 @@ if (!validate_sn($sn)) {
     exit;
 }
 
+// Catat aktivitas mesin ke tabel mesin_absensi
+$pushver = $_GET['pushver'] ?? '2.4.0';
+$ip_client = $_SERVER['REMOTE_ADDR'] ?? '172.16.0.136';
+$conn->query("CREATE TABLE IF NOT EXISTS mesin_absensi (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sn VARCHAR(50) NOT NULL UNIQUE,
+    nama_mesin VARCHAR(100) NOT NULL DEFAULT 'Mesin Absensi Solution',
+    ip_mesin VARCHAR(50) NULL DEFAULT '172.16.0.136',
+    port_mesin INT NOT NULL DEFAULT 4370,
+    tipe_koneksi VARCHAR(20) NOT NULL DEFAULT 'ADMS_CLOUD',
+    firmware_version VARCHAR(100) NULL,
+    push_version VARCHAR(20) NULL,
+    user_count INT DEFAULT 0,
+    fp_count INT DEFAULT 0,
+    face_count INT DEFAULT 0,
+    log_count INT DEFAULT 0,
+    status_online TINYINT(1) DEFAULT 1,
+    last_seen DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)");
+$stmt_ms = $conn->prepare("INSERT INTO mesin_absensi (sn, nama_mesin, ip_mesin, push_version, status_online, last_seen)
+    VALUES (?, 'Mesin Solution Utama', ?, ?, 1, NOW())
+    ON DUPLICATE KEY UPDATE ip_mesin = VALUES(ip_mesin), push_version = VALUES(push_version), status_online = 1, last_seen = NOW()");
+if ($stmt_ms) {
+    $stmt_ms->bind_param("sss", $sn, $ip_client, $pushver);
+    $stmt_ms->execute();
+}
+
 // 1. HANDSHAKE (GET)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     echo "GET OPTION FROM: " . $sn . "\n";
