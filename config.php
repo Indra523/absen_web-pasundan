@@ -335,6 +335,7 @@ function get_app_settings() {
             'school_latitude'      => '-6.906528629790896',
             'school_longitude'     => '107.57195249522985',
             'gps_radius_meters'    => '100',
+            'gambar_kop_surat'     => '',
         ];
         $conn = getDB();
         $res = $conn->query("SELECT setting_key, setting_value FROM app_settings");
@@ -347,6 +348,40 @@ function get_app_settings() {
         }
     }
     return $settings;
+}
+
+// --- Helper: Render Kop Surat Resmi (Gambar Banner atau Format Teks) ---
+function render_kop_surat_html($app_settings, $extra_style = '') {
+    $has_image_kop = !empty($app_settings['gambar_kop_surat']) && file_exists(__DIR__ . '/' . $app_settings['gambar_kop_surat']);
+
+    if ($has_image_kop) {
+        $kop_src = h($app_settings['gambar_kop_surat']);
+        return '<div class="header-kop-banner" style="text-align:center; margin-bottom:14px; ' . $extra_style . '">
+            <img src="' . $kop_src . '" style="width:100%; max-height:140px; object-fit:contain; display:block; margin:0 auto;" alt="Kop Surat Resmi">
+        </div>';
+    } else {
+        $logo_src = h($app_settings['logo_sekolah'] ?? 'assets/logo_pasundan2.png');
+        $nama_yayasan = h(strtoupper($app_settings['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN'));
+        $nama_sekolah = h(strtoupper($app_settings['nama_sekolah'] ?? 'SMK PASUNDAN 2 BANDUNG'));
+        $sub_header = !empty($app_settings['sub_header_kop']) ? '<div class="line-jurusan">' . h($app_settings['sub_header_kop']) . '</div>' : '';
+        $alamat = h($app_settings['alamat_sekolah'] ?? '');
+        $telepon = !empty($app_settings['telepon_sekolah']) ? 'Telp. ' . h($app_settings['telepon_sekolah']) : '';
+        $email = !empty($app_settings['email_sekolah']) ? '<div class="line-web">e-mail : ' . h($app_settings['email_sekolah']) . '</div>' : '';
+
+        return '<div class="header-kop" style="' . $extra_style . '">
+            <div class="logo-kop">
+                <img src="' . $logo_src . '" alt="Logo Sekolah">
+            </div>
+            <div class="text-kop">
+                <div class="line-1">' . $nama_yayasan . '</div>
+                <div class="line-2">' . $nama_sekolah . '</div>
+                ' . $sub_header . '
+                <div class="line-alamat">' . $alamat . ' ' . $telepon . '</div>
+                ' . $email . '
+            </div>
+        </div>
+        <div class="double-line"></div>';
+    }
 }
 
 // --- Helper: Audit Log Aktivitas System ---

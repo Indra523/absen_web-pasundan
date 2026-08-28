@@ -87,6 +87,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
+    // 3. Handle Upload Gambar Kop Surat Resmi (Banner Header Image)
+    if (!empty($_POST['hapus_gambar_kop_surat'])) {
+        $settings_to_update['gambar_kop_surat'] = '';
+    } elseif (!empty($_FILES['gambar_kop_surat']['name']) && $_FILES['gambar_kop_surat']['error'] === UPLOAD_ERR_OK) {
+        $file_tmp  = $_FILES['gambar_kop_surat']['tmp_name'];
+        $file_ext  = strtolower(pathinfo($_FILES['gambar_kop_surat']['name'], PATHINFO_EXTENSION));
+        $allowed   = ['jpg', 'jpeg', 'png', 'webp'];
+        
+        if (in_array($file_ext, $allowed)) {
+            $kop_filename = "kop_" . time() . "." . $file_ext;
+            $dest_path = $upload_dir . $kop_filename;
+            if (move_uploaded_file($file_tmp, $dest_path)) {
+                $settings_to_update['gambar_kop_surat'] = "uploads/tenants/{$tenant_code}/" . $kop_filename;
+            }
+        } else {
+            $pesan_error = "Format file gambar kop surat tidak didukung (gunakan JPG, PNG, atau WEBP).";
+        }
+    }
+
     // Simpan semua settings ke database tenant
     $stmt = $conn->prepare("INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
     if ($stmt) {
@@ -296,6 +315,61 @@ render_header("Pengaturan Sekolah", "pengaturan_sekolah");
             </div>
 
             <div class="settings-card-body">
+                <!-- BANNER KOP SURAT RESMI UPLOAD -->
+                <div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:16px; padding:20px; margin-bottom:24px; transition:border-color .2s;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:18px;">🖼️</span>
+                                <label style="font-size:14px; font-weight:800; color:#0f172a; margin:0;">Upload Gambar Kop Surat Resmi (Header Banner Image)</label>
+                            </div>
+                            <div class="form-help" style="margin-top:4px; font-size:12px; color:#64748b;">
+                                ⭐ <b>Rekomendasi Utama:</b> Unggah file gambar banner kop surat sekolah Anda (format JPG/PNG/WEBP). Seluruh laporan PDF &amp; cetak dokumen akan otomatis memakai gambar ini secara presisi 100% sama dengan kop surat fisik sekolah.
+                            </div>
+                        </div>
+                        <div>
+                            <?php if (!empty($app_settings['gambar_kop_surat']) && file_exists(__DIR__ . '/' . $app_settings['gambar_kop_surat'])): ?>
+                                <span style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:4px 12px; border-radius:20px; font-size:11.5px; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+                                    <span style="width:8px; height:8px; border-radius:50%; background:#22c55e;"></span>
+                                    Gambar Kop Aktif Digunakan di PDF
+                                </span>
+                            <?php else: ?>
+                                <span style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; padding:4px 12px; border-radius:20px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+                                    Menggunakan Format Teks Otomatis
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- PREVIEW AREA -->
+                    <div id="kopPreviewContainer" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; text-align:center; min-height:80px; display:flex; align-items:center; justify-content:center; margin-bottom:14px; overflow:hidden;">
+                        <?php if (!empty($app_settings['gambar_kop_surat']) && file_exists(__DIR__ . '/' . $app_settings['gambar_kop_surat'])): ?>
+                            <img src="<?php echo h($app_settings['gambar_kop_surat']); ?>" id="previewKopImg" style="width:100%; max-height:130px; object-fit:contain; border-radius:6px;" alt="Preview Kop Surat">
+                        <?php else: ?>
+                            <div id="previewKopPlaceholder" style="color:#94a3b8; font-size:12.5px; padding:20px;">
+                                <div style="font-size:24px; margin-bottom:4px;">📄</div>
+                                Belum ada file gambar kop surat yang diunggah.<br><span style="font-size:11px; color:#cbd5e1;">(Sistem akan menggunakan kop teks otomatis di bawah jika gambar kosong)</span>
+                            </div>
+                            <img src="" id="previewKopImg" style="width:100%; max-height:130px; object-fit:contain; border-radius:6px; display:none;" alt="Preview Kop Surat">
+                        <?php endif; ?>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div style="flex:1; min-width:250px;">
+                            <input type="file" name="gambar_kop_surat" accept="image/*" onchange="previewKopFile(this)" style="font-size:12.5px; width:100%;">
+                            <div style="font-size:11px; color:#64748b; margin-top:4px;">Disarankan gambar banner memanjang (misal resolusi: 1200x200 px s/d 1600x300 px) dengan latar belakang putih.</div>
+                        </div>
+                        <?php if (!empty($app_settings['gambar_kop_surat']) && file_exists(__DIR__ . '/' . $app_settings['gambar_kop_surat'])): ?>
+                            <div>
+                                <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#dc2626; cursor:pointer; background:#fef2f2; border:1px solid #fecaca; padding:6px 12px; border-radius:8px;">
+                                    <input type="checkbox" name="hapus_gambar_kop_surat" value="1">
+                                    <span>Hapus gambar kop &amp; kembali ke teks</span>
+                                </label>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <!-- LOGO & FAVICON UPLOAD -->
                 <div class="form-grid-2">
                     <div class="logo-preview-box">
@@ -304,7 +378,7 @@ render_header("Pengaturan Sekolah", "pengaturan_sekolah");
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:12.5px; font-weight:700; color:#0f172a; display:block; margin-bottom:4px;">Logo Sekolah</label>
-                            <div class="form-help" style="margin-bottom:8px;">Tampil di Kop Surat, Halaman Login, dan Sidebar</div>
+                            <div class="form-help" style="margin-bottom:8px;">Tampil di Kop Teks, Halaman Login, dan Sidebar</div>
                             <input type="file" name="logo_sekolah" accept="image/*" onchange="previewFile(this, 'previewLogoImg')" style="font-size:12px;">
                         </div>
                     </div>
@@ -505,6 +579,24 @@ function previewFile(input, imgId) {
         const reader = new FileReader();
         reader.onload = function(e) {
             document.getElementById(imgId).src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function previewKopFile(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById('previewKopImg');
+            const placeholder = document.getElementById('previewKopPlaceholder');
+            if (img) {
+                img.src = e.target.result;
+                img.style.display = 'block';
+            }
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
         };
         reader.readAsDataURL(input.files[0]);
     }

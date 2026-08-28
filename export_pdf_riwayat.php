@@ -89,23 +89,7 @@ log_audit("EXPORT_PDF_RIWAYAT", "Export PDF Riwayat Individual PIN {$pin} ({$emp
 
 <div style="padding: 10px 15px;">
     <!-- KOP SURAT SEKOLAH OFISIAL -->
-    <div class="header-kop">
-        <div class="logo-kop">
-            <img src="<?php echo h($app_settings['logo_sekolah'] ?? 'assets/logo_pasundan2.png'); ?>" alt="Logo Sekolah">
-        </div>
-        <div class="text-kop">
-            <div class="line-1"><?php echo h(strtoupper($app_settings['nama_yayasan'] ?? 'YAYASAN PENDIDIKAN')); ?></div>
-            <div class="line-2"><?php echo h(strtoupper($app_settings['nama_sekolah'] ?? 'SMK PASUNDAN 2 BANDUNG')); ?></div>
-            <?php if (!empty($app_settings['sub_header_kop'])): ?>
-            <div class="line-jurusan"><?php echo h($app_settings['sub_header_kop']); ?></div>
-            <?php endif; ?>
-            <div class="line-alamat"><?php echo h($app_settings['alamat_sekolah'] ?? ''); ?> <?php echo !empty($app_settings['telepon_sekolah']) ? 'Telp. ' . h($app_settings['telepon_sekolah']) : ''; ?></div>
-            <?php if (!empty($app_settings['email_sekolah'])): ?>
-            <div class="line-web">e-mail : <?php echo h($app_settings['email_sekolah']); ?></div>
-            <?php endif; ?>
-        </div>
-    </div>
-    <div class="double-line"></div>
+    <?php echo render_kop_surat_html($app_settings); ?>
 
     <!-- JUDUL -->
     <div class="title-report">
