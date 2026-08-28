@@ -80,8 +80,8 @@ log_audit("EXPORT_PDF_RIWAYAT", "Export PDF Riwayat Individual PIN {$pin} ({$emp
         .profile-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; margin-bottom: 15px; display: flex; justify-content: space-between; font-family: 'Arial', sans-serif; font-size: 9.5pt; }
         .profile-col { line-height: 1.6; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 9.5pt; }
-        th, td { border: 1px solid #000; padding: 6px 6px; text-align: center; vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 9.5pt; table-layout: fixed; }
+        th, td { border: 1px solid #000; padding: 6px 8px; text-align: center; vertical-align: middle; }
         th { background: #e2e8f0; font-weight: bold; font-family: 'Arial', sans-serif; font-size: 9pt; }
         tr { page-break-inside: avoid; }
 
@@ -95,9 +95,9 @@ log_audit("EXPORT_PDF_RIWAYAT", "Export PDF Riwayat Individual PIN {$pin} ({$emp
 </head>
 <body>
 
-<div class="no-print" style="background:#f1f5f9; padding:10px 20px; border-bottom:1px solid #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
-    <div><b>📄 Preview Laporan PDF Official Individual</b> (Lengkap dengan Bukti Foto Selfie Absen Mobile)</div>
-    <button onclick="window.print()" style="background:#2563eb; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">🖨️ Cetak / Simpan PDF</button>
+<div class="no-print" style="background:#f1f5f9; padding:10px 20px; border-bottom:1px solid #cbd5e1; display:flex; justify-content:space-between; align-items:center; font-family:'Arial',sans-serif;">
+    <div style="font-size:13px; font-weight:bold; color:#1e293b;">Preview Laporan PDF Official Individual (Presensi Guru &amp; Karyawan)</div>
+    <button onclick="window.print()" style="background:#2563eb; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">Cetak / Simpan PDF</button>
 </div>
 
 <div style="padding: 10px 15px;">
@@ -129,11 +129,11 @@ log_audit("EXPORT_PDF_RIWAYAT", "Export PDF Riwayat Individual PIN {$pin} ({$emp
     <table>
         <thead>
             <tr>
-                <th style="width:28px;">NO</th>
-                <th style="width:145px;">TANGGAL &amp; WAKTU (WIB)</th>
-                <th style="width:85px;">STATUS PRESENSI</th>
-                <th style="text-align:left; padding-left:10px;">METODE VERIFIKASI</th>
-                <th style="width:80px;">BUKTI FOTO</th>
+                <th style="width:35px;">NO</th>
+                <th style="width:165px;">TANGGAL &amp; WAKTU (WIB)</th>
+                <th style="width:95px;">STATUS</th>
+                <th style="text-align:left; padding-left:12px;">METODE VERIFIKASI</th>
+                <th style="width:105px;">BUKTI FOTO</th>
             </tr>
         </thead>
         <tbody>
@@ -147,42 +147,42 @@ log_audit("EXPORT_PDF_RIWAYAT", "Export PDF Riwayat Individual PIN {$pin} ({$emp
                     $jam_fmt  = date('H:i:s', $waktu_ts);
 
                     $st_badge = ($l['status'] == 0)
-                        ? '<span style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:8.5pt; display:inline-block;">MASUK</span>'
-                        : '<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:8.5pt; display:inline-block;">PULANG</span>';
+                        ? '<span style="background:#f0fdf4; color:#15803d; border:1px solid #86efac; padding:3px 10px; border-radius:4px; font-weight:bold; font-size:8.5pt; display:inline-block;">MASUK</span>'
+                        : '<span style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; padding:3px 10px; border-radius:4px; font-weight:bold; font-size:8.5pt; display:inline-block;">PULANG</span>';
 
                     $is_mobile = ($l['tipe_verifikasi'] === 'SELFIE' || !empty($l['foto_selfie']));
                     if ($is_mobile) {
-                        $ver_text = '<div style="font-weight:bold; color:#1e40af; font-size:9pt;">📱 Absen Mobile (Selfie Mandiri)</div>';
+                        $ver_text = '<div style="font-weight:bold; color:#0f172a; font-size:9pt;">Absen Mobile (Selfie Mandiri)</div>';
                         if (!empty($l['latitude']) && !empty($l['longitude'])) {
-                            $ver_text .= '<div style="font-size:7.5pt; color:#475569; margin-top:2px;">📍 GPS: ' . h($l['latitude']) . ', ' . h($l['longitude']) . '</div>';
+                            $ver_text .= '<div style="font-size:7.5pt; color:#475569; margin-top:2px;">Titik GPS: ' . h($l['latitude']) . ', ' . h($l['longitude']) . '</div>';
                         }
                         if (!empty($l['ip_address'])) {
-                            $ver_text .= '<div style="font-size:7.5pt; color:#64748b;">🌐 IP: ' . h($l['ip_address']) . '</div>';
+                            $ver_text .= '<div style="font-size:7.5pt; color:#64748b;">Jaringan IP: ' . h($l['ip_address']) . '</div>';
                         }
                     } elseif ($l['tipe_verifikasi'] == '15') {
-                        $ver_text = '<div style="font-weight:bold; color:#6b21a8; font-size:9pt;">👤 Scan Wajah (Mesin Solution)</div>';
+                        $ver_text = '<div style="font-weight:bold; color:#0f172a; font-size:9pt;">Scan Wajah (Mesin Solution)</div>';
                     } elseif ($l['tipe_verifikasi'] == '1') {
-                        $ver_text = '<div style="font-weight:bold; color:#0f172a; font-size:9pt;">👆 Sidik Jari (Mesin Solution)</div>';
+                        $ver_text = '<div style="font-weight:bold; color:#0f172a; font-size:9pt;">Sidik Jari (Mesin Solution)</div>';
                     } elseif ($l['tipe_verifikasi'] == '0' || $l['tipe_verifikasi'] == '99') {
-                        $ver_text = '<div style="font-weight:bold; color:#c2410c; font-size:9pt;">✏️ Input Manual Admin</div>';
+                        $ver_text = '<div style="font-weight:bold; color:#0f172a; font-size:9pt;">Input Manual Admin</div>';
                     } else {
-                        $ver_text = '<div style="font-weight:bold; color:#475569; font-size:9pt;">📟 Mesin Standalone</div>';
+                        $ver_text = '<div style="font-weight:bold; color:#0f172a; font-size:9pt;">Mesin Standalone</div>';
                     }
 
-                    $foto_html = '<span style="color:#94a3b8; font-size:8pt;">-</span>';
+                    $foto_html = '<span style="color:#94a3b8; font-size:9pt;">-</span>';
                     if (!empty($l['foto_selfie']) && file_exists(__DIR__ . '/' . $l['foto_selfie'])) {
                         $foto_src = h($l['foto_selfie']);
-                        $foto_html = '<img src="' . $foto_src . '" style="width:46px; height:46px; object-fit:cover; border-radius:6px; border:1px solid #94a3b8; display:block; margin:0 auto;" alt="Foto Selfie">';
+                        $foto_html = '<img src="' . $foto_src . '" style="width:48px; height:48px; object-fit:cover; border-radius:4px; border:1px solid #94a3b8; display:block; margin:0 auto;" alt="Bukti Foto">';
                     }
             ?>
                 <tr>
                     <td style="font-weight:bold;"><?php echo $no++; ?></td>
                     <td style="font-family:'Arial',sans-serif; font-size:9pt;">
                         <div style="font-weight:bold; color:#0f172a;"><?php echo $h_nama . ', ' . $tgl_fmt; ?></div>
-                        <div style="color:#475569; font-family:monospace; font-size:9pt; font-weight:bold; margin-top:2px;"><?php echo $jam_fmt; ?> WIB</div>
+                        <div style="color:#475569; font-family:monospace; font-size:8.5pt; font-weight:bold; margin-top:2px;"><?php echo $jam_fmt; ?> WIB</div>
                     </td>
                     <td><?php echo $st_badge; ?></td>
-                    <td style="text-align:left; padding-left:10px; font-family:'Arial',sans-serif;"><?php echo $ver_text; ?></td>
+                    <td style="text-align:left; padding-left:12px; font-family:'Arial',sans-serif;"><?php echo $ver_text; ?></td>
                     <td><?php echo $foto_html; ?></td>
                 </tr>
             <?php endforeach; else: ?>
